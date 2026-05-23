@@ -37,3 +37,29 @@ class ReleaseConfigSchema(BaseModel):
 
 class ExecuteReleaseRequest(BaseModel):
     name: str
+
+from datetime import datetime
+
+class ReleaseStatusResponse(BaseModel):
+    id: int
+    name: str
+    status: str
+    message: Optional[str] = None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+class ReleaseStepResponse(BaseModel):
+    id: int
+    stage_id: str
+    step_id: str
+    status: str
+    message: Optional[str] = None
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+class ReleaseDetailsResponse(ReleaseStatusResponse):
+    steps: List[ReleaseStepResponse]

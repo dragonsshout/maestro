@@ -1,5 +1,7 @@
 from fastapi import APIRouter, Depends, UploadFile, File, HTTPException
 from maestro.services.orchestrator import OrchestratorService
+from maestro.schemas.orchestrator import ExecuteReleaseRequest, ReleaseStatusResponse, ReleaseDetailsResponse
+from maestro.repositories.execution import ExecutionRepository
 
 router = APIRouter(prefix="/orchestrator", tags=["Orchestrator"])
 
@@ -27,18 +29,47 @@ async def upload_config(
         "id": descriptor.id
     }
 
-from maestro.schemas.orchestrator import ExecuteReleaseRequest
-
 @router.post("/execute")
 async def execute_release(
     payload: ExecuteReleaseRequest,
     service: OrchestratorService = Depends()
 ):
     try:
-        process_id = await service.execute_release(payload.name)
+        execution_id = await service.execute_release(payload.name)
         return {
             "message": "Processo de release iniciado com sucesso",
-            "release_process_id": process_id
+            "release_execution_id": execution_id
         }
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+@router.get("/status/{name}", response_model=ReleaseStatusResponse)
+async def get_release_status(
+    name: str,
+    execution_repo: ExecutionRepository = Depends()
+):
+    execution = await execution_repo.get_latest_execution_by_name(name)
+    if not execution:
+        raise HTTPException(status_code=404, detail=f"Nenhuma execução encontrada para a release '{name}'.")
+    
+    return execution
+
+@router.get("/details/{name}", response_model=ReleaseDetailsResponse)
+async def get_release_details(
+    name: str,
+    execution_repo: ExecutionRepository = Depends()
+):
+    execution = await execution_repo.get_latest_execution_by_name(name)
+    if not execution:
+        raise HTTPException(status_code=404, detail=f"Nenhuma execução encontrada para a release '{name}'.")
+    
+    steps = await execution_repo.get_steps_by_execution_id(execution.id)
+    
+    return ReleaseDetailsResponse(
+        id=execution.id,
+        name=execution.name,
+        status=execution.status,
+        message=execution.message,
+        created_at=execution.created_at,
+        steps=steps
+    )

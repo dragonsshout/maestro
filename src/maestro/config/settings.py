@@ -1,3 +1,4 @@
+from typing import Optional
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import Field
 
@@ -8,5 +9,12 @@ class Settings(BaseSettings):
         default="postgresql+asyncpg://maestro_user:maestro_password@localhost:5432/maestro_db",
         validation_alias="DB_URL"
     )
+
+    jenkins_url: str = Field(default="http://localhost:8080")
+    jenkins_username: Optional[str] = Field(default=None)
+    jenkins_token: Optional[str] = Field(default=None)
+
+    github_organization: str = Field(default="my-org")
+    github_token: Optional[str] = Field(default=None)
 
 settings = Settings()
