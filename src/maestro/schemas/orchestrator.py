@@ -14,7 +14,7 @@ class StepSchema(BaseModel):
     job: JobSchema
 
 class StageSchema(BaseModel):
-    name: str
+    id: str
     steps: List[StepSchema]
 
 class StrategySchema(BaseModel):
@@ -34,3 +34,6 @@ class ReleaseConfigSchema(BaseModel):
     kind: Literal["Release"]
     metadata: MetadataSchema
     spec: ReleaseSpecSchema
+
+class ExecuteReleaseRequest(BaseModel):
+    name: str

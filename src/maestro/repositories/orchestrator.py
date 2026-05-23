@@ -20,6 +20,12 @@ class OrchestratorDescriptorRepository:
         )
         return result.scalars().first()
 
+    async def get_by_name(self, name: str) -> OrchestratorDescriptor | None:
+        result = await self.db.execute(
+            select(OrchestratorDescriptor).where(OrchestratorDescriptor.name == name)
+        )
+        return result.scalars().first()
+
     async def get_all(self) -> list[OrchestratorDescriptor]:
         result = await self.db.execute(
             select(OrchestratorDescriptor).order_by(OrchestratorDescriptor.id)

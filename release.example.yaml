@@ -10,7 +10,7 @@ spec:
     # "fire-and-forget": "Se um job critico falhar, todos os outros jobs que dependem dele serão executados"
     type: "all-or-nothing"
   stages:
-    - name: "deploy"
+    - id: "deploy"
       steps:
         - id: deploy-web-teste
           repository: web-teste
@@ -30,7 +30,7 @@ spec:
             type: jenkins
             path: jobs/build-api-teste
 
-    - name: "testes"
+    - id: "testes"
       steps:
         - id: run-e2e-tests
           repository: tests

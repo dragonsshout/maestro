@@ -26,3 +26,19 @@ async def upload_config(
         "message": "Configuração do orquestrador salva com sucesso",
         "id": descriptor.id
     }
+
+from maestro.schemas.orchestrator import ExecuteReleaseRequest
+
+@router.post("/execute")
+async def execute_release(
+    payload: ExecuteReleaseRequest,
+    service: OrchestratorService = Depends()
+):
+    try:
+        process_id = await service.execute_release(payload.name)
+        return {
+            "message": "Processo de release iniciado com sucesso",
+            "release_process_id": process_id
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
