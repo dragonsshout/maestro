@@ -1,0 +1,178 @@
+{
+	"info": {
+		"_postman_id": "12345678-1234-1234-1234-123456789012",
+		"name": "Maestro API",
+		"description": "Coleção para testar as APIs do projeto Maestro.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "System",
+			"item": [
+				{
+					"name": "Health Check",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/health",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"health"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Orchestrator",
+			"item": [
+				{
+					"name": "Upload Config",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "file",
+									"type": "file",
+									"src": []
+								}
+							]
+						},
+						"url": {
+							"raw": "{{base_url}}/orchestrator/config",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"orchestrator",
+								"config"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Execute Release",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"minha-release\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/orchestrator/execute",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"orchestrator",
+								"execute"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Status",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/orchestrator/status/minha-release",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"orchestrator",
+								"status",
+								"minha-release"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Details",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/orchestrator/details/minha-release",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"orchestrator",
+								"details",
+								"minha-release"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Callback",
+			"item": [
+				{
+					"name": "Release Callback",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"release_process_id\": 1,\n    \"stage_id\": \"stage-1\",\n    \"step_id\": \"step-1\",\n    \"status\": \"success\",\n    \"message\": \"Tudo certo com a pipeline\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/callback/release",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"callback",
+								"release"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:8000"
+		}
+	]
+}

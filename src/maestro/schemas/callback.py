@@ -7,4 +7,4 @@ class ReleaseCallbackSchema(BaseModel):
     stage_id: str
     step_id: str
     message: Optional[str] = None
-    status: Literal["success", "error"]
+    status: Literal["success", "error", "failure"]

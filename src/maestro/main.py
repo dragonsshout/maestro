@@ -5,21 +5,25 @@ import uvicorn
 import subprocess
 import sys
 
+from maestro.config.logger import get_logger
+
+logger = get_logger(__name__)
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Aqui será inicializada a conexão assíncrona com o Postgres (SQLAlchemy + asyncpg)
-    print("Iniciando o Maestro - Orquestrador de Releases!")
+    logger.info("Iniciando o Maestro - Orquestrador de Releases!")
     
-    print("Executando migrations do banco de dados (Alembic)...")
+    logger.info("Executando migrations do banco de dados (Alembic)...")
     try:
         # Executa as migrations via subprocesso para evitar conflitos de event loop (já que FastAPI tem o próprio loop rodando e o Alembic async cria o dele)
         subprocess.run([sys.executable, "-m", "alembic", "upgrade", "head"], check=True)
-        print("Migrations executadas com sucesso!")
+        logger.info("Migrations executadas com sucesso!")
     except subprocess.CalledProcessError as e:
-        print(f"Erro ao rodar migrations: {e}")
+        logger.error(f"Erro ao rodar migrations: {e}")
         
     yield
-    print("Encerrando o Maestro.")
+    logger.info("Encerrando o Maestro.")
 
 from maestro.api.routes.orchestrator import router as orchestrator_router
 from maestro.api.routes.callback import router as callback_router

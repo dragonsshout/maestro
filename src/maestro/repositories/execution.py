@@ -21,7 +21,19 @@ class ExecutionRepository:
         await self.db.refresh(execution)
         return execution
 
+    async def get_execution_by_id(self, execution_id: int) -> ReleaseExecution | None:
+        result = await self.db.execute(
+            select(ReleaseExecution).where(ReleaseExecution.id == execution_id)
+        )
+        return result.scalars().first()
+
     async def add_step_execution(self, execution: ReleaseStepExecution) -> ReleaseStepExecution:
+        self.db.add(execution)
+        await self.db.commit()
+        await self.db.refresh(execution)
+        return execution
+
+    async def update_step_execution(self, execution: ReleaseStepExecution) -> ReleaseStepExecution:
         self.db.add(execution)
         await self.db.commit()
         await self.db.refresh(execution)

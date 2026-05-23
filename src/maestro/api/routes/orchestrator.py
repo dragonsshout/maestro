@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, UploadFile, File, HTTPException
+from fastapi import APIRouter, Depends, UploadFile, File, HTTPException, BackgroundTasks
 from maestro.services.orchestrator import OrchestratorService
 from maestro.schemas.orchestrator import ExecuteReleaseRequest, ReleaseStatusResponse, ReleaseDetailsResponse
 from maestro.repositories.execution import ExecutionRepository
@@ -32,10 +32,11 @@ async def upload_config(
 @router.post("/execute")
 async def execute_release(
     payload: ExecuteReleaseRequest,
+    background_tasks: BackgroundTasks,
     service: OrchestratorService = Depends()
 ):
     try:
-        execution_id = await service.execute_release(payload.name)
+        execution_id = await service.execute_release(payload.name, background_tasks)
         return {
             "message": "Processo de release iniciado com sucesso",
             "release_execution_id": execution_id
