@@ -1,0 +1,41 @@
+apiVersion: maestro.ecosoft.com/v1alpha1
+kind: Release
+metadata:
+  name: "build-and-deploy-app"
+  author: "Erico Marineli"
+  description: "Testes de Release"
+spec:
+  strategy:
+    # "all-or-nothing": "Se um job critico falhar, todos os outros jobs que dependem dele não serão executados"
+    # "fire-and-forget": "Se um job critico falhar, todos os outros jobs que dependem dele serão executados"
+    type: "all-or-nothing"
+  stages:
+    - name: "deploy"
+      steps:
+        - id: deploy-web-teste
+          repository: web-teste
+          release: "release/minhaReleaseWeb"
+          critical: true
+          requires_approval: true
+          job: 
+            type: jenkins
+            path: jobs/build-web-teste
+
+        - id: deploy-api-teste
+          repository: api-teste
+          release: "release/minhaReleaseApi"
+          critical: true
+          requires_approval: true
+          job: 
+            type: jenkins
+            path: jobs/build-api-teste
+
+    - name: "testes"
+      steps:
+        - id: run-e2e-tests
+          repository: tests
+          release: "main"
+          critical: false
+          job:
+            type: jenkins
+            path: jobs/run-e2e

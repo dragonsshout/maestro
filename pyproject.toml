@@ -1,0 +1,29 @@
+[project]
+name = "maestro"
+version = "0.1.0"
+description = "Orquestrador de releases em Python"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi[standard]",
+    "sqlalchemy",
+    "asyncpg",
+    "pydantic-settings",
+    "alembic>=1.18.4",
+    "python-multipart>=0.0.29",
+    "pyyaml>=6.0.3",
+    "pydantic>=2.0.0",
+]
+
+[project.scripts]
+maestro = "maestro.main:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0.0",
+    "ruff>=0.3.0",
+]
