@@ -1,5 +1,7 @@
 from typing import List, Literal, Optional
 from pydantic import BaseModel
+from maestro.schemas.enums import ExecutionStatus
+from datetime import datetime
 
 class JobSchema(BaseModel):
     type: str
@@ -38,14 +40,17 @@ class ReleaseConfigSchema(BaseModel):
 class ExecuteReleaseRequest(BaseModel):
     name: str
 
-from datetime import datetime
+class StageStatusResponse(BaseModel):
+    stage_id: str
+    status: ExecutionStatus
 
 class ReleaseStatusResponse(BaseModel):
     id: int
     name: str
-    status: str
+    status: ExecutionStatus
     message: Optional[str] = None
     created_at: datetime
+    stages: List[StageStatusResponse]
 
     class Config:
         from_attributes = True
@@ -54,8 +59,9 @@ class ReleaseStepResponse(BaseModel):
     id: int
     stage_id: str
     step_id: str
-    status: str
+    status: ExecutionStatus
     message: Optional[str] = None
+    job_execution_correlation_id: Optional[int] = None
     updated_at: datetime
 
     class Config:

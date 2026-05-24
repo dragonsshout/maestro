@@ -6,12 +6,12 @@ from maestro.repositories.execution import ExecutionRepository
 from maestro.schemas.orchestrator import ReleaseConfigSchema
 from maestro.config.settings import settings
 from maestro.integration.github import GithubIntegration
-from maestro.integration.jenkins import JenkinsIntegration
 from pydantic import ValidationError
 import yaml
-import uuid
 from sqlalchemy.exc import IntegrityError
 from maestro.config.logger import get_logger
+from maestro.services.jenkins import JenkinsService
+from maestro.schemas.enums import ExecutionStatus
 
 logger = get_logger(__name__)
 
@@ -19,10 +19,12 @@ class OrchestratorService:
     def __init__(
         self, 
         repository: OrchestratorDescriptorRepository = Depends(),
-        execution_repo: ExecutionRepository = Depends()
+        execution_repo: ExecutionRepository = Depends(),
+        jenkins_service: JenkinsService = Depends()
     ):
         self.repository = repository
         self.execution_repo = execution_repo
+        self.jenkins_service = jenkins_service
 
     async def save_descriptor(self, yaml_content: str) -> OrchestratorDescriptor:
         # Validação do formato YAML
@@ -57,7 +59,7 @@ class OrchestratorService:
 
         release_execution = ReleaseExecution(
             name=name,
-            status="pending",
+            status=ExecutionStatus.PENDING,
             orchestrator_descriptor_id=descriptor.id
         )
         release_execution = await self.execution_repo.add_release_execution(release_execution)
@@ -75,7 +77,7 @@ class OrchestratorService:
                         raise ValueError(f"O Pull Request para a branch '{step.release}' no repositório '{step.repository}' não está no estado 'clean' (estado atual: '{pr_detail.mergeable_state}').")
 
         except Exception as e:
-            release_execution.status = "failure"
+            release_execution.status = ExecutionStatus.FAILURE
             release_execution.message = str(e)
 
             # atualiza dados da falha
@@ -90,7 +92,7 @@ class OrchestratorService:
                     release_execution_id=release_execution.id,
                     stage_id=stage.id,
                     step_id=step.id,
-                    status="pending"
+                    status=ExecutionStatus.PENDING
                 )
                 await self.execution_repo.add_step_execution(step_execution)
 
@@ -103,7 +105,7 @@ class OrchestratorService:
             logger.warning(f"Execução {execution_id} não encontrada.")
             return
 
-        if execution.status in ["success", "failure"]:
+        if execution.status in [ExecutionStatus.SUCCESS, ExecutionStatus.FAILURE]:
             return
 
         descriptor = await self.repository.get_by_id(execution.orchestrator_descriptor_id)
@@ -117,68 +119,68 @@ class OrchestratorService:
         execution_failed = False
 
         for stage in config.spec.stages:
-            stage_status = "success"
+            stage_status = ExecutionStatus.SUCCESS
             for step in stage.steps:
                 se = step_exec_map.get((stage.id, step.id))
                 if not se: continue
 
-                if se.status == "failure":
-                    stage_status = "failure"
+                if se.status == ExecutionStatus.FAILURE:
+                    stage_status = ExecutionStatus.FAILURE
                     execution_failed = True
                     break
-                elif se.status == "in_progress":
-                    stage_status = "in_progress"
+
+                # if job is in progress, just mark and continue
+                elif se.status == ExecutionStatus.IN_PROGRESS:
+                    stage_status = ExecutionStatus.IN_PROGRESS
                     execution_in_progress = True
-                elif se.status == "pending":
-                    # Mark as in progress and trigger job
-                    se.status = "in_progress"
+                
+                # if job is pending, mark as in progress and trigger job
+                elif se.status == ExecutionStatus.PENDING:
+                    se.status = ExecutionStatus.IN_PROGRESS
                     await self.execution_repo.update_step_execution(se)
                     
                     if step.job.type == "jenkins":
-                        logger.info(f"Acionando job do tipo {step.job.type} no caminho {step.job.path} para o step {step.id}")
-                        jenkins = JenkinsIntegration(
-                            base_url=settings.jenkins_url,
-                            username=settings.jenkins_username,
-                            token=settings.jenkins_token
-                        )
-                        # O jenkins deve chamar o webhook passando estes parâmetros de volta
-                        params = {
-                            "release_process_id": str(execution_id),
-                            "stage_id": stage.id,
-                            "step_id": step.id
-                        }
+                        logger.info(f"Starting job of type {step.job.type} at path {step.job.path} for step {step.id}")
+
                         try:
-                            # Dispara o job sem esperar (fire and forget). A continuação será via webhook.
-                            await jenkins.build_job(step.job.path, parameters=params, fire_and_forget=True)
+                            await self.jenkins_service.trigger_job(
+                                job_path=step.job.path, 
+                                step_execution_id=se.id, 
+                                release_branch=step.release
+                            )
+                        
                         except Exception as e:
-                            logger.error(f"Erro ao acionar o Jenkins para {step.job.path}: {e}")
-                            se.status = "failure"
+                            logger.error(f"Error starting jenkins job {step.job.path}: {e}")
+                            # marks the execution as failure
+                            se.status = ExecutionStatus.FAILURE
                             se.message = str(e)
                             await self.execution_repo.update_step_execution(se)
-                            stage_status = "failure"
+                        
+                            stage_status = ExecutionStatus.FAILURE
                             execution_failed = True
                             continue
-                            
+
                     else:
-                        logger.warning(f"Job type não suportado ainda: {step.job.type}")
-                        # Simulando que terminou rápido
-                        se.status = "success"
+                        logger.warning(f"Job type not supported yet: {step.job.type}")
+                        # Simulating that it finished quickly
+                        se.status = ExecutionStatus.SUCCESS
                         await self.execution_repo.update_step_execution(se)
                         continue
 
-                    # Como depende de webhook (ou job falhou acima), atualizamos o status geral
-                    if se.status == "in_progress":
-                        stage_status = "in_progress"
+                    # Since it depends on a webhook (or job failed above), we update the overall status
+                    if se.status == ExecutionStatus.IN_PROGRESS:
+                        stage_status = ExecutionStatus.IN_PROGRESS
                         execution_in_progress = True
 
-            if stage_status == "failure":
-                execution.status = "failure"
+            if stage_status == ExecutionStatus.FAILURE:
+                execution.status = ExecutionStatus.FAILURE
                 await self.execution_repo.update_release_execution(execution)
                 return
-            elif stage_status == "in_progress":
+            
+            elif stage_status == ExecutionStatus.IN_PROGRESS:
                 # Waiting for steps to complete, cannot proceed to next stage
                 return
 
         if not execution_in_progress and not execution_failed:
-            execution.status = "success"
+            execution.status = ExecutionStatus.SUCCESS
             await self.execution_repo.update_release_execution(execution)

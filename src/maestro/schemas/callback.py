@@ -1,10 +1,8 @@
 from typing import Optional
 from pydantic import BaseModel
-from typing import Literal
+from maestro.schemas.enums import ExecutionStatus
 
 class ReleaseCallbackSchema(BaseModel):
-    release_process_id: str
-    stage_id: str
-    step_id: str
+    job_execution_correlation_id: int
     message: Optional[str] = None
-    status: Literal["success", "error", "failure"]
+    status: ExecutionStatus

@@ -2,6 +2,8 @@ import asyncio
 import httpx
 from typing import Optional, Dict, Any
 
+from maestro.schemas.jenkins import JenkinsQueueItemSchema
+
 class JenkinsIntegration:
     def __init__(self, base_url: str, username: Optional[str] = None, token: Optional[str] = None):
         """
@@ -45,6 +47,39 @@ class JenkinsIntegration:
             return None
         else:
             return await _do_request()
+
+    async def trigger_job_and_get_queue_url(self, job_name: str, parameters: Optional[Dict[str, str]] = None) -> str:
+        """
+        Dispara um job no Jenkins e retorna a URL do item na fila (Queue Item).
+        """
+        async with self._get_client() as client:
+            if parameters:
+                endpoint = f"/job/{job_name}/buildWithParameters"
+                response = await client.post(endpoint, params=parameters)
+            else:
+                endpoint = f"/job/{job_name}/build"
+                response = await client.post(endpoint)
+            
+            response.raise_for_status()
+            # Jenkins returns 201 Created with Location header pointing to the queue item
+            location = response.headers.get("Location")
+            if not location:
+                raise ValueError("Jenkins não retornou o header 'Location' ao disparar o job.")
+            return location
+
+    async def get_queue_item_info(self, queue_url: str) -> JenkinsQueueItemSchema:
+        """
+        Obtém informações de um item na fila usando a URL retornada no disparo.
+        """
+        async with self._get_client() as client:
+            # Ensure the URL is just the path if it includes the domain
+            if queue_url.startswith(self.base_url):
+                queue_url = queue_url[len(self.base_url):]
+            
+            endpoint = f"{queue_url.rstrip('/')}/api/json"
+            response = await client.get(endpoint)
+            response.raise_for_status()
+            return JenkinsQueueItemSchema(**response.json())
 
     async def get_job_info(self, job_name: str) -> Dict[str, Any]:
         """

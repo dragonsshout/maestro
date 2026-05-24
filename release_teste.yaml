@@ -1,0 +1,31 @@
+apiVersion: maestro.ecosoft.com/v1alpha1
+kind: Release
+metadata:
+  name: "release-teste"
+  author: "Erico Marineli"
+  description: "Testes de Release"
+spec:
+  strategy:
+    # "all-or-nothing": "Se um job critico falhar, todos os outros jobs que dependem dele não serão executados"
+    # "fire-and-forget": "Se um job critico falhar, todos os outros jobs que dependem dele serão executados"
+    type: "all-or-nothing"
+  stages:
+    - id: "deploy"
+      steps:
+        - id: deploy-testeA
+          repository: api-teste
+          release: "release/teste"
+          critical: true
+          requires_approval: true
+          job: 
+            type: jenkins
+            path: job/teste/job/testeB
+
+        - id: deploy-testeB
+          repository: api-teste
+          release: "release/teste"
+          critical: true
+          requires_approval: true
+          job: 
+            type: jenkins
+            path: job/teste/job/testeB

@@ -12,11 +12,11 @@ async def release_callback(
     execution_repo: ExecutionRepository = Depends(),
     orchestrator_service: OrchestratorService = Depends()
 ):
-    execution_id = payload.release_process_id
+    correlation_id = payload.job_execution_correlation_id
 
-    step = await execution_repo.get_specific_step(execution_id, payload.stage_id, payload.step_id)
+    step = await execution_repo.get_step_by_correlation_id(correlation_id)
     if not step:
-        raise HTTPException(status_code=404, detail="Step não encontrado.")
+        raise HTTPException(status_code=404, detail="Step não encontrado para este correlation_id.")
 
     step.status = payload.status
     if payload.message:
@@ -24,12 +24,13 @@ async def release_callback(
 
     await execution_repo.update_step_execution(step)
 
-    background_tasks.add_task(orchestrator_service.process_workflow, execution_id)
+    background_tasks.add_task(orchestrator_service.process_workflow, step.release_execution_id)
 
     return {
         "message": "Callback recebido e processado com sucesso",
-        "release_process_id": payload.release_process_id,
-        "stage": payload.stage_id,
-        "step": payload.step_id,
+        "job_execution_correlation_id": correlation_id,
+        "release_process_id": step.release_execution_id,
+        "stage": step.stage_id,
+        "step": step.step_id,
         "status": payload.status
     }

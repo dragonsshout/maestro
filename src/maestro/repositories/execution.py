@@ -55,6 +55,22 @@ class ExecutionRepository:
         )
         return result.scalars().first()
 
+    async def get_step_by_correlation_id(self, correlation_id: int) -> ReleaseStepExecution | None:
+        result = await self.db.execute(
+            select(ReleaseStepExecution).where(
+                ReleaseStepExecution.job_execution_correlation_id == correlation_id
+            )
+        )
+        return result.scalars().first()
+
+    async def get_step_by_id(self, step_execution_id: int) -> ReleaseStepExecution | None:
+        result = await self.db.execute(
+            select(ReleaseStepExecution).where(
+                ReleaseStepExecution.id == step_execution_id
+            )
+        )
+        return result.scalars().first()
+
     async def exists_by_name(self, name: str) -> bool:
         result = await self.db.execute(
             select(ReleaseExecution).where(ReleaseExecution.name == name).limit(1)
