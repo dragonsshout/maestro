@@ -117,6 +117,7 @@ class OrchestratorService:
 
         execution_in_progress = False
         execution_failed = False
+        execution_waiting_approval = False
 
         for stage in config.spec.stages:
             stage_status = ExecutionStatus.SUCCESS
@@ -133,6 +134,11 @@ class OrchestratorService:
                 elif se.status == ExecutionStatus.IN_PROGRESS:
                     stage_status = ExecutionStatus.IN_PROGRESS
                     execution_in_progress = True
+                    
+                # se estiver esperando aprovação, não bloqueia o stage, 
+                # permitindo que os próximos stages executem
+                elif se.status == ExecutionStatus.WAITING_APPROVAL:
+                    execution_waiting_approval = True
                 
                 # if job is pending, mark as in progress and trigger job
                 elif se.status == ExecutionStatus.PENDING:
@@ -182,5 +188,10 @@ class OrchestratorService:
                 return
 
         if not execution_in_progress and not execution_failed:
-            execution.status = ExecutionStatus.SUCCESS
+            if execution_waiting_approval:
+                execution.status = ExecutionStatus.WAITING_APPROVAL
+            else:
+                execution.status = ExecutionStatus.SUCCESS
+
+            # update the release execution
             await self.execution_repo.update_release_execution(execution)
