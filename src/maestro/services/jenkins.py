@@ -27,6 +27,8 @@ class JenkinsService:
         asyncio.create_task(self.poll_and_update_correlation(queue_url, step_execution_id))
 
     async def poll_and_update_correlation(self, queue_url: str, step_execution_id: int):
+        from maestro.database.session import AsyncSessionLocal
+        
         for trying in range(1, 60): # Poll for up to 120 seconds
             logger.info(f"Polling queue {queue_url} for step {step_execution_id} - trying {trying}/60")
             
@@ -36,14 +38,17 @@ class JenkinsService:
                     build_number = info.executable.number
 
                     if build_number:
-                        se = await self.execution_repo.get_step_by_id(step_execution_id)
-                        if se:
-                            # salva o correlation id com o valor do build number
-                            se.job_execution_correlation_id = build_number
-                            await self.execution_repo.update_step_execution(se)
-                            logger.info(f"Updated correlation ID for step {step_execution_id} to {build_number}")
-                        else:
-                            logger.error(f"Step {step_execution_id} not found")
+                        async with AsyncSessionLocal() as session:
+                            # Import locally to avoid circular imports if any, and instantiate with the new session
+                            repo = ExecutionRepository(db=session)
+                            se = await repo.get_step_by_id(step_execution_id)
+                            if se:
+                                # salva o correlation id com o valor do build number
+                                se.job_execution_correlation_id = build_number
+                                await repo.update_step_execution(se)
+                                logger.info(f"Updated correlation ID for step {step_execution_id} to {build_number}")
+                            else:
+                                logger.error(f"Step {step_execution_id} not found")
                         
                         return
 

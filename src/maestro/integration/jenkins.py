@@ -33,10 +33,10 @@ class JenkinsIntegration:
         async def _do_request():
             async with self._get_client() as client:
                 if parameters:
-                    endpoint = f"/job/{job_name}/buildWithParameters"
+                    endpoint = f"/{job_name.strip('/')}/buildWithParameters"
                     response = await client.post(endpoint, params=parameters)
                 else:
-                    endpoint = f"/job/{job_name}/build"
+                    endpoint = f"/{job_name.strip('/')}/build"
                     response = await client.post(endpoint)
                 
                 response.raise_for_status()
@@ -54,10 +54,10 @@ class JenkinsIntegration:
         """
         async with self._get_client() as client:
             if parameters:
-                endpoint = f"/job/{job_name}/buildWithParameters"
+                endpoint = f"/{job_name.strip('/')}/buildWithParameters"
                 response = await client.post(endpoint, params=parameters)
             else:
-                endpoint = f"/job/{job_name}/build"
+                endpoint = f"/{job_name.strip('/')}/build"
                 response = await client.post(endpoint)
             
             response.raise_for_status()
@@ -89,7 +89,7 @@ class JenkinsIntegration:
         :return: Dicionário com as informações (JSON) retornadas pelo Jenkins.
         """
         async with self._get_client() as client:
-            endpoint = f"/job/{job_name}/api/json"
+            endpoint = f"/{job_name.strip('/')}/api/json"
             response = await client.get(endpoint)
             response.raise_for_status()
             return response.json()

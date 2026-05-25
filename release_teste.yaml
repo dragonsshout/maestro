@@ -19,7 +19,7 @@ spec:
           requires_approval: true
           job: 
             type: jenkins
-            path: job/teste/job/testeB
+            path: job/teste/job/testeA
 
         - id: deploy-testeB
           repository: api-teste
