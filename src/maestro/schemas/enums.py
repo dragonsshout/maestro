@@ -6,3 +6,5 @@ class ExecutionStatus(str, Enum):
     SUCCESS = "success"
     FAILURE = "failure"
     ERROR = "error"
+    ABORTED = "aborted"
+    WAITING_APPROVAL = "waiting_approval"

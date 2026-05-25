@@ -29,3 +29,15 @@ spec:
           job: 
             type: jenkins
             path: job/teste/job/testeB
+
+    - id: "deploy"
+      steps:
+        - id: deploy-testeC
+          repository: api-teste
+          release: "release/teste"
+          critical: true
+          requires_approval: true
+          job: 
+            type: jenkins
+            path: job/teste/job/testeC
+        
