@@ -1,0 +1,27 @@
+# Contexto do Projeto Maestro
+
+- Você está trabalhando no Maestro, um orquestrador de releases em Python usando FastAPI, SQLAlchemy (async) e Pydantic.
+- O gerenciador de pacotes e dependências utilizado é o `uv` (padrão `pyproject.toml` e `uv.lock`). O ambiente virtual fica em `.venv`.
+
+## Regras de Código (Python)
+
+1. **Clean Architecture e Separação de Responsabilidades**:
+   - Nunca coloque regras de negócio nas rotas (`api/routes`). Sempre chame um service (`services/`).
+   - Nunca faça queries diretas com SQLAlchemy nos `services`. Sempre abstraia o acesso a dados usando a camada `repositories/`.
+   - Utilize schemas do Pydantic na camada `schemas/` para validar entradas e formatar saídas.
+   
+2. **Assincronicidade Obrigatória**:
+   - O projeto é 100% assíncrono. Use sempre `async def` e chamadas com `await`.
+   - Para requisições web externas, utilize SEMPRE `httpx.AsyncClient`. É proibido usar a biblioteca síncrona `requests`.
+
+3. **Manuseio de Status**:
+   - Acompanhe o fluxo de estado na tabela `ReleaseStepExecution`.
+   - Sempre utilize a classe Enum `maestro.schemas.enums.ExecutionStatus` para lidar com status (como PENDING, IN_PROGRESS, SUCCESS, WAITING_APPROVAL, etc). Não espalhe strings "hardcoded" pelo código.
+
+4. **Tratamento de Erros e Exceções**:
+   - Lance `ValueError` nos *services* para regras de negócio não atendidas. A rota FastAPI é projetada para interceptar `ValueError` e devolver `400 Bad Request` na API.
+   - Se for um erro NotFound (recurso inexistente), lide devolvendo `None` nos repositórios e levantando `HTTPException(404)` na rota.
+   - Evite expor exceções cruas do banco de dados (ex: `IntegrityError`). Intercepte-as no service e transforme-as em um erro legível.
+
+## Fluxo da Máquina de Estado
+O coração do projeto é a função `process_workflow` no `OrchestratorService`. Se precisar modificá-la, note que o workflow avança verificando o estado atual dos steps no banco de dados. Qualquer operação longa acionada ali não deve bloquear; em vez disso, deixe o status como `IN_PROGRESS` e dependa de um callback assíncrono para ser acordado novamente, chamando `process_workflow` via `BackgroundTasks`.
