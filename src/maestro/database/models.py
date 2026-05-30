@@ -33,6 +33,7 @@ class ReleaseStepExecution(Base):
     status = Column(String, nullable=False)
     message = Column(Text, nullable=True)
     job_execution_correlation_id = Column(Integer, nullable=True)
+    job_input_id = Column(String, nullable=True)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
 
     __table_args__ = (

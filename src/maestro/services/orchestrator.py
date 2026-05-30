@@ -99,6 +99,59 @@ class OrchestratorService:
         background_tasks.add_task(self.process_workflow, release_execution.id)
         return release_execution.id
 
+    async def approve_release(self, name: str, background_tasks: BackgroundTasks, status: str = "Sucesso") -> dict:
+        execution = await self.execution_repo.get_latest_execution_by_name(name)
+        if not execution:
+            raise ValueError(f"Nenhuma execução encontrada para a release '{name}'.")
+
+        if execution.status != ExecutionStatus.WAITING_APPROVAL:
+            raise ValueError(f"A execução '{name}' não está aguardando aprovação (status atual: {execution.status}).")
+
+        descriptor = await self.repository.get_by_id(execution.orchestrator_descriptor_id)
+        config = ReleaseConfigSchema(**yaml.safe_load(descriptor.yaml))
+        
+        steps_exec = await self.execution_repo.get_steps_by_execution_id(execution.id)
+        
+        step_exec_map = {(se.stage_id, se.step_id): se for se in steps_exec}
+        
+        approved_steps = []
+        for stage in config.spec.stages:
+            for step in stage.steps:
+                se = step_exec_map.get((stage.id, step.id))
+                
+                if se and se.status == ExecutionStatus.WAITING_APPROVAL:
+                    if step.job.type == "jenkins":
+                        if not se.job_execution_correlation_id:
+                            logger.warning(f"Step {se.id} aguardando aprovação mas sem correlation_id (build_number)")
+                            continue
+                            
+                        # Chama o Jenkins para aprovar
+                        try:
+                            await self.jenkins_service.approve_job(
+                                job_path=step.job.path, 
+                                build_number=se.job_execution_correlation_id, 
+                                input_id=se.job_input_id,
+                                status=status
+                            )
+                            # Atualiza status para in_progress
+                            se.status = ExecutionStatus.IN_PROGRESS
+                            await self.execution_repo.update_step_execution(se)
+                            approved_steps.append(se.id)
+
+                        except Exception as e:
+                            logger.error(f"Erro ao aprovar job {step.job.path}: {e}")
+                            raise ValueError(f"Erro ao aprovar job {step.job.path}: {e}")
+                    else:
+                        logger.warning(f"Aprovação manual para job_type {step.job.type} não suportada")
+
+        if approved_steps:
+            execution.status = ExecutionStatus.IN_PROGRESS
+            await self.execution_repo.update_release_execution(execution)
+            background_tasks.add_task(self.process_workflow, execution.id)
+            return {"message": "Aprovação enviada com sucesso ao Jenkins", "approved_steps": approved_steps}
+        else:
+            return {"message": "Nenhum step pendente de aprovação encontrado que pudesse ser aprovado."}
+
     async def process_workflow(self, execution_id: int):
         execution = await self.execution_repo.get_execution_by_id(execution_id)
         if not execution:

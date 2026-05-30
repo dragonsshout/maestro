@@ -1,3 +1,4 @@
+from typing import Optional
 import asyncio
 from fastapi import Depends
 from maestro.integration.jenkins import JenkinsIntegration
@@ -59,3 +60,8 @@ class JenkinsService:
                 await asyncio.sleep(2)
 
         logger.error(f"Timeout waiting for executable for queue {queue_url}")
+
+    async def approve_job(self, job_path: str, build_number: int, input_id: Optional[str] = None, status: str = "Sucesso"):
+        logger.info(f"Approving job {job_path} build {build_number} with status {status}")
+        await self.jenkins_integration.approve_pipeline(job_path, build_number, input_id, status=status)
+

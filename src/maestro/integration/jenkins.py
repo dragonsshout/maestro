@@ -1,4 +1,4 @@
-import asyncio
+import json
 import httpx
 from typing import Optional, Dict, Any
 
@@ -55,6 +55,40 @@ class JenkinsIntegration:
             response = await client.get(endpoint)
             response.raise_for_status()
             return JenkinsQueueItemSchema(**response.json())
+
+    async def approve_pipeline(self, job_name: str, build_number: int, input_id: Optional[str] = None, status: str = "Sucesso") -> None:
+        """
+        Aprova um pipeline que está aguardando input (waiting approval) enviando um parâmetro de formulário.
+        Se input_id não for fornecido, tenta buscar o ID e o nome do parâmetro automaticamente através da wfapi.
+        """
+        
+        async with self._get_client() as client:
+            param_name = "STATUS"
+            
+            if not input_id:
+                pending_url = f"/{job_name.strip('/')}/{build_number}/wfapi/pendingInputActions"
+                response = await client.get(pending_url)
+                if response.status_code == 200:
+                    inputs_data = response.json()
+                    if inputs_data and len(inputs_data) > 0:
+                        input_id = inputs_data[0].get("id")
+                        
+                        # Tenta descobrir o nome do parâmetro no Jenkins
+                        if "inputs" in inputs_data[0] and len(inputs_data[0]["inputs"]) > 0:
+                            param_name = inputs_data[0]["inputs"][0].get("name", "STATUS")
+                
+                if not input_id:
+                    input_id = "Submit"
+
+            proceed_url = f"/{job_name.strip('/')}/{build_number}/input/{input_id}/proceed"
+            
+            form_data = {
+                "json": json.dumps({"parameter": [{"name": param_name, "value": status}]})
+            }
+            
+            response = await client.post(proceed_url, data=form_data)
+            if response.status_code not in (200, 302):
+                response.raise_for_status()
 
     async def get_job_info(self, job_name: str) -> Dict[str, Any]:
         """

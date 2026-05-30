@@ -40,6 +40,9 @@ class ReleaseConfigSchema(BaseModel):
 class ExecuteReleaseRequest(BaseModel):
     name: str
 
+class ApproveReleaseRequest(BaseModel):
+    status: str = "Sucesso"
+
 class StageStatusResponse(BaseModel):
     stage_id: str
     status: ExecutionStatus
@@ -62,6 +65,7 @@ class ReleaseStepResponse(BaseModel):
     status: ExecutionStatus
     message: Optional[str] = None
     job_execution_correlation_id: Optional[int] = None
+    job_input_id: Optional[str] = None
     updated_at: datetime
 
     class Config:
