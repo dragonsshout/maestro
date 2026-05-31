@@ -1,0 +1,9 @@
+{% if error %}
+<div role="alert" class="alert alert-error">
+    <span>❌ {{ error }}</span>
+</div>
+{% else %}
+<div role="alert" class="alert alert-success">
+    <span>✅ Aprovação enviada com sucesso. O processo continuará em breve.</span>
+</div>
+{% endif %}

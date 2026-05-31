@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}Maestro — {{ execution.name }}{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <a href="/ui" class="btn btn-ghost btn-sm">← Voltar</a>
+</div>
+
+<!-- Header da execução -->
+<div class="card bg-base-100 shadow mb-6">
+    <div class="card-body">
+        <div class="flex items-center justify-between flex-wrap gap-4">
+            <div>
+                <h2 class="card-title text-2xl">{{ execution.name }}</h2>
+                <p class="text-base-content/60 text-sm mt-1">
+                    Iniciado em {{ execution.created_at.strftime('%d/%m/%Y %H:%M:%S') }}
+                    &nbsp;·&nbsp; ID #{{ execution.id }}
+                </p>
+                {% if execution.message %}
+                <p class="text-error text-sm mt-2">{{ execution.message }}</p>
+                {% endif %}
+            </div>
+
+            <div class="flex items-center gap-3">
+                <!-- Badge de status -->
+                <div id="execution-status-badge">
+                    {% include "partials/status_badge.html" %}
+                </div>
+
+                <!-- Botão de aprovação — visível apenas quando aguardando -->
+                {% if waiting_approval %}
+                <div id="approve-area">
+                    <button
+                        class="btn btn-info btn-sm gap-2"
+                        hx-post="/ui/execution/{{ execution.id }}/approve"
+                        hx-target="#approve-area"
+                        hx-swap="innerHTML"
+                        hx-indicator="#approve-spinner"
+                        hx-confirm="Confirmar aprovação da release '{{ execution.name }}'?"
+                    >
+                        <span id="approve-spinner" class="loading loading-spinner loading-xs htmx-indicator"></span>
+                        🔔 Aprovar release
+                    </button>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Stages e Steps — atualiza via SSE -->
+<div id="stages-container"
+     hx-ext="sse"
+     sse-connect="/ui/sse/execution/{{ execution.id }}"
+     sse-swap="stage-update"
+     hx-swap="innerHTML">
+    {% include "partials/stages.html" %}
+</div>
+
+{% endblock %}

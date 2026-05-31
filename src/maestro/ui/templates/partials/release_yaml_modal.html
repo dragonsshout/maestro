@@ -1,0 +1,18 @@
+<!-- Modal de visualização do YAML de release -->
+<dialog id="release-yaml-modal" class="modal modal-open">
+    <div class="modal-box w-11/12 max-w-3xl">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="font-bold text-lg">📄 Release: {{ execution.name }}</h3>
+            <button onclick="document.getElementById('release-yaml-modal').remove()" class="btn btn-sm btn-ghost btn-circle">✕</button>
+        </div>
+
+        <div class="mockup-code text-xs overflow-auto max-h-[60vh]">
+            <pre><code>{{ yaml_content }}</code></pre>
+        </div>
+
+        <div class="modal-action">
+            <button onclick="document.getElementById('release-yaml-modal').remove()" class="btn btn-sm">Fechar</button>
+        </div>
+    </div>
+    <div class="modal-backdrop" onclick="document.getElementById('release-yaml-modal').remove()"></div>
+</dialog>

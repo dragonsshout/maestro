@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Maestro — Execuções{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-between mb-6">
+    <h1 class="text-2xl font-bold">Execuções de Release</h1>
+    <span class="text-sm text-base-content/50">Atualiza automaticamente</span>
+</div>
+
+<!-- Tabela de execuções com polling a cada 5s via HTMX -->
+<div id="executions-table"
+     hx-get="/ui/partials/executions"
+     hx-trigger="load, every 5s"
+     hx-swap="innerHTML">
+    <div class="flex justify-center py-12">
+        <span class="loading loading-spinner loading-lg text-primary"></span>
+    </div>
+</div>
+
+<!-- Container onde o modal de YAML é injetado via HTMX -->
+<div id="yaml-modal-container"></div>
+{% endblock %}

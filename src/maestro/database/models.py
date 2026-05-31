@@ -39,3 +39,11 @@ class ReleaseStepExecution(Base):
     __table_args__ = (
         Index('ix_release_step_execution_execution_stage_step', 'release_execution_id', 'stage_id', 'step_id', unique=True),
     )
+
+class UISettings(Base):
+    __tablename__ = "ui_settings"
+
+    id = Column(Integer, primary_key=True, autoincrement=True, nullable=False)
+    key = Column(String, nullable=False, unique=True)
+    value = Column(Text, nullable=True)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)

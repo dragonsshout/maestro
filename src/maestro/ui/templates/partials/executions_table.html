@@ -1,0 +1,67 @@
+{% if executions %}
+<div class="overflow-x-auto rounded-box shadow">
+    <table class="table table-zebra w-full bg-base-100">
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>Nome</th>
+                <th>Status</th>
+                <th>Iniciado em</th>
+                <th>Atualizado em</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for ex in executions %}
+            <tr class="hover cursor-pointer" onclick="window.location='/ui/execution/{{ ex.id }}'">
+                <td class="font-mono text-base-content/50">{{ ex.id }}</td>
+                <td class="font-semibold">{{ ex.name }}</td>
+                <td>
+                    {% set status_val = ex.status.value if ex.status.value is defined else ex.status %}
+                    {% if status_val == "pending" %}
+                        <span class="badge badge-ghost gap-1">⏳ Pendente</span>
+                    {% elif status_val == "in_progress" %}
+                        <span class="badge badge-warning gap-1">
+                            <span class="loading loading-spinner loading-xs"></span> Em progresso
+                        </span>
+                    {% elif status_val == "success" %}
+                        <span class="badge badge-success gap-1">✅ Sucesso</span>
+                    {% elif status_val == "failure" %}
+                        <span class="badge badge-error gap-1">❌ Falha</span>
+                    {% elif status_val == "waiting_approval" %}
+                        <span class="badge badge-info gap-1">🔔 Aprovação</span>
+                    {% else %}
+                        <span class="badge badge-neutral gap-1">{{ status_val }}</span>
+                    {% endif %}
+                </td>
+                <td class="text-sm text-base-content/60">{{ ex.created_at.strftime('%d/%m/%Y %H:%M') }}</td>
+                <td class="text-sm text-base-content/60">{{ ex.updated_at.strftime('%d/%m/%Y %H:%M') }}</td>
+                <td>
+                    <div class="flex gap-1">
+                        <a href="/ui/execution/{{ ex.id }}" class="btn btn-xs btn-outline btn-primary">Ver detalhes</a>
+                        <button
+                            class="btn btn-xs btn-outline"
+                            hx-get="/ui/execution/{{ ex.id }}/release-yaml"
+                            hx-target="#yaml-modal-container"
+                            hx-swap="innerHTML"
+                            title="Ver YAML de release"
+                            onclick="event.stopPropagation()"
+                        >📄 YAML</button>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="hero py-20">
+    <div class="hero-content text-center">
+        <div>
+            <p class="text-5xl mb-4">🎼</p>
+            <h2 class="text-xl font-semibold">Nenhuma execução encontrada</h2>
+            <p class="text-base-content/50 mt-2">Inicie uma release via API para ver o progresso aqui.</p>
+        </div>
+    </div>
+</div>
+{% endif %}

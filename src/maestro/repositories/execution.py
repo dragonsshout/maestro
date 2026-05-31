@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from maestro.database.session import get_db
 from maestro.database.models import ReleaseExecution, ReleaseStepExecution
-from typing import List
+from typing import List, Optional
 
 class ExecutionRepository:
     def __init__(self, db: AsyncSession = Depends(get_db)):
@@ -85,3 +85,11 @@ class ExecutionRepository:
             .limit(1)
         )
         return result.scalars().first()
+
+    async def get_all_executions(self, limit: int = 50) -> List[ReleaseExecution]:
+        result = await self.db.execute(
+            select(ReleaseExecution)
+            .order_by(ReleaseExecution.id.desc())
+            .limit(limit)
+        )
+        return list(result.scalars().all())

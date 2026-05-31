@@ -27,6 +27,7 @@ async def lifespan(app: FastAPI):
 
 from maestro.api.routes.orchestrator import router as orchestrator_router
 from maestro.api.routes.callback import router as callback_router
+from maestro.api.routes.ui import router as ui_router
 
 app = FastAPI(
     title="Maestro",
@@ -37,6 +38,7 @@ app = FastAPI(
 
 app.include_router(orchestrator_router)
 app.include_router(callback_router)
+app.include_router(ui_router)
 
 @app.get("/health", tags=["System"])
 async def health_check():

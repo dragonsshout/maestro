@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Configurações — Maestro{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl">
+
+    <div class="flex items-center gap-3 mb-6">
+        <h1 class="text-2xl font-bold">⚙️ Configurações</h1>
+    </div>
+
+    {% if saved %}
+    <div class="alert alert-success mb-6">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+        </svg>
+        <span>Configurações salvas com sucesso.</span>
+    </div>
+    {% endif %}
+
+    <form method="POST" action="/ui/settings">
+        <div class="card bg-base-100 border border-base-300 shadow-sm">
+            <div class="card-body gap-5">
+
+                <h2 class="card-title text-base">🔧 Integrações</h2>
+
+                {% for key, meta in known_settings.items() %}
+                <div class="form-control">
+                    <label class="label pb-1" for="{{ key }}">
+                        <span class="label-text font-medium">{{ meta.label }}</span>
+                    </label>
+                    <input
+                        type="text"
+                        id="{{ key }}"
+                        name="{{ key }}"
+                        value="{{ settings.get(key) or '' }}"
+                        placeholder="{{ meta.placeholder }}"
+                        class="input input-bordered input-sm w-full font-mono"
+                    />
+                    {% if meta.help %}
+                    <label class="label pt-1">
+                        <span class="label-text-alt text-base-content/50">{{ meta.help }}</span>
+                    </label>
+                    {% endif %}
+                </div>
+                {% endfor %}
+
+            </div>
+        </div>
+
+        <div class="mt-4 flex justify-end">
+            <button type="submit" class="btn btn-primary btn-sm">
+                💾 Salvar configurações
+            </button>
+        </div>
+    </form>
+
+</div>
+{% endblock %}

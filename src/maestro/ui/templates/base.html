@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{% block title %}Maestro{% endblock %}</title>
+
+    <!-- Tailwind + DaisyUI via CDN -->
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.10/dist/full.min.css" rel="stylesheet" />
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- HTMX -->
+    <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+    <!-- HTMX SSE extension -->
+    <script src="https://unpkg.com/htmx.org@1.9.12/dist/ext/sse.js"></script>
+
+    <style>
+        .status-pending          { @apply badge badge-ghost; }
+        .status-in_progress      { @apply badge badge-warning; }
+        .status-success          { @apply badge badge-success; }
+        .status-failure          { @apply badge badge-error; }
+        .status-error            { @apply badge badge-error; }
+        .status-aborted          { @apply badge badge-neutral; }
+        .status-waiting_approval { @apply badge badge-info; }
+
+        /* Sidebar transition */
+        #sidebar {
+            transition: width 0.25s ease;
+            overflow: hidden;
+            width: 14rem; /* 56 = w-56 */
+        }
+        #sidebar.collapsed {
+            width: 3.5rem; /* só ícones */
+        }
+
+        /* Esconde labels quando recolhido */
+        #sidebar.collapsed .nav-label {
+            display: none;
+        }
+
+        /* Centraliza ícone quando recolhido */
+        #sidebar.collapsed .nav-item {
+            justify-content: center;
+            padding-left: 0;
+            padding-right: 0;
+        }
+
+        /* Main content acompanha a sidebar */
+        #main-content {
+            transition: margin-left 0.25s ease;
+            margin-left: 14rem;
+        }
+        #main-content.collapsed {
+            margin-left: 3.5rem;
+        }
+
+        /* Tooltip quando recolhido */
+        #sidebar.collapsed .nav-item {
+            position: relative;
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-base-200">
+
+    <!-- Navbar -->
+    <div class="navbar bg-base-100 shadow-md fixed top-0 left-0 right-0 z-50 px-4">
+        <!-- Toggle button -->
+        <button id="sidebar-toggle" class="btn btn-ghost btn-sm btn-square mr-2" title="Recolher menu">
+            <svg id="icon-collapse" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+        </button>
+        <div class="flex-1">
+            <a href="/ui" class="text-xl font-bold tracking-wide text-primary">🎼 Maestro</a>
+        </div>
+    </div>
+
+    <!-- Layout: sidebar + content -->
+    <div class="flex pt-16 min-h-screen">
+
+        <!-- Sidebar -->
+        <aside id="sidebar" class="bg-base-100 border-r border-base-300 fixed top-16 left-0 bottom-0 flex flex-col py-4 z-40">
+            <ul class="menu px-2 gap-1 w-full">
+                <li>
+                    <a href="/ui"
+                       class="nav-item flex items-center gap-3 {% if request.url.path in ['/ui', '/ui/'] %}active{% endif %}"
+                       title="Execuções">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+                        </svg>
+                        <span class="nav-label">Execuções</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="/ui/settings"
+                       class="nav-item flex items-center gap-3 {% if request.url.path == '/ui/settings' %}active{% endif %}"
+                       title="Configurações">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                        <span class="nav-label">Configurações</span>
+                    </a>
+                </li>
+            </ul>        </aside>
+
+        <!-- Main content -->
+        <main id="main-content" class="flex-1 px-6 py-8">
+            {% block content %}{% endblock %}
+        </main>
+
+    </div>
+
+    <script>
+        const sidebar = document.getElementById('sidebar');
+        const mainContent = document.getElementById('main-content');
+        const toggleBtn = document.getElementById('sidebar-toggle');
+
+        // Persiste estado no localStorage
+        const STORAGE_KEY = 'maestro_sidebar_collapsed';
+        const isCollapsed = localStorage.getItem(STORAGE_KEY) === 'true';
+
+        if (isCollapsed) {
+            sidebar.classList.add('collapsed');
+            mainContent.classList.add('collapsed');
+        }
+
+        toggleBtn.addEventListener('click', () => {
+            const collapsed = sidebar.classList.toggle('collapsed');
+            mainContent.classList.toggle('collapsed', collapsed);
+            localStorage.setItem(STORAGE_KEY, collapsed);
+        });
+    </script>
+
+</body>
+</html>

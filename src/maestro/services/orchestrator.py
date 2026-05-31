@@ -1,4 +1,4 @@
-from unicodedata import name
+import asyncio
 from fastapi import Depends, BackgroundTasks
 from maestro.database.models import OrchestratorDescriptor, ReleaseExecution, ReleaseStepExecution
 from maestro.repositories.orchestrator import OrchestratorDescriptorRepository
@@ -152,6 +152,34 @@ class OrchestratorService:
         else:
             return {"message": "Nenhum step pendente de aprovação encontrado que pudesse ser aprovado."}
 
+    async def _trigger_step(self, step, se) -> ExecutionStatus:
+        """Dispara um único step e retorna o status resultante."""
+        se.status = ExecutionStatus.IN_PROGRESS
+        await self.execution_repo.update_step_execution(se)
+
+        if step.job.type == "jenkins":
+            logger.info(f"Starting job of type {step.job.type} at path {step.job.path} for step {step.id}")
+            try:
+                await self.jenkins_service.trigger_job(
+                    job_path=step.job.path,
+                    step_execution_id=se.id,
+                    release_branch=step.release
+                )
+                return ExecutionStatus.IN_PROGRESS
+
+            except Exception as e:
+                logger.error(f"Error starting jenkins job {step.job.path}: {e}")
+                se.status = ExecutionStatus.FAILURE
+                se.message = str(e)
+                await self.execution_repo.update_step_execution(se)
+                return ExecutionStatus.FAILURE
+        else:
+            logger.warning(f"Job type not supported yet: {step.job.type}")
+            # Simulating that it finished quickly
+            se.status = ExecutionStatus.SUCCESS
+            await self.execution_repo.update_step_execution(se)
+            return ExecutionStatus.SUCCESS
+
     async def process_workflow(self, execution_id: int):
         execution = await self.execution_repo.get_execution_by_id(execution_id)
         if not execution:
@@ -164,7 +192,7 @@ class OrchestratorService:
         descriptor = await self.repository.get_by_id(execution.orchestrator_descriptor_id)
         config = ReleaseConfigSchema(**yaml.safe_load(descriptor.yaml))
         steps_exec = await self.execution_repo.get_steps_by_execution_id(execution_id)
-        
+
         # Mapear as execuções de step
         step_exec_map = {(se.stage_id, se.step_id): se for se in steps_exec}
 
@@ -173,78 +201,60 @@ class OrchestratorService:
         execution_waiting_approval = False
 
         for stage in config.spec.stages:
-            stage_status = ExecutionStatus.SUCCESS
+            # Classifica os steps do stage pelo status atual
+            stage_has_failure = False
+            stage_has_in_progress = False
+            stage_has_waiting_approval = False
+            pending_to_trigger = []  # (step, se) que precisam ser disparados agora
+
             for step in stage.steps:
                 se = step_exec_map.get((stage.id, step.id))
-                if not se: continue
+                if not se:
+                    continue
 
                 if se.status == ExecutionStatus.FAILURE:
-                    stage_status = ExecutionStatus.FAILURE
-                    execution_failed = True
+                    stage_has_failure = True
                     break
-
-                # if job is in progress, just mark and continue
                 elif se.status == ExecutionStatus.IN_PROGRESS:
-                    stage_status = ExecutionStatus.IN_PROGRESS
-                    execution_in_progress = True
-                    
-                # se estiver esperando aprovação, não bloqueia o stage, 
-                # permitindo que os próximos stages executem
+                    stage_has_in_progress = True
                 elif se.status == ExecutionStatus.WAITING_APPROVAL:
-                    execution_waiting_approval = True
-                
-                # if job is pending, mark as in progress and trigger job
+                    stage_has_waiting_approval = True
                 elif se.status == ExecutionStatus.PENDING:
-                    se.status = ExecutionStatus.IN_PROGRESS
-                    await self.execution_repo.update_step_execution(se)
-                    
-                    if step.job.type == "jenkins":
-                        logger.info(f"Starting job of type {step.job.type} at path {step.job.path} for step {step.id}")
+                    pending_to_trigger.append((step, se))
+                # SUCCESS: não faz nada, continua para o próximo step
 
-                        try:
-                            await self.jenkins_service.trigger_job(
-                                job_path=step.job.path, 
-                                step_execution_id=se.id, 
-                                release_branch=step.release
-                            )
-                        
-                        except Exception as e:
-                            logger.error(f"Error starting jenkins job {step.job.path}: {e}")
-                            # marks the execution as failure
-                            se.status = ExecutionStatus.FAILURE
-                            se.message = str(e)
-                            await self.execution_repo.update_step_execution(se)
-                        
-                            stage_status = ExecutionStatus.FAILURE
-                            execution_failed = True
-                            continue
-
-                    else:
-                        logger.warning(f"Job type not supported yet: {step.job.type}")
-                        # Simulating that it finished quickly
-                        se.status = ExecutionStatus.SUCCESS
-                        await self.execution_repo.update_step_execution(se)
-                        continue
-
-                    # Since it depends on a webhook (or job failed above), we update the overall status
-                    if se.status == ExecutionStatus.IN_PROGRESS:
-                        stage_status = ExecutionStatus.IN_PROGRESS
-                        execution_in_progress = True
-
-            if stage_status == ExecutionStatus.FAILURE:
+            if stage_has_failure:
                 execution.status = ExecutionStatus.FAILURE
                 await self.execution_repo.update_release_execution(execution)
-                return
-            
-            elif stage_status == ExecutionStatus.IN_PROGRESS:
-                # Waiting for steps to complete, cannot proceed to next stage
+                execution_failed = True
                 return
 
-        if not execution_in_progress and not execution_failed:
+            # Dispara todos os steps PENDING do stage simultaneamente
+            if pending_to_trigger:
+                trigger_results = await asyncio.gather(
+                    *[self._trigger_step(step, se) for step, se in pending_to_trigger]
+                )
+                for result in trigger_results:
+                    if result == ExecutionStatus.FAILURE:
+                        execution.status = ExecutionStatus.FAILURE
+                        await self.execution_repo.update_release_execution(execution)
+                        execution_failed = True
+                        return
+                    elif result == ExecutionStatus.IN_PROGRESS:
+                        stage_has_in_progress = True
+
+            if stage_has_in_progress:
+                # Ainda há steps rodando neste stage — não avança para o próximo
+                execution_in_progress = True
+                return
+
+            if stage_has_waiting_approval:
+                execution_waiting_approval = True
+
+        # Todos os stages foram processados
+        if not execution_failed:
             if execution_waiting_approval:
                 execution.status = ExecutionStatus.WAITING_APPROVAL
-            else:
+            elif not execution_in_progress:
                 execution.status = ExecutionStatus.SUCCESS
-
-            # update the release execution
             await self.execution_repo.update_release_execution(execution)

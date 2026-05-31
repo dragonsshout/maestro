@@ -1,0 +1,126 @@
+{% for stage in stages %}
+<div class="mb-6">
+    <!-- Stage header -->
+    <div class="flex items-center gap-3 mb-2">
+        <div class="badge badge-outline badge-lg font-mono">Stage</div>
+        <h3 class="text-lg font-bold">{{ stage.id }}</h3>
+        {% set stage_statuses = stage.steps | map(attribute='execution') | map(attribute='status') | list %}
+        {% if "failure" in stage_statuses %}
+            <span class="badge badge-error">❌ Falha</span>
+        {% elif "in_progress" in stage_statuses %}
+            <span class="badge badge-warning">
+                <span class="loading loading-spinner loading-xs mr-1"></span> Em progresso
+            </span>
+        {% elif stage_statuses | select("equalto", "success") | list | length == stage_statuses | length %}
+            <span class="badge badge-success">✅ Concluído</span>
+        {% elif "waiting_approval" in stage_statuses %}
+            <span class="badge badge-info">🔔 Aguardando aprovação</span>
+        {% else %}
+            <span class="badge badge-ghost">⏳ Pendente</span>
+        {% endif %}
+    </div>
+
+    <!-- Tabela de steps -->
+    <div class="pl-4 border-l-2 border-base-300">
+        <div class="overflow-x-auto rounded-lg border border-base-300">
+            <table class="table table-sm w-full text-xs">
+                <thead class="bg-base-200 text-base-content/60 uppercase tracking-wide text-xs">
+                    <tr>
+                        <th class="w-8"></th>
+                        <th>Step</th>
+                        <th>Tipo</th>
+                        <th>Repositório</th>
+                        <th>Release</th>
+                        <th>Build</th>
+                        <th>Atualizado</th>
+                        <th>Mensagem</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for step in stage.steps %}
+                    {% set se = step.execution %}
+                    {% set sv = se.status %}
+                    <tr class="hover">
+                        <!-- Status icon -->
+                        <td class="text-center">
+                            {% if sv == "pending" %}
+                                <span title="Pendente">⏳</span>
+                            {% elif sv == "in_progress" %}
+                                <span class="loading loading-spinner loading-xs text-warning" title="Em progresso"></span>
+                            {% elif sv == "success" %}
+                                <span title="Sucesso">✅</span>
+                            {% elif sv == "failure" %}
+                                <span title="Falha">❌</span>
+                            {% elif sv == "waiting_approval" %}
+                                <span title="Aguardando aprovação">🔔</span>
+                            {% elif sv == "aborted" %}
+                                <span title="Abortado">🚫</span>
+                            {% else %}
+                                <span class="badge badge-ghost badge-xs">{{ sv }}</span>
+                            {% endif %}
+                        </td>
+
+                        <!-- Step ID -->
+                        <td>
+                            {% if step.job_type == "jenkins" and jenkins_base_url %}
+                                <a href="{{ jenkins_base_url }}/{{ step.job_path }}" target="_blank" rel="noopener"
+                                   class="font-semibold font-mono link link-hover" title="{{ se.step_id }}">
+                                    {{ se.step_id }}
+                                </a>
+                            {% else %}
+                                <span class="font-semibold font-mono" title="{{ se.step_id }}">{{ se.step_id }}</span>
+                            {% endif %}
+                        </td>
+
+                        <!-- Job type -->
+                        <td>
+                            {% if step.job_type == "jenkins" and jenkins_base_url %}
+                                <a href="{{ jenkins_base_url }}/{{ step.job_path }}" target="_blank" rel="noopener"
+                                   class="badge badge-outline badge-sm font-mono hover:badge-primary transition-colors">
+                                    {{ step.job_type }} ↗
+                                </a>
+                            {% else %}
+                                <span class="badge badge-outline badge-sm font-mono">{{ step.job_type }}</span>
+                            {% endif %}
+                        </td>
+
+                        <!-- Repositório -->
+                        <td class="font-mono text-base-content/70 max-w-[10rem] truncate" title="{{ step.repository }}">
+                            {{ step.repository }}
+                        </td>
+
+                        <!-- Release -->
+                        <td class="font-mono text-base-content/70 max-w-[10rem] truncate" title="{{ step.release }}">
+                            {{ step.release }}
+                        </td>
+
+                        <!-- Build # -->
+                        <td class="font-mono text-base-content/50">
+                            {% if se.job_execution_correlation_id %}
+                                #{{ se.job_execution_correlation_id }}
+                            {% else %}
+                                <span class="text-base-content/30">—</span>
+                            {% endif %}
+                        </td>
+
+                        <!-- Horário -->
+                        <td class="text-base-content/50 whitespace-nowrap">
+                            {{ se.updated_at.strftime('%H:%M:%S') }}
+                        </td>
+
+                        <!-- Mensagem -->
+                        <td class="text-base-content/60 max-w-[12rem] truncate" title="{{ se.message or '' }}">
+                            {% if se.message %}
+                                {{ se.message }}
+                            {% else %}
+                                <span class="text-base-content/30">—</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endfor %}

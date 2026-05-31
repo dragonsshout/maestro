@@ -1,0 +1,20 @@
+{% set status_val = status if status is defined else execution.status.value %}
+{% if status_val == "pending" %}
+    <span class="badge badge-ghost badge-lg gap-1">⏳ Pendente</span>
+{% elif status_val == "in_progress" %}
+    <span class="badge badge-warning badge-lg gap-1">
+        <span class="loading loading-spinner loading-xs"></span> Em progresso
+    </span>
+{% elif status_val == "success" %}
+    <span class="badge badge-success badge-lg gap-1">✅ Sucesso</span>
+{% elif status_val == "failure" %}
+    <span class="badge badge-error badge-lg gap-1">❌ Falha</span>
+{% elif status_val == "error" %}
+    <span class="badge badge-error badge-lg gap-1">💥 Erro</span>
+{% elif status_val == "aborted" %}
+    <span class="badge badge-neutral badge-lg gap-1">🚫 Abortado</span>
+{% elif status_val == "waiting_approval" %}
+    <span class="badge badge-info badge-lg gap-1">🔔 Aguardando aprovação</span>
+{% else %}
+    <span class="badge badge-ghost badge-lg">{{ status_val }}</span>
+{% endif %}
