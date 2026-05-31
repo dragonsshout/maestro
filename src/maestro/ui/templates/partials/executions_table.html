@@ -8,13 +8,26 @@
                 <th>Status</th>
                 <th>Iniciado em</th>
                 <th>Atualizado em</th>
-                <th></th>
+                <th>Ações</th>
             </tr>
         </thead>
         <tbody>
             {% for ex in executions %}
             <tr class="hover cursor-pointer" onclick="window.location='/ui/execution/{{ ex.id }}'">
-                <td class="font-mono text-base-content/50">{{ ex.id }}</td>
+                <td class="font-mono text-base-content/50">
+                    <div class="flex items-center gap-2">
+                        <span>{{ ex.id }}</span>
+                        <button
+                            class="btn btn-xs btn-success btn-circle"
+                            hx-post="/ui/execute/{{ ex.name }}"
+                            hx-target="body"
+                            hx-swap="beforeend"
+                            hx-confirm="Executar a release '{{ ex.name }}'?"
+                            onclick="event.stopPropagation()"
+                            title="Executar release"
+                        >▶</button>
+                    </div>
+                </td>
                 <td class="font-semibold">{{ ex.name }}</td>
                 <td>
                     {% set status_val = ex.status.value if ex.status.value is defined else ex.status %}
@@ -38,12 +51,12 @@
                 <td class="text-sm text-base-content/60">{{ ex.updated_at.strftime('%d/%m/%Y %H:%M') }}</td>
                 <td>
                     <div class="flex gap-1">
-                        <a href="/ui/execution/{{ ex.id }}" class="btn btn-xs btn-outline btn-primary">Ver detalhes</a>
+                        <a href="/ui/execution/{{ ex.id }}" class="btn btn-xs btn-outline btn-primary" onclick="event.stopPropagation()">Ver detalhes</a>
                         <button
                             class="btn btn-xs btn-outline"
                             hx-get="/ui/execution/{{ ex.id }}/release-yaml"
-                            hx-target="#yaml-modal-container"
-                            hx-swap="innerHTML"
+                            hx-target="body"
+                            hx-swap="beforeend"
                             title="Ver YAML de release"
                             onclick="event.stopPropagation()"
                         >📄 YAML</button>

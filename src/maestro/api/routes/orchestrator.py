@@ -44,6 +44,24 @@ async def execute_release(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
+
+@router.post("/retry-step/{step_execution_id}")
+async def retry_step(
+    step_execution_id: int,
+    background_tasks: BackgroundTasks,
+    service: OrchestratorService = Depends()
+):
+    try:
+        step = await service.retry_step(step_execution_id, background_tasks)
+        return {
+            "message": "Step reenviado para execução com sucesso",
+            "step_execution_id": step.id,
+            "stage_id": step.stage_id,
+            "step_id": step.step_id,
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
 @router.post("/approve/{name}")
 async def approve_release(
     name: str,

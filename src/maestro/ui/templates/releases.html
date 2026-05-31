@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% block title %}Releases — Maestro{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl">
+
+    <div class="flex items-center justify-between mb-6">
+        <h1 class="text-2xl font-bold">📦 Releases</h1>
+    </div>
+
+    <!-- Feedback de upload -->
+    {% if upload_success %}
+    <div class="alert alert-success mb-4">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+        </svg>
+        <span>Configuração de release enviada com sucesso.</span>
+    </div>
+    {% endif %}
+    {% if upload_error %}
+    <div class="alert alert-error mb-4">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+        </svg>
+        <span>{{ upload_error }}</span>
+    </div>
+    {% endif %}
+
+    <!-- Upload de configuração -->
+    <div class="card bg-base-100 border border-base-300 shadow-sm mb-6">
+        <div class="card-body">
+            <h2 class="card-title text-base">📤 Enviar configuração de release</h2>
+            <p class="text-sm text-base-content/60 mb-3">Envie um arquivo YAML com a definição da release.</p>
+            <form method="POST" action="/ui/releases/upload" enctype="multipart/form-data">
+                <div class="flex items-end gap-3">
+                    <div class="form-control flex-1">
+                        <input
+                            type="file"
+                            name="file"
+                            accept=".yaml,.yml"
+                            class="file-input file-input-bordered file-input-sm w-full"
+                            required
+                        />
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-sm">
+                        📤 Enviar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Lista de releases cadastradas -->
+    <div class="card bg-base-100 border border-base-300 shadow-sm">
+        <div class="card-body">
+            <h2 class="card-title text-base mb-3">📋 Releases cadastradas</h2>
+
+            {% if descriptors %}
+            <div class="overflow-x-auto">
+                <table class="table table-sm w-full text-sm">
+                    <thead class="text-xs uppercase text-base-content/60">
+                        <tr>
+                            <th>#</th>
+                            <th>Nome</th>
+                            <th>Criado em</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for desc in descriptors %}
+                        <tr class="hover">
+                            <td class="font-mono text-base-content/50">{{ desc.id }}</td>
+                            <td class="font-semibold font-mono">{{ desc.name }}</td>
+                            <td class="text-base-content/60">{{ desc.created_at.strftime('%d/%m/%Y %H:%M') }}</td>
+                            <td>
+                                <button
+                                    class="btn btn-xs btn-outline"
+                                    hx-get="/ui/releases/{{ desc.id }}/yaml"
+                                    hx-target="body"
+                                    hx-swap="beforeend"
+                                    title="Ver YAML"
+                                >📄 YAML</button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-8 text-base-content/50">
+                <p class="text-3xl mb-2">📭</p>
+                <p>Nenhuma release cadastrada. Envie um arquivo YAML acima.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+</div>
+{% endblock %}

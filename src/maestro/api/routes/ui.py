@@ -1,5 +1,5 @@
 from pathlib import Path
-from fastapi import APIRouter, Depends, HTTPException, Request, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, Request, BackgroundTasks, UploadFile, File
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from sse_starlette.sse import EventSourceResponse
@@ -7,6 +7,7 @@ from maestro.services.ui import UIService
 from maestro.services.orchestrator import OrchestratorService
 from maestro.services.settings import UISettingsService, KNOWN_SETTINGS, SETTING_JENKINS_BASE_URL, SETTING_GITHUB_BASE_URL, SETTING_GITHUB_ORGANIZATION
 from maestro.repositories.execution import ExecutionRepository
+from maestro.repositories.orchestrator import OrchestratorDescriptorRepository
 from maestro.schemas.enums import ExecutionStatus
 
 TEMPLATES_DIR = Path(__file__).parent.parent.parent / "ui" / "templates"
@@ -129,6 +130,29 @@ async def step_events(
     )
 
 
+@router.post("/retry-step/{step_execution_id}", response_class=HTMLResponse)
+async def retry_step_ui(
+    request: Request,
+    step_execution_id: int,
+    background_tasks: BackgroundTasks,
+    orchestrator_service: OrchestratorService = Depends(),
+):
+    """Reexecuta um step que falhou via UI."""
+    try:
+        step = await orchestrator_service.retry_step(step_execution_id, background_tasks)
+        return templates.TemplateResponse(
+            request,
+            "partials/retry_result.html",
+            {"error": None, "step": step},
+        )
+    except ValueError as e:
+        return templates.TemplateResponse(
+            request,
+            "partials/retry_result.html",
+            {"error": str(e), "step": None},
+        )
+
+
 @router.get("/settings", response_class=HTMLResponse)
 async def settings_page(request: Request, service: UISettingsService = Depends()):
     current = await service.get_all()
@@ -137,6 +161,35 @@ async def settings_page(request: Request, service: UISettingsService = Depends()
         "settings.html",
         {"settings": current, "known_settings": KNOWN_SETTINGS},
     )
+
+
+@router.post("/execute/{name}", response_class=HTMLResponse)
+async def execute_release_ui(
+    request: Request,
+    name: str,
+    background_tasks: BackgroundTasks,
+    orchestrator_service: OrchestratorService = Depends(),
+):
+    """Dispara execução de uma release pela UI."""
+    try:
+        execution_id = await orchestrator_service.execute_release(name, background_tasks)
+        return templates.TemplateResponse(
+            request,
+            "partials/execute_result.html",
+            {"error": None, "execution_id": execution_id, "name": name},
+        )
+    except ValueError as e:
+        return templates.TemplateResponse(
+            request,
+            "partials/execute_result.html",
+            {"error": str(e), "execution_id": None, "name": name},
+        )
+    except Exception as e:
+        return templates.TemplateResponse(
+            request,
+            "partials/execute_result.html",
+            {"error": f"Erro inesperado: {str(e)}", "execution_id": None, "name": name},
+        )
 
 
 @router.post("/settings", response_class=HTMLResponse)
@@ -149,4 +202,63 @@ async def settings_save(request: Request, service: UISettingsService = Depends()
         request,
         "settings.html",
         {"settings": current, "known_settings": KNOWN_SETTINGS, "saved": True},
+    )
+
+
+@router.get("/releases", response_class=HTMLResponse)
+async def releases_page(
+    request: Request,
+    orchestrator_repo: OrchestratorDescriptorRepository = Depends(),
+):
+    descriptors = await orchestrator_repo.get_all()
+    return templates.TemplateResponse(
+        request,
+        "releases.html",
+        {"descriptors": descriptors},
+    )
+
+
+@router.post("/releases/upload", response_class=HTMLResponse)
+async def releases_upload(
+    request: Request,
+    file: UploadFile = File(...),
+    orchestrator_service: OrchestratorService = Depends(),
+    orchestrator_repo: OrchestratorDescriptorRepository = Depends(),
+):
+    error = None
+    if not file.filename.endswith((".yaml", ".yml")):
+        error = "O arquivo deve ter a extensão .yaml ou .yml"
+    else:
+        content = await file.read()
+        try:
+            yaml_content = content.decode("utf-8")
+        except UnicodeDecodeError:
+            error = "O arquivo não pôde ser lido como UTF-8"
+        else:
+            try:
+                await orchestrator_service.save_descriptor(yaml_content)
+            except ValueError as e:
+                error = str(e)
+
+    descriptors = await orchestrator_repo.get_all()
+    return templates.TemplateResponse(
+        request,
+        "releases.html",
+        {"descriptors": descriptors, "upload_error": error, "upload_success": error is None},
+    )
+
+
+@router.get("/releases/{descriptor_id}/yaml", response_class=HTMLResponse)
+async def release_descriptor_yaml(
+    request: Request,
+    descriptor_id: int,
+    orchestrator_repo: OrchestratorDescriptorRepository = Depends(),
+):
+    descriptor = await orchestrator_repo.get_by_id(descriptor_id)
+    if not descriptor:
+        raise HTTPException(status_code=404, detail="Descriptor não encontrado.")
+    return templates.TemplateResponse(
+        request,
+        "partials/release_yaml_modal.html",
+        {"yaml_content": descriptor.yaml, "execution": descriptor},
     )

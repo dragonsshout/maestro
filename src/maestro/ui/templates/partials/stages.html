@@ -41,16 +41,23 @@
                     {% set se = step.execution %}
                     {% set sv = se.status %}
                     <tr class="hover">
-                        <!-- Status icon -->
+                        <!-- Status icon + retry -->
                         <td class="text-center">
-                            {% if sv == "pending" %}
+                            {% if sv == "failure" %}
+                                <button
+                                    class="btn btn-xs btn-warning btn-circle"
+                                    hx-post="/ui/retry-step/{{ se.id }}"
+                                    hx-target="body"
+                                    hx-swap="beforeend"
+                                    hx-confirm="Reexecutar o step '{{ se.step_id }}'?"
+                                    title="Reexecutar step"
+                                >🔄</button>
+                            {% elif sv == "pending" %}
                                 <span title="Pendente">⏳</span>
                             {% elif sv == "in_progress" %}
                                 <span class="loading loading-spinner loading-xs text-warning" title="Em progresso"></span>
                             {% elif sv == "success" %}
                                 <span title="Sucesso">✅</span>
-                            {% elif sv == "failure" %}
-                                <span title="Falha">❌</span>
                             {% elif sv == "waiting_approval" %}
                                 <span title="Aguardando aprovação">🔔</span>
                             {% elif sv == "aborted" %}

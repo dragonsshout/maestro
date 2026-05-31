@@ -1,0 +1,33 @@
+{% if error %}
+<dialog id="retry-result-modal" class="modal modal-open">
+    <div class="modal-box">
+        <div class="flex items-center gap-2 mb-4">
+            <span class="text-2xl">❌</span>
+            <h3 class="font-bold text-lg">Não foi possível reexecutar</h3>
+        </div>
+        <div class="alert alert-error">
+            <p class="text-sm">{{ error }}</p>
+        </div>
+        <div class="modal-action">
+            <button onclick="document.getElementById('retry-result-modal').remove()" class="btn btn-sm">Fechar</button>
+        </div>
+    </div>
+    <div class="modal-backdrop" onclick="document.getElementById('retry-result-modal').remove()"></div>
+</dialog>
+{% else %}
+<dialog id="retry-result-modal" class="modal modal-open">
+    <div class="modal-box">
+        <div class="flex items-center gap-2 mb-4">
+            <span class="text-2xl">🔄</span>
+            <h3 class="font-bold text-lg">Step reenviado</h3>
+        </div>
+        <div class="alert alert-success">
+            <p class="text-sm">O step <span class="font-mono font-bold">{{ step.step_id }}</span> foi reenviado para execução. O fluxo continuará automaticamente.</p>
+        </div>
+        <div class="modal-action">
+            <button onclick="document.getElementById('retry-result-modal').remove()" class="btn btn-sm">Fechar</button>
+        </div>
+    </div>
+    <div class="modal-backdrop" onclick="document.getElementById('retry-result-modal').remove()"></div>
+</dialog>
+{% endif %}

@@ -152,6 +152,33 @@ class OrchestratorService:
         else:
             return {"message": "Nenhum step pendente de aprovação encontrado que pudesse ser aprovado."}
 
+    async def retry_step(self, step_execution_id: int, background_tasks: BackgroundTasks) -> ReleaseStepExecution:
+        """Reexecuta um step que falhou, resetando seu status e continuando o fluxo."""
+        step = await self.execution_repo.get_step_by_id(step_execution_id)
+        if not step:
+            raise ValueError(f"Step de execução #{step_execution_id} não encontrado.")
+
+        if step.status != ExecutionStatus.FAILURE:
+            raise ValueError(f"Só é possível reexecutar steps com status 'failure' (status atual: '{step.status}').")
+
+        # Reseta o step
+        step.status = ExecutionStatus.PENDING
+        step.message = None
+        step.job_execution_correlation_id = None
+        step.job_input_id = None
+        await self.execution_repo.update_step_execution(step)
+
+        # Reseta a execução para IN_PROGRESS para que o workflow continue
+        execution = await self.execution_repo.get_execution_by_id(step.release_execution_id)
+        if execution and execution.status == ExecutionStatus.FAILURE:
+            execution.status = ExecutionStatus.IN_PROGRESS
+            execution.message = None
+            await self.execution_repo.update_release_execution(execution)
+
+        # Re-dispara o workflow
+        background_tasks.add_task(self.process_workflow, step.release_execution_id)
+        return step
+
     async def _trigger_step(self, step, se) -> ExecutionStatus:
         """Dispara um único step e retorna o status resultante."""
         se.status = ExecutionStatus.IN_PROGRESS
