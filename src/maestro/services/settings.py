@@ -3,12 +3,24 @@ from maestro.repositories.settings import UISettingsRepository
 
 # Chaves conhecidas de configuração
 SETTING_JENKINS_BASE_URL = "jenkins_base_url"
+SETTING_GITHUB_BASE_URL = "github_base_url"
+SETTING_GITHUB_ORGANIZATION = "github_organization"
 
 KNOWN_SETTINGS = {
     SETTING_JENKINS_BASE_URL: {
         "label": "URL base do Jenkins",
         "placeholder": "https://jenkins.exemplo.com",
         "help": "Usado para montar links diretos para os builds nos detalhes de execução.",
+    },
+    SETTING_GITHUB_BASE_URL: {
+        "label": "URL base do GitHub",
+        "placeholder": "https://github.com",
+        "help": "URL base da instância GitHub (ou GitHub Enterprise).",
+    },
+    SETTING_GITHUB_ORGANIZATION: {
+        "label": "Organização do GitHub",
+        "placeholder": "minha-org",
+        "help": "Nome da organização usada para montar links de repositório.",
     },
 }
 

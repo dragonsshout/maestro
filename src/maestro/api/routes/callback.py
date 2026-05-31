@@ -1,8 +1,9 @@
 from fastapi import APIRouter, Depends, BackgroundTasks, HTTPException
-from maestro.schemas.callback import ReleaseCallbackSchema
+from maestro.schemas.callback import ReleaseCallbackSchema, StepEventSchema
 from maestro.repositories.execution import ExecutionRepository
 from maestro.services.orchestrator import OrchestratorService
 from maestro.schemas.enums import ExecutionStatus
+from maestro.database.models import StepEvent
 
 router = APIRouter(prefix="/callback", tags=["Callback"])
 
@@ -42,4 +43,26 @@ async def release_callback(
         "stage": step.stage_id,
         "step": step.step_id,
         "status": payload.status
+    }
+
+
+@router.post("/event")
+async def step_event_callback(
+    payload: StepEventSchema,
+    execution_repo: ExecutionRepository = Depends(),
+):
+    """Recebe eventos informativos de um step (ex: logs do Jenkins)."""
+    step = await execution_repo.get_step_by_correlation_id(payload.job_execution_correlation_id)
+    if not step:
+        raise HTTPException(status_code=404, detail="Step não encontrado para este correlation_id.")
+
+    event = StepEvent(
+        job_execution_correlation_id=payload.job_execution_correlation_id,
+        message=payload.message,
+    )
+    await execution_repo.add_step_event(event)
+
+    return {
+        "message": "Evento registrado com sucesso",
+        "job_execution_correlation_id": payload.job_execution_correlation_id,
     }

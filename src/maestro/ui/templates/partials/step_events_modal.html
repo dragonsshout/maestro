@@ -1,0 +1,47 @@
+<!-- Modal de histórico de eventos do step -->
+<dialog id="step-events-modal" class="modal modal-open">
+    <div class="modal-box w-11/12 max-w-2xl">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="font-bold text-lg">📋 Eventos — Build #{{ correlation_id }}</h3>
+            <button onclick="document.getElementById('step-events-modal').remove()" class="btn btn-sm btn-ghost btn-circle">✕</button>
+        </div>
+
+        {% if events %}
+        <div class="overflow-y-auto max-h-[60vh]">
+            <ul class="timeline timeline-vertical timeline-compact">
+                {% for event in events %}
+                <li>
+                    {% if not loop.first %}
+                    <hr />
+                    {% endif %}
+                    <div class="timeline-start text-xs text-base-content/50 whitespace-nowrap">
+                        {{ event.created_at.strftime('%d/%m %H:%M:%S') }}
+                    </div>
+                    <div class="timeline-middle">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="h-4 w-4 text-primary">
+                            <circle cx="10" cy="10" r="4" />
+                        </svg>
+                    </div>
+                    <div class="timeline-end timeline-box text-sm">
+                        {{ event.message }}
+                    </div>
+                    {% if not loop.last %}
+                    <hr />
+                    {% endif %}
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% else %}
+        <div class="text-center py-8 text-base-content/50">
+            <p class="text-3xl mb-2">📭</p>
+            <p>Nenhum evento registrado para este step.</p>
+        </div>
+        {% endif %}
+
+        <div class="modal-action">
+            <button onclick="document.getElementById('step-events-modal').remove()" class="btn btn-sm">Fechar</button>
+        </div>
+    </div>
+    <div class="modal-backdrop" onclick="document.getElementById('step-events-modal').remove()"></div>
+</dialog>

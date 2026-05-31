@@ -86,7 +86,14 @@
 
                         <!-- Repositório -->
                         <td class="font-mono text-base-content/70 max-w-[10rem] truncate" title="{{ step.repository }}">
-                            {{ step.repository }}
+                            {% if github_base_url and github_organization %}
+                                <a href="{{ github_base_url }}/{{ github_organization }}/{{ step.repository }}" target="_blank" rel="noopener"
+                                   class="link link-hover">
+                                    {{ step.repository }}
+                                </a>
+                            {% else %}
+                                {{ step.repository }}
+                            {% endif %}
                         </td>
 
                         <!-- Release -->
@@ -97,7 +104,13 @@
                         <!-- Build # -->
                         <td class="font-mono text-base-content/50">
                             {% if se.job_execution_correlation_id %}
-                                #{{ se.job_execution_correlation_id }}
+                                <button
+                                    class="link link-hover text-base-content/70"
+                                    hx-get="/ui/step-events/{{ se.job_execution_correlation_id }}"
+                                    hx-target="#events-modal-container"
+                                    hx-swap="innerHTML"
+                                    title="Ver eventos do build"
+                                >#{{ se.job_execution_correlation_id }} 📋</button>
                             {% else %}
                                 <span class="text-base-content/30">—</span>
                             {% endif %}

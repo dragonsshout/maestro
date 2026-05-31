@@ -47,3 +47,12 @@ class UISettings(Base):
     key = Column(String, nullable=False, unique=True)
     value = Column(Text, nullable=True)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+
+
+class StepEvent(Base):
+    __tablename__ = "step_event"
+
+    id = Column(Integer, primary_key=True, autoincrement=True, nullable=False)
+    job_execution_correlation_id = Column(Integer, nullable=False, index=True)
+    message = Column(Text, nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)

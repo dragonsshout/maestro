@@ -58,7 +58,7 @@ class UIService:
             try:
                 from maestro.database.session import AsyncSessionLocal
                 from maestro.repositories.settings import UISettingsRepository
-                from maestro.services.settings import SETTING_JENKINS_BASE_URL
+                from maestro.services.settings import SETTING_JENKINS_BASE_URL, SETTING_GITHUB_BASE_URL, SETTING_GITHUB_ORGANIZATION
 
                 async with AsyncSessionLocal() as session:
                     exec_repo = ExecutionRepository(db=session)
@@ -72,6 +72,8 @@ class UIService:
 
                     execution, stages = result
                     jenkins_base_url = (await settings_repo.get(SETTING_JENKINS_BASE_URL) or "").rstrip("/")
+                    github_base_url = (await settings_repo.get(SETTING_GITHUB_BASE_URL) or "").rstrip("/")
+                    github_organization = await settings_repo.get(SETTING_GITHUB_ORGANIZATION) or ""
 
                 snapshot = _build_snapshot(stages)
 
@@ -81,6 +83,8 @@ class UIService:
                         "partials/stages.html",
                         stages=stages,
                         jenkins_base_url=jenkins_base_url,
+                        github_base_url=github_base_url,
+                        github_organization=github_organization,
                     )
                     yield {"event": "stage-update", "data": html}
 

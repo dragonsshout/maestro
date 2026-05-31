@@ -7,3 +7,8 @@ class ReleaseCallbackSchema(BaseModel):
     message: Optional[str] = None
     status: ExecutionStatus
     input_id: Optional[str] = None
+
+
+class StepEventSchema(BaseModel):
+    job_execution_correlation_id: int
+    message: str

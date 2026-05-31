@@ -5,7 +5,8 @@ from fastapi.templating import Jinja2Templates
 from sse_starlette.sse import EventSourceResponse
 from maestro.services.ui import UIService
 from maestro.services.orchestrator import OrchestratorService
-from maestro.services.settings import UISettingsService, KNOWN_SETTINGS, SETTING_JENKINS_BASE_URL
+from maestro.services.settings import UISettingsService, KNOWN_SETTINGS, SETTING_JENKINS_BASE_URL, SETTING_GITHUB_BASE_URL, SETTING_GITHUB_ORGANIZATION
+from maestro.repositories.execution import ExecutionRepository
 from maestro.schemas.enums import ExecutionStatus
 
 TEMPLATES_DIR = Path(__file__).parent.parent.parent / "ui" / "templates"
@@ -42,6 +43,8 @@ async def execution_detail(
 
     execution, stages = result
     jenkins_base_url = await settings_service.get(SETTING_JENKINS_BASE_URL)
+    github_base_url = await settings_service.get(SETTING_GITHUB_BASE_URL)
+    github_organization = await settings_service.get(SETTING_GITHUB_ORGANIZATION)
     return templates.TemplateResponse(
         request,
         "execution_detail.html",
@@ -50,6 +53,8 @@ async def execution_detail(
             "stages": stages,
             "waiting_approval": execution.status == ExecutionStatus.WAITING_APPROVAL,
             "jenkins_base_url": (jenkins_base_url or "").rstrip("/"),
+            "github_base_url": (github_base_url or "").rstrip("/"),
+            "github_organization": github_organization or "",
         }
     )
 
@@ -107,6 +112,21 @@ async def execution_release_yaml(
 @router.get("/sse/execution/{execution_id}")
 async def sse_execution(execution_id: int, service: UIService = Depends()):
     return EventSourceResponse(service.execution_sse_stream(execution_id))
+
+
+@router.get("/step-events/{correlation_id}", response_class=HTMLResponse)
+async def step_events(
+    request: Request,
+    correlation_id: int,
+    execution_repo: ExecutionRepository = Depends(),
+):
+    """Retorna modal com histórico de eventos de um step."""
+    events = await execution_repo.get_events_by_correlation_id(correlation_id)
+    return templates.TemplateResponse(
+        request,
+        "partials/step_events_modal.html",
+        {"events": events, "correlation_id": correlation_id},
+    )
 
 
 @router.get("/settings", response_class=HTMLResponse)

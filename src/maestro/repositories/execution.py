@@ -2,7 +2,7 @@ from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from maestro.database.session import get_db
-from maestro.database.models import ReleaseExecution, ReleaseStepExecution
+from maestro.database.models import ReleaseExecution, ReleaseStepExecution, StepEvent
 from typing import List, Optional
 
 class ExecutionRepository:
@@ -91,5 +91,19 @@ class ExecutionRepository:
             select(ReleaseExecution)
             .order_by(ReleaseExecution.id.desc())
             .limit(limit)
+        )
+        return list(result.scalars().all())
+
+    async def add_step_event(self, event: StepEvent) -> StepEvent:
+        self.db.add(event)
+        await self.db.commit()
+        await self.db.refresh(event)
+        return event
+
+    async def get_events_by_correlation_id(self, correlation_id: int) -> List[StepEvent]:
+        result = await self.db.execute(
+            select(StepEvent)
+            .where(StepEvent.job_execution_correlation_id == correlation_id)
+            .order_by(StepEvent.created_at.asc())
         )
         return list(result.scalars().all())
