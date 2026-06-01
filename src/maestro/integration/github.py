@@ -24,6 +24,19 @@ class GithubIntegration:
             
         return httpx.AsyncClient(base_url=self.base_url, headers=headers)
 
+    async def branch_exists(self, repo_name: str, branch_name: str) -> bool:
+        """
+        Verifica se uma branch existe no repositório.
+
+        :param repo_name: Nome do repositório (ex: 'Hello-World').
+        :param branch_name: Nome da branch (ex: 'release/v1.0').
+        :return: True se a branch existir, False caso contrário.
+        """
+        async with self._get_client() as client:
+            endpoint = f"/repos/{self.organization}/{repo_name}/branches/{branch_name}"
+            response = await client.get(endpoint)
+            return response.status_code == 200
+
     async def get_pull_request_details(self, repo_name: str, pr_number: int) -> PullRequestDetailSchema:
         """
         Obtém os detalhes completos de um Pull Request pelo seu número.
