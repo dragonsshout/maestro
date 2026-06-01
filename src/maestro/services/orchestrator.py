@@ -11,6 +11,7 @@ import yaml
 from sqlalchemy.exc import IntegrityError
 from maestro.config.logger import get_logger
 from maestro.services.jenkins import JenkinsService
+from maestro.services.validation import ReleaseValidationService
 from maestro.schemas.enums import ExecutionStatus
 
 logger = get_logger(__name__)
@@ -36,6 +37,10 @@ class OrchestratorService:
 
         except (yaml.YAMLError, ValidationError) as e:
             raise ValueError(f"Erro de validação na estrutura do YAML:\n{e}")
+
+        # Validação de branches (GitHub) e jobs (Jenkins)
+        validation_service = ReleaseValidationService()
+        await validation_service.validate(release_config)
 
         descriptor = OrchestratorDescriptor(
             name=release_config.metadata.name,
