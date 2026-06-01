@@ -90,6 +90,18 @@ class JenkinsIntegration:
             if response.status_code not in (200, 302):
                 response.raise_for_status()
 
+    async def job_exists(self, job_name: str) -> bool:
+        """
+        Verifica se um job existe no Jenkins.
+
+        :param job_name: Nome/caminho do job.
+        :return: True se o job existir, False caso contrário.
+        """
+        async with self._get_client() as client:
+            endpoint = f"/{job_name.strip('/')}/api/json"
+            response = await client.get(endpoint)
+            return response.status_code == 200
+
     async def get_job_info(self, job_name: str) -> Dict[str, Any]:
         """
         Obtém os detalhes e as informações gerais de um job no Jenkins.
@@ -102,15 +114,3 @@ class JenkinsIntegration:
             response = await client.get(endpoint)
             response.raise_for_status()
             return response.json()
-
-    async def job_exists(self, job_name: str) -> bool:
-        """
-        Verifica se um job existe no Jenkins.
-
-        :param job_name: Nome/path do job (ex: 'job/teste/job/testeA').
-        :return: True se o job existir, False caso contrário.
-        """
-        async with self._get_client() as client:
-            endpoint = f"/{job_name.strip('/')}/api/json"
-            response = await client.get(endpoint)
-            return response.status_code == 200
