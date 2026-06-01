@@ -2,7 +2,7 @@
 	"info": {
 		"_postman_id": "12345678-1234-1234-1234-123456789012",
 		"name": "Maestro API",
-		"description": "Coleção para testar as APIs do projeto Maestro.",
+		"description": "Coleção para testar as APIs do projeto Maestro - Orquestrador de Releases.",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"item": [
@@ -42,7 +42,8 @@
 								{
 									"key": "file",
 									"type": "file",
-									"src": []
+									"src": [],
+									"description": "Arquivo YAML de configuração da release (.yaml ou .yml)"
 								}
 							]
 						},
@@ -55,7 +56,8 @@
 								"orchestrator",
 								"config"
 							]
-						}
+						},
+						"description": "Faz upload de um arquivo YAML de configuração de release."
 					},
 					"response": []
 				},
@@ -87,7 +89,62 @@
 								"orchestrator",
 								"execute"
 							]
-						}
+						},
+						"description": "Inicia a execução de uma release pelo nome."
+					},
+					"response": []
+				},
+				{
+					"name": "Retry Step",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/orchestrator/retry-step/1",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"orchestrator",
+								"retry-step",
+								"1"
+							]
+						},
+						"description": "Reexecuta um step que falhou, passando o ID do step_execution."
+					},
+					"response": []
+				},
+				{
+					"name": "Approve Release",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"status\": \"Sucesso\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/orchestrator/approve/minha-release",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"orchestrator",
+								"approve",
+								"minha-release"
+							]
+						},
+						"description": "Aprova uma release que está aguardando aprovação."
 					},
 					"response": []
 				},
@@ -106,7 +163,8 @@
 								"status",
 								"minha-release"
 							]
-						}
+						},
+						"description": "Retorna o status da última execução de uma release."
 					},
 					"response": []
 				},
@@ -125,7 +183,8 @@
 								"details",
 								"minha-release"
 							]
-						}
+						},
+						"description": "Retorna detalhes completos (com steps) da última execução de uma release."
 					},
 					"response": []
 				}
@@ -146,7 +205,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"release_process_id\": 1,\n    \"stage_id\": \"stage-1\",\n    \"step_id\": \"step-1\",\n    \"status\": \"success\",\n    \"message\": \"Tudo certo com a pipeline\"\n}",
+							"raw": "{\n    \"job_execution_correlation_id\": 1,\n    \"status\": \"success\",\n    \"message\": \"Pipeline executada com sucesso\",\n    \"input_id\": null\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -162,7 +221,362 @@
 								"callback",
 								"release"
 							]
-						}
+						},
+						"description": "Callback chamado pelo Jenkins ao finalizar um step. Status possíveis: pending, in_progress, success, failure, error, aborted, waiting_approval."
+					},
+					"response": []
+				},
+				{
+					"name": "Step Event",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"job_execution_correlation_id\": 1,\n    \"message\": \"Build iniciado no Jenkins\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/callback/event",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"callback",
+								"event"
+							]
+						},
+						"description": "Recebe eventos informativos de um step (ex: logs do Jenkins)."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "UI",
+			"item": [
+				{
+					"name": "Index Page",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/ui/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"ui",
+								""
+							]
+						},
+						"description": "Página inicial da UI."
+					},
+					"response": []
+				},
+				{
+					"name": "Partials - Executions Table",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/ui/partials/executions",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"ui",
+								"partials",
+								"executions"
+							]
+						},
+						"description": "Retorna o partial HTML da tabela de execuções."
+					},
+					"response": []
+				},
+				{
+					"name": "Execution Detail",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/ui/execution/1",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"ui",
+								"execution",
+								"1"
+							]
+						},
+						"description": "Página de detalhes de uma execução."
+					},
+					"response": []
+				},
+				{
+					"name": "Approve Execution",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/ui/execution/1/approve",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"ui",
+								"execution",
+								"1",
+								"approve"
+							]
+						},
+						"description": "Aprova uma execução que está aguardando aprovação via UI."
+					},
+					"response": []
+				},
+				{
+					"name": "Execution Release YAML",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/ui/execution/1/release-yaml",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"ui",
+								"execution",
+								"1",
+								"release-yaml"
+							]
+						},
+						"description": "Retorna o modal com o YAML da release de uma execução."
+					},
+					"response": []
+				},
+				{
+					"name": "SSE Execution Stream",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/ui/sse/execution/1",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"ui",
+								"sse",
+								"execution",
+								"1"
+							]
+						},
+						"description": "Stream SSE (Server-Sent Events) para atualizações em tempo real de uma execução."
+					},
+					"response": []
+				},
+				{
+					"name": "Step Events",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/ui/step-events/1",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"ui",
+								"step-events",
+								"1"
+							]
+						},
+						"description": "Retorna o modal com o histórico de eventos de um step pelo correlation_id."
+					},
+					"response": []
+				},
+				{
+					"name": "Retry Step",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/ui/retry-step/1",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"ui",
+								"retry-step",
+								"1"
+							]
+						},
+						"description": "Reexecuta um step que falhou via UI."
+					},
+					"response": []
+				},
+				{
+					"name": "Settings Page",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/ui/settings",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"ui",
+								"settings"
+							]
+						},
+						"description": "Página de configurações."
+					},
+					"response": []
+				},
+				{
+					"name": "Save Settings",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/x-www-form-urlencoded"
+							}
+						],
+						"body": {
+							"mode": "urlencoded",
+							"urlencoded": [
+								{
+									"key": "jenkins_base_url",
+									"value": "http://localhost:8080",
+									"description": "URL base do Jenkins"
+								},
+								{
+									"key": "github_base_url",
+									"value": "https://github.com",
+									"description": "URL base do GitHub"
+								},
+								{
+									"key": "github_organization",
+									"value": "my-org",
+									"description": "Organização do GitHub"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{base_url}}/ui/settings",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"ui",
+								"settings"
+							]
+						},
+						"description": "Salva as configurações da UI (form data)."
+					},
+					"response": []
+				},
+				{
+					"name": "Execute Release (UI)",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/ui/execute/minha-release",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"ui",
+								"execute",
+								"minha-release"
+							]
+						},
+						"description": "Dispara a execução de uma release pela UI."
+					},
+					"response": []
+				},
+				{
+					"name": "Releases Page",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/ui/releases",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"ui",
+								"releases"
+							]
+						},
+						"description": "Página de listagem de releases cadastradas."
+					},
+					"response": []
+				},
+				{
+					"name": "Upload Release YAML",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "file",
+									"type": "file",
+									"src": [],
+									"description": "Arquivo YAML de release (.yaml ou .yml)"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{base_url}}/ui/releases/upload",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"ui",
+								"releases",
+								"upload"
+							]
+						},
+						"description": "Faz upload de um arquivo YAML de release pela UI."
+					},
+					"response": []
+				},
+				{
+					"name": "Release Descriptor YAML",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/ui/releases/1/yaml",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"ui",
+								"releases",
+								"1",
+								"yaml"
+							]
+						},
+						"description": "Retorna o modal com o YAML de um descriptor de release pelo ID."
 					},
 					"response": []
 				}
