@@ -179,11 +179,70 @@ spec:
 # Instalar dependências de desenvolvimento
 uv sync --group dev
 
-# Rodar testes
-uv run pytest
-
 # Linter
 uv run ruff check src/
+```
+
+## Testes
+
+O projeto conta com uma suíte de **194 testes** organizada em duas camadas:
+
+### Testes Unitários (160 testes)
+
+Testam cada camada isoladamente com mocks, sem dependências externas.
+
+```bash
+# Rodar todos os testes unitários
+uv run pytest tests/ -m "not integration"
+```
+
+| Arquivo | Testes | Cobertura |
+|---------|--------|-----------|
+| `tests/test_schemas.py` | 39 | Todos os modelos Pydantic, enums, validação |
+| `tests/test_repositories.py` | 29 | Repositórios com AsyncSession mockada |
+| `tests/test_services.py` | 35 | Lógica de negócio, orquestração, validação |
+| `tests/test_routes.py` | 21 | Rotas da API (status codes, payloads, erros) |
+| `tests/test_integrations.py` | 29 | Clientes HTTP do GitHub e Jenkins |
+| `tests/test_dry_run.py` | 6 | Cenários de dry-run end-to-end |
+| `tests/test_main.py` | 1 | Health check |
+
+### Testes de Integração (34 testes)
+
+Testam o fluxo completo com um **PostgreSQL real** via container (Docker/Podman). As APIs externas (Jenkins, GitHub) são mockadas no nível HTTP com `pytest-httpx`.
+
+```bash
+# Rodar apenas testes de integração (requer Docker ou Podman)
+uv run pytest tests/integration/ -m integration
+
+# Rodar um módulo específico
+uv run pytest tests/integration/test_orchestrator_flow.py -v
+```
+
+| Arquivo | Testes | Cobertura |
+|---------|--------|-----------|
+| `tests/integration/test_orchestrator_flow.py` | 16 | Upload → dry-run → execute → retry (fluxo completo) |
+| `tests/integration/test_callback_flow.py` | 11 | Callbacks do Jenkins atualizando estado real no banco |
+| `tests/integration/test_settings_flow.py` | 7 | CRUD de settings com upsert no PostgreSQL |
+
+**Pré-requisitos para testes de integração:**
+- Docker ou Podman instalado e com imagem `postgres:16-alpine` disponível
+- Porta TCP livre (alocada automaticamente)
+
+**Arquitetura dos testes de integração:**
+
+```
+Request HTTP → FastAPI → Service → Integration (mock httpx) ✓
+                                 → Repository → PostgreSQL (container real) ✓
+```
+
+### Rodar toda a suíte
+
+```bash
+# Todos os testes (unitários + integração)
+uv run pytest tests/ -v
+
+# Com relatório de cobertura (se pytest-cov instalado)
+uv run pytest tests/ --cov=src/maestro --cov-report=term-missing
 ```
 
 ## Docker (Produção)
