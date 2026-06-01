@@ -38,8 +38,6 @@ def _mock_descriptor(name="test-release"):
 @patch("maestro.services.orchestrator.OrchestratorService.dry_run_release")
 def test_dry_run_descriptor_not_found(mock_dry_run, mock_init, mock_github, mock_jenkins):
     """Descriptor not found returns 400."""
-    from maestro.services.orchestrator import OrchestratorService
-
     mock_dry_run.side_effect = ValueError("Descritor com nome 'nonexistent' não encontrado.")
 
     response = client.post("/orchestrator/dry-run", json={"name": "nonexistent"})
