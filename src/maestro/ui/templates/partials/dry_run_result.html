@@ -1,0 +1,120 @@
+{% if error %}
+<dialog id="dry-run-result-modal" class="modal modal-open">
+    <div class="modal-box">
+        <div class="flex items-center gap-2 mb-4">
+            <span class="text-2xl">❌</span>
+            <h3 class="font-bold text-lg">Erro no Dry Run</h3>
+        </div>
+        <div class="alert alert-error">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+            </svg>
+            <div>
+                <p class="font-semibold">Release: <span class="font-mono">{{ name }}</span></p>
+                <p class="text-sm mt-1">{{ error }}</p>
+            </div>
+        </div>
+        <div class="modal-action">
+            <button onclick="document.getElementById('dry-run-result-modal').remove()" class="btn btn-sm">Fechar</button>
+        </div>
+    </div>
+    <div class="modal-backdrop" onclick="document.getElementById('dry-run-result-modal').remove()"></div>
+</dialog>
+{% else %}
+<dialog id="dry-run-result-modal" class="modal modal-open">
+    <div class="modal-box max-w-3xl">
+        <div class="flex items-center gap-2 mb-4">
+            {% if result.valid %}
+            <span class="text-2xl">✅</span>
+            <h3 class="font-bold text-lg">Dry Run - Tudo pronto!</h3>
+            {% else %}
+            <span class="text-2xl">⚠️</span>
+            <h3 class="font-bold text-lg">Dry Run - Problemas encontrados</h3>
+            {% endif %}
+        </div>
+
+        <div class="mb-3">
+            <span class="font-semibold">Release:</span>
+            <span class="font-mono">{{ result.name }}</span>
+            {% if result.valid %}
+            <span class="badge badge-success badge-sm ml-2">Pronto para execucao</span>
+            {% else %}
+            <span class="badge badge-warning badge-sm ml-2">Possui pendencias</span>
+            {% endif %}
+        </div>
+
+        {% for stage in result.stages %}
+        <div class="collapse collapse-arrow bg-base-200 mb-2">
+            <input type="checkbox" checked />
+            <div class="collapse-title font-medium text-sm">
+                Stage: <span class="font-mono">{{ stage.stage_id }}</span>
+                <span class="text-xs text-base-content/50 ml-2">({{ stage.steps | length }} steps)</span>
+            </div>
+            <div class="collapse-content">
+                <div class="overflow-x-auto">
+                    <table class="table table-xs w-full">
+                        <thead class="text-xs">
+                            <tr>
+                                <th>Step</th>
+                                <th>Repositorio</th>
+                                <th>Branch</th>
+                                <th>Branch Existe</th>
+                                <th>PR Encontrado</th>
+                                <th>PR Clean</th>
+                                <th>Job Jenkins</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for step in stage.steps %}
+                            <tr>
+                                <td class="font-mono text-xs">{{ step.step_id }}</td>
+                                <td class="font-mono text-xs">{{ step.repository }}</td>
+                                <td class="font-mono text-xs">{{ step.branch }}</td>
+                                <td>
+                                    {% if step.branch_exists %}
+                                    <span class="badge badge-success badge-xs">OK</span>
+                                    {% else %}
+                                    <span class="badge badge-error badge-xs">Nao</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if step.pr_found %}
+                                    <span class="badge badge-success badge-xs">
+                                        #{{ step.pr_number }}
+                                    </span>
+                                    {% else %}
+                                    <span class="badge badge-error badge-xs">Nao</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if step.pr_is_clean %}
+                                    <span class="badge badge-success badge-xs">Clean</span>
+                                    {% elif step.pr_mergeable_state %}
+                                    <span class="badge badge-warning badge-xs">{{ step.pr_mergeable_state }}</span>
+                                    {% else %}
+                                    <span class="badge badge-ghost badge-xs">-</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if step.jenkins_job_exists %}
+                                    <span class="badge badge-success badge-xs">OK</span>
+                                    {% else %}
+                                    <span class="badge badge-error badge-xs">Nao</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+
+        <div class="modal-action">
+            <button onclick="document.getElementById('dry-run-result-modal').remove()" class="btn btn-sm">Fechar</button>
+        </div>
+    </div>
+    <div class="modal-backdrop" onclick="document.getElementById('dry-run-result-modal').remove()"></div>
+</dialog>
+{% endif %}

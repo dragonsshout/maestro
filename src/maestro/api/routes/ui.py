@@ -248,6 +248,34 @@ async def releases_upload(
     )
 
 
+@router.post("/dry-run/{name}", response_class=HTMLResponse)
+async def dry_run_release_ui(
+    request: Request,
+    name: str,
+    orchestrator_service: OrchestratorService = Depends(),
+):
+    """Executa dry-run de uma release pela UI."""
+    try:
+        result = await orchestrator_service.dry_run_release(name)
+        return templates.TemplateResponse(
+            request,
+            "partials/dry_run_result.html",
+            {"error": None, "result": result, "name": name},
+        )
+    except ValueError as e:
+        return templates.TemplateResponse(
+            request,
+            "partials/dry_run_result.html",
+            {"error": str(e), "result": None, "name": name},
+        )
+    except Exception as e:
+        return templates.TemplateResponse(
+            request,
+            "partials/dry_run_result.html",
+            {"error": f"Erro inesperado: {str(e)}", "result": None, "name": name},
+        )
+
+
 @router.get("/releases/{descriptor_id}/yaml", response_class=HTMLResponse)
 async def release_descriptor_yaml(
     request: Request,
