@@ -23,6 +23,15 @@
         .status-aborted          { @apply badge badge-neutral; }
         .status-waiting_approval { @apply badge badge-info; }
 
+        /* HTMX indicator: hidden by default, shown during request */
+        .htmx-indicator {
+            display: none;
+        }
+        .htmx-request .htmx-indicator,
+        .htmx-request.htmx-indicator {
+            display: inline-flex;
+        }
+
         /* Sidebar transition */
         #sidebar {
             transition: width 0.25s ease;

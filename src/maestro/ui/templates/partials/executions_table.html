@@ -26,6 +26,16 @@
                             onclick="event.stopPropagation()"
                             title="Executar release"
                         >▶</button>
+                        <button
+                            class="btn btn-xs btn-info btn-circle"
+                            hx-post="/ui/dry-run/{{ ex.name }}"
+                            hx-target="body"
+                            hx-swap="beforeend"
+                            hx-indicator="#dry-run-loading-exec-{{ ex.id }}"
+                            onclick="event.stopPropagation()"
+                            title="Validar pré-requisitos"
+                        >🔍</button>
+                        <span id="dry-run-loading-exec-{{ ex.id }}" class="loading loading-spinner loading-xs htmx-indicator text-info"></span>
                     </div>
                 </td>
                 <td class="font-semibold">{{ ex.name }}</td>
@@ -50,7 +60,7 @@
                 <td class="text-sm text-base-content/60">{{ ex.created_at.strftime('%d/%m/%Y %H:%M') }}</td>
                 <td class="text-sm text-base-content/60">{{ ex.updated_at.strftime('%d/%m/%Y %H:%M') }}</td>
                 <td>
-                    <div class="flex gap-1">
+                    <div class="flex gap-1 items-center">
                         <a href="/ui/execution/{{ ex.id }}" class="btn btn-xs btn-outline btn-primary" onclick="event.stopPropagation()">Ver detalhes</a>
                         <button
                             class="btn btn-xs btn-outline"

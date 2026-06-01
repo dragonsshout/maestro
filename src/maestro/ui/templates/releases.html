@@ -87,8 +87,10 @@
                                         hx-post="/ui/dry-run/{{ desc.name }}"
                                         hx-target="body"
                                         hx-swap="beforeend"
-                                        title="Dry Run - simular execucao"
-                                    >🧪</button>
+                                        hx-indicator="#dry-run-loading-{{ desc.id }}"
+                                        title="Dry Run - validar pré-requisitos"
+                                    >🔍</button>
+                                    <span id="dry-run-loading-{{ desc.id }}" class="loading loading-spinner loading-xs htmx-indicator text-info"></span>
                                     <button
                                         class="btn btn-xs btn-outline"
                                         hx-get="/ui/releases/{{ desc.id }}/yaml"
