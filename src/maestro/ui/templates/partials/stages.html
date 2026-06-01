@@ -105,7 +105,14 @@
 
                         <!-- Release -->
                         <td class="font-mono text-base-content/70 max-w-[10rem] truncate" title="{{ step.release }}">
-                            {{ step.release }}
+                            {% if github_base_url and github_organization %}
+                                <a href="{{ github_base_url }}/{{ github_organization }}/{{ step.repository }}/tree/{{ step.release }}" target="_blank" rel="noopener"
+                                   class="link link-hover">
+                                    {{ step.release }}
+                                </a>
+                            {% else %}
+                                {{ step.release }}
+                            {% endif %}
                         </td>
 
                         <!-- Build # -->
