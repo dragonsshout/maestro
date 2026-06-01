@@ -1,21 +1,198 @@
 # Maestro - Orquestrador de Releases
 
-Orquestrador de releases desenvolvido em Python.
+Orquestrador de releases desenvolvido em Python com FastAPI. Gerencia pipelines complexas (stages e steps) orquestrando a execução de jobs no Jenkins, com suporte a aprovações manuais, callbacks assíncronos e interface web em tempo real.
+
+## Funcionalidades
+
+- Upload e versionamento de descritores de release (YAML)
+- Execução orquestrada de pipelines com múltiplos stages e steps
+- Integração nativa com Jenkins (disparo de jobs, aprovações, polling de fila)
+- Validação de Pull Requests via GitHub antes da execução
+- Callbacks assíncronos para atualização de status (event-driven)
+- Suporte a aprovações manuais (waiting_approval)
+- Retry de steps com falha
+- Interface web com atualizações em tempo real (SSE + HTMX)
+- Registro de eventos por step (logs do Jenkins)
 
 ## Estrutura do Projeto
 
-Este projeto segue as melhores práticas de estrutura de projetos em Python:
+```
+src/maestro/
+├── api/routes/       # Endpoints FastAPI (orchestrator, callback, ui)
+├── config/           # Configurações de ambiente e logger
+├── database/         # Modelos ORM e session async (SQLAlchemy + asyncpg)
+├── integration/      # Clientes HTTP para Jenkins e GitHub
+├── repositories/     # Padrão repository para queries ao banco
+├── schemas/          # Pydantic models (validação, DTOs, enums)
+├── services/         # Lógica de negócio e máquina de estado
+└── ui/templates/     # Templates HTML (Jinja2 + HTMX)
+migrations/           # Migrations do Alembic
+postman/              # Collection do Postman para testes de API
+tests/                # Testes automatizados
+```
 
-- `src/maestro/`: Código-fonte principal da aplicação.
-- `tests/`: Testes automatizados.
-- `pyproject.toml`: Configuração do projeto e dependências (otimizado para o `uv`).
-- `docker-compose.yaml`: Configuração da infraestrutura local (ex: Banco de Dados PostgreSQL).
+## Pré-requisitos
+
+- Python >= 3.11
+- PostgreSQL 15+
+- Docker e Docker Compose (para infra local)
+- [uv](https://github.com/astral-sh/uv) (gerenciador de pacotes recomendado)
 
 ## Como executar
 
-É recomendado usar o gerenciador de pacotes [uv](https://github.com/astral-sh/uv).
+### 1. Subir a infraestrutura
 
-Para rodar o banco de dados:
 ```bash
 docker-compose up -d
 ```
+
+Isso inicia:
+- **PostgreSQL** na porta `5432`
+- **Jenkins** na porta `8080`
+
+### 2. Configurar variáveis de ambiente
+
+```bash
+cp .env.example .env
+```
+
+Edite o `.env` com suas credenciais:
+
+```env
+DB_URL=postgresql+asyncpg://maestro_user:maestro_password@localhost:5432/maestro_db
+
+JENKINS_URL=http://localhost:8080
+JENKINS_USERNAME=seu_usuario
+JENKINS_TOKEN=seu_token
+
+GITHUB_ORGANIZATION=sua-org
+GITHUB_TOKEN=seu_token_do_github
+```
+
+### 3. Instalar dependências
+
+```bash
+uv sync
+```
+
+### 4. Rodar a aplicação
+
+```bash
+uv run maestro
+```
+
+A API estará disponível em `http://localhost:8000`.
+
+> As migrations do Alembic são executadas automaticamente ao iniciar a aplicação.
+
+## Endpoints da API
+
+### System
+
+| Método | Rota | Descrição |
+|--------|------|-----------|
+| GET | `/health` | Health check |
+
+### Orchestrator
+
+| Método | Rota | Descrição |
+|--------|------|-----------|
+| POST | `/orchestrator/config` | Upload de YAML de configuração de release |
+| POST | `/orchestrator/execute` | Inicia a execução de uma release |
+| POST | `/orchestrator/retry-step/{step_execution_id}` | Reexecuta um step com falha |
+| POST | `/orchestrator/approve/{name}` | Aprova uma release aguardando aprovação |
+| GET | `/orchestrator/status/{name}` | Status da última execução de uma release |
+| GET | `/orchestrator/details/{name}` | Detalhes completos (com steps) de uma release |
+
+### Callback
+
+| Método | Rota | Descrição |
+|--------|------|-----------|
+| POST | `/callback/release` | Callback do Jenkins ao finalizar um step |
+| POST | `/callback/event` | Eventos informativos de um step (logs) |
+
+### UI (Interface Web)
+
+| Método | Rota | Descrição |
+|--------|------|-----------|
+| GET | `/ui/` | Página inicial |
+| GET | `/ui/execution/{id}` | Detalhes de uma execução |
+| POST | `/ui/execution/{id}/approve` | Aprovar execução via UI |
+| GET | `/ui/sse/execution/{id}` | Stream SSE para atualizações em tempo real |
+| GET | `/ui/step-events/{correlation_id}` | Histórico de eventos de um step |
+| POST | `/ui/retry-step/{id}` | Retry de step via UI |
+| GET | `/ui/settings` | Página de configurações |
+| POST | `/ui/settings` | Salvar configurações |
+| POST | `/ui/execute/{name}` | Executar release via UI |
+| GET | `/ui/releases` | Listagem de releases cadastradas |
+| POST | `/ui/releases/upload` | Upload de YAML de release |
+
+## Descritor de Release (YAML)
+
+Exemplo de arquivo de configuração:
+
+```yaml
+apiVersion: v1
+kind: Release
+metadata:
+  name: minha-release
+  author: time-platform
+  description: Deploy dos microsserviços
+spec:
+  strategy:
+    type: all-or-nothing
+  stages:
+    - id: stage-build
+      steps:
+        - id: build-api
+          repository: meu-repo
+          release: main
+          critical: true
+          job:
+            type: jenkins
+            path: /job/build-api
+    - id: stage-deploy
+      steps:
+        - id: deploy-api
+          repository: meu-repo
+          release: main
+          critical: true
+          requires_approval: true
+          job:
+            type: jenkins
+            path: /job/deploy-api
+```
+
+## Tecnologias
+
+- **FastAPI** — Framework web assíncrono
+- **SQLAlchemy** (async) + **asyncpg** — ORM e driver PostgreSQL
+- **Alembic** — Migrations de banco de dados
+- **Pydantic** — Validação de dados e configurações
+- **Jinja2** + **HTMX** — Interface web com SSE
+- **httpx** — Cliente HTTP para integrações
+- **uv** — Gerenciador de pacotes e ambiente virtual
+
+## Desenvolvimento
+
+```bash
+# Instalar dependências de desenvolvimento
+uv sync --group dev
+
+# Rodar testes
+uv run pytest
+
+# Linter
+uv run ruff check src/
+```
+
+## Docker (Produção)
+
+```bash
+docker build -t maestro .
+docker run -p 8000:8000 --env-file .env maestro
+```
+
+## Arquitetura
+
+Para detalhes sobre decisões arquiteturais, consulte o [ARCHITECTURE.md](ARCHITECTURE.md).
