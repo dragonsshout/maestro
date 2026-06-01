@@ -63,7 +63,7 @@
                             <th>#</th>
                             <th>Nome</th>
                             <th>Criado em</th>
-                            <th></th>
+                            <th>Acoes</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -73,13 +73,30 @@
                             <td class="font-semibold font-mono">{{ desc.name }}</td>
                             <td class="text-base-content/60">{{ desc.created_at.strftime('%d/%m/%Y %H:%M') }}</td>
                             <td>
-                                <button
-                                    class="btn btn-xs btn-outline"
-                                    hx-get="/ui/releases/{{ desc.id }}/yaml"
-                                    hx-target="body"
-                                    hx-swap="beforeend"
-                                    title="Ver YAML"
-                                >📄 YAML</button>
+                                <div class="flex gap-1">
+                                    <button
+                                        class="btn btn-xs btn-success btn-circle"
+                                        hx-post="/ui/execute/{{ desc.name }}"
+                                        hx-target="body"
+                                        hx-swap="beforeend"
+                                        hx-confirm="Executar a release '{{ desc.name }}'?"
+                                        title="Executar release"
+                                    >▶</button>
+                                    <button
+                                        class="btn btn-xs btn-info btn-circle"
+                                        hx-post="/ui/dry-run/{{ desc.name }}"
+                                        hx-target="body"
+                                        hx-swap="beforeend"
+                                        title="Dry Run - simular execucao"
+                                    >🧪</button>
+                                    <button
+                                        class="btn btn-xs btn-outline"
+                                        hx-get="/ui/releases/{{ desc.id }}/yaml"
+                                        hx-target="body"
+                                        hx-swap="beforeend"
+                                        title="Ver YAML"
+                                    >📄</button>
+                                </div>
                             </td>
                         </tr>
                         {% endfor %}
