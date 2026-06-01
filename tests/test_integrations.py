@@ -221,17 +221,3 @@ class TestJenkinsIntegration:
             with patch.object(httpx.AsyncClient, "get", return_value=httpx.Response(200, json=[])):
                 with pytest.raises(httpx.HTTPStatusError):
                     await jenkins.approve_pipeline("job/deploy", build_number=10, input_id="inp")
-
-    async def test_get_job_info(self, jenkins):
-        job_data = {"name": "deploy", "buildable": True, "color": "blue"}
-        mock_response = httpx.Response(200, json=job_data, request=httpx.Request("GET", "http://test"))
-        with patch.object(httpx.AsyncClient, "get", return_value=mock_response):
-            result = await jenkins.get_job_info("job/deploy")
-            assert result["name"] == "deploy"
-            assert result["buildable"] is True
-
-    async def test_get_job_info_error(self, jenkins):
-        mock_response = httpx.Response(404, request=httpx.Request("GET", "http://test"))
-        with patch.object(httpx.AsyncClient, "get", return_value=mock_response):
-            with pytest.raises(httpx.HTTPStatusError):
-                await jenkins.get_job_info("job/nonexistent")

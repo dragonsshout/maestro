@@ -48,6 +48,8 @@ class StageStatusResponse(BaseModel):
     status: ExecutionStatus
 
 class ReleaseStatusResponse(BaseModel):
+    model_config = {"from_attributes": True}
+
     id: int
     name: str
     status: ExecutionStatus
@@ -55,10 +57,9 @@ class ReleaseStatusResponse(BaseModel):
     created_at: datetime
     stages: List[StageStatusResponse]
 
-    class Config:
-        from_attributes = True
-
 class ReleaseStepResponse(BaseModel):
+    model_config = {"from_attributes": True}
+
     id: int
     stage_id: str
     step_id: str
@@ -67,9 +68,6 @@ class ReleaseStepResponse(BaseModel):
     job_execution_correlation_id: Optional[int] = None
     job_input_id: Optional[str] = None
     updated_at: datetime
-
-    class Config:
-        from_attributes = True
 
 class ReleaseDetailsResponse(ReleaseStatusResponse):
     steps: List[ReleaseStepResponse]

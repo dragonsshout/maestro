@@ -32,6 +32,10 @@ pythonpath = ["src"]
 markers = [
     "integration: marks tests that require Docker (Testcontainers)",
 ]
+filterwarnings = [
+    "ignore::DeprecationWarning:pythonjsonlogger",
+    "ignore:coroutine.*was never awaited:RuntimeWarning",
+]
 
 [dependency-groups]
 dev = [

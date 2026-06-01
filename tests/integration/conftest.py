@@ -1,7 +1,7 @@
 """
 Integration test fixtures.
 
-Spins up a real PostgreSQL container (via podman/docker CLI),
+Uses testcontainers to spin up a real PostgreSQL container,
 runs Alembic migrations, and provides an async session + httpx AsyncClient
 for full end-to-end testing.
 
@@ -10,97 +10,40 @@ External APIs (Jenkins, GitHub) are mocked at the HTTP level via pytest-httpx.
 import os
 import re
 import subprocess
-import socket
-import time
 import asyncio
-from contextlib import closing
 
 import pytest
 import pytest_asyncio
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from httpx import AsyncClient, ASGITransport
+from testcontainers.postgres import PostgresContainer
 
 from maestro.database.models import Base
 from maestro.database.session import get_db
 
 
 # ---------------------------------------------------------------------------
-# Container management helpers
-# ---------------------------------------------------------------------------
-
-def _find_free_port() -> int:
-    """Find a free TCP port on localhost."""
-    with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as s:
-        s.bind(("", 0))
-        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        return s.getsockname()[1]
-
-
-def _container_runtime() -> str:
-    """Detect available container runtime (podman or docker)."""
-    for cmd in ("podman", "docker"):
-        try:
-            subprocess.run([cmd, "--version"], capture_output=True, check=True)
-            return cmd
-        except (subprocess.CalledProcessError, FileNotFoundError):
-            continue
-    pytest.skip("No container runtime (podman/docker) available")
-
-
-def _wait_for_postgres(host: str, port: int, timeout: int = 30):
-    """Wait until PostgreSQL is accepting connections."""
-    import psycopg2
-    deadline = time.time() + timeout
-    while time.time() < deadline:
-        try:
-            conn = psycopg2.connect(
-                host=host, port=port, user="maestro_test",
-                password="maestro_test", dbname="maestro_test"
-            )
-            conn.close()
-            return
-        except psycopg2.OperationalError:
-            time.sleep(0.5)
-    raise TimeoutError(f"PostgreSQL not ready after {timeout}s on port {port}")
-
-
-# ---------------------------------------------------------------------------
-# PostgreSQL container fixture (session-scoped)
+# PostgreSQL container fixture (session-scoped via testcontainers)
 # ---------------------------------------------------------------------------
 
 @pytest.fixture(scope="session")
 def postgres_container():
     """
-    Start a PostgreSQL container for the test session.
-    Yields the connection URL (asyncpg format).
-    Cleans up after all tests.
+    Start a PostgreSQL container using testcontainers.
+    Yields the async connection URL (asyncpg format).
+    Container is automatically cleaned up after the session.
     """
-    runtime = _container_runtime()
-    port = _find_free_port()
-    container_name = f"maestro-test-pg-{port}"
-
-    # Start postgres container
-    subprocess.run(
-        [
-            runtime, "run", "--rm", "-d",
-            "--name", container_name,
-            "-e", "POSTGRES_USER=maestro_test",
-            "-e", "POSTGRES_PASSWORD=maestro_test",
-            "-e", "POSTGRES_DB=maestro_test",
-            "-p", f"{port}:5432",
-            "postgres:16-alpine",
-        ],
-        check=True,
-        capture_output=True,
-    )
-
-    try:
-        _wait_for_postgres("localhost", port)
-        db_url = f"postgresql+asyncpg://maestro_test:maestro_test@localhost:{port}/maestro_test"
-        yield db_url
-    finally:
-        # Stop and remove container
-        subprocess.run([runtime, "rm", "-f", container_name], capture_output=True)
+    with PostgresContainer(
+        image="postgres:16-alpine",
+        username="maestro_test",
+        password="maestro_test",
+        dbname="maestro_test",
+    ) as pg:
+        # testcontainers provides a sync URL like postgresql://user:pass@host:port/db
+        sync_url = pg.get_connection_url()
+        # Convert to asyncpg format
+        async_url = sync_url.replace("postgresql+psycopg2://", "postgresql+asyncpg://")
+        yield async_url
 
 
 # ---------------------------------------------------------------------------
@@ -128,20 +71,19 @@ def run_migrations(postgres_container):
     env = os.environ.copy()
     env["DB_URL"] = sync_url
 
+    project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
     result = subprocess.run(
-        ["python3.11", "-m", "alembic", "upgrade", "head"],
-        cwd="/projects/sandbox/maestro",
+        ["python3", "-m", "alembic", "upgrade", "head"],
+        cwd=project_root,
         env=env,
         capture_output=True,
         text=True,
     )
     if result.returncode != 0:
         # Fallback: create tables directly via SQLAlchemy
-        import asyncio
-        from sqlalchemy.ext.asyncio import create_async_engine as _create_engine
-
         async def _create_tables():
-            engine = _create_engine(postgres_container)
+            engine = create_async_engine(postgres_container)
             async with engine.begin() as conn:
                 await conn.run_sync(Base.metadata.create_all)
             await engine.dispose()
@@ -158,10 +100,7 @@ async def db_session(db_engine):
     """
     Provide an async session for each test.
     After each test, all tables are truncated to ensure isolation.
-    We use real commits since the app code uses commit().
     """
-    from sqlalchemy.ext.asyncio import async_sessionmaker
-
     session_factory = async_sessionmaker(bind=db_engine, expire_on_commit=False)
     async with session_factory() as session:
         yield session
@@ -173,7 +112,10 @@ async def _cleanup_db(postgres_container):
     cleanup_engine = create_async_engine(postgres_container, echo=False)
     async with cleanup_engine.connect() as conn:
         from sqlalchemy import text
-        await conn.execute(text("TRUNCATE step_event, release_step_execution, release_execution, orchestrator_descriptor, ui_settings CASCADE"))
+        await conn.execute(text(
+            "TRUNCATE step_event, release_step_execution, release_execution, "
+            "orchestrator_descriptor, ui_settings CASCADE"
+        ))
         await conn.commit()
     await cleanup_engine.dispose()
     yield
@@ -191,7 +133,6 @@ async def app(db_engine):
     subprocess.run is patched to prevent Alembic from running in lifespan.
     """
     from unittest.mock import patch
-    from sqlalchemy.ext.asyncio import async_sessionmaker
 
     session_factory = async_sessionmaker(bind=db_engine, expire_on_commit=False)
 
@@ -245,7 +186,7 @@ def mock_github_pr_found(httpx_mock):
 def mock_github_pr_details_clean(httpx_mock):
     """Mock GitHub get_pull_request_details → clean PR."""
     httpx_mock.add_response(
-        url=re.compile(r".*api\.github\.com/repos/.*/pulls/\d+$"),
+        url=re.compile(r".*api\.github\.com/repos/.*/pulls/\\d+$"),
         json={
             "number": 1,
             "state": "open",
