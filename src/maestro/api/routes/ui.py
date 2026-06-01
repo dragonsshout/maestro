@@ -46,6 +46,7 @@ async def execution_detail(
     jenkins_base_url = await settings_service.get(SETTING_JENKINS_BASE_URL)
     github_base_url = await settings_service.get(SETTING_GITHUB_BASE_URL)
     github_organization = await settings_service.get(SETTING_GITHUB_ORGANIZATION)
+    
     return templates.TemplateResponse(
         request,
         "execution_detail.html",

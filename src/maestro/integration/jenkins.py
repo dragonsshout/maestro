@@ -2,7 +2,7 @@ import json
 import httpx
 from typing import Optional, Dict, Any
 
-from maestro.schemas.jenkins import JenkinsQueueItemSchema
+from maestro.schemas.jenkins import JenkinsQueueItemSchema, JenkinsPendingInputSchema
 
 class JenkinsIntegration:
     def __init__(self, base_url: str, username: Optional[str] = None, token: Optional[str] = None):
@@ -69,13 +69,13 @@ class JenkinsIntegration:
                 pending_url = f"/{job_name.strip('/')}/{build_number}/wfapi/pendingInputActions"
                 response = await client.get(pending_url)
                 if response.status_code == 200:
-                    inputs_data = response.json()
-                    if inputs_data and len(inputs_data) > 0:
-                        input_id = inputs_data[0].get("id")
-                        
-                        # Tenta descobrir o nome do parâmetro no Jenkins
-                        if "inputs" in inputs_data[0] and len(inputs_data[0]["inputs"]) > 0:
-                            param_name = inputs_data[0]["inputs"][0].get("name", "STATUS")
+                    raw_inputs = response.json()
+                    if raw_inputs and len(raw_inputs) > 0:
+                        pending_input = JenkinsPendingInputSchema(**raw_inputs[0])
+                        input_id = pending_input.id
+
+                        if pending_input.inputs:
+                            param_name = pending_input.inputs[0].name
                 
                 if not input_id:
                     input_id = "Submit"
@@ -101,16 +101,3 @@ class JenkinsIntegration:
             endpoint = f"/{job_name.strip('/')}/api/json"
             response = await client.get(endpoint)
             return response.status_code == 200
-
-    async def get_job_info(self, job_name: str) -> Dict[str, Any]:
-        """
-        Obtém os detalhes e as informações gerais de um job no Jenkins.
-
-        :param job_name: Nome do job.
-        :return: Dicionário com as informações (JSON) retornadas pelo Jenkins.
-        """
-        async with self._get_client() as client:
-            endpoint = f"/{job_name.strip('/')}/api/json"
-            response = await client.get(endpoint)
-            response.raise_for_status()
-            return response.json()
