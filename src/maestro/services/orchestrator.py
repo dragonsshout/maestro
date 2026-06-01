@@ -3,9 +3,10 @@ from fastapi import Depends, BackgroundTasks
 from maestro.database.models import OrchestratorDescriptor, ReleaseExecution, ReleaseStepExecution
 from maestro.repositories.orchestrator import OrchestratorDescriptorRepository
 from maestro.repositories.execution import ExecutionRepository
-from maestro.schemas.orchestrator import ReleaseConfigSchema
+from maestro.schemas.orchestrator import ReleaseConfigSchema, DryRunResponse, DryRunStageResult, DryRunStepResult
 from maestro.config.settings import settings
 from maestro.integration.github import GithubIntegration
+from maestro.integration.jenkins import JenkinsIntegration
 from pydantic import ValidationError
 import yaml
 from sqlalchemy.exc import IntegrityError
@@ -46,6 +47,88 @@ class OrchestratorService:
             return await self.repository.add(descriptor)
         except IntegrityError:
             raise ValueError(f"Já existe uma configuração de release com o nome '{release_config.metadata.name}'.")
+
+    async def dry_run_release(self, name: str) -> DryRunResponse:
+        descriptor = await self.repository.get_by_name(name)
+        if not descriptor:
+            raise ValueError(f"Descritor com nome '{name}' não encontrado.")
+
+        config = ReleaseConfigSchema(**yaml.safe_load(descriptor.yaml))
+
+        github = GithubIntegration(organization=settings.github_organization, token=settings.github_token)
+        jenkins = JenkinsIntegration(
+            base_url=settings.jenkins_url,
+            username=settings.jenkins_username,
+            token=settings.jenkins_token,
+        )
+
+        all_valid = True
+        stages_results: list[DryRunStageResult] = []
+
+        for stage in config.spec.stages:
+            steps_results: list[DryRunStepResult] = []
+
+            for step in stage.steps:
+                branch_exists = False
+                pr_found = False
+                pr_number = None
+                pr_mergeable_state = None
+                pr_is_clean = False
+                jenkins_job_exists = False
+
+                try:
+                    branch_exists = await github.branch_exists(step.repository, step.release)
+                except Exception:
+                    branch_exists = False
+
+                if branch_exists:
+                    try:
+                        pr = await github.get_pull_request_by_branch(step.repository, step.release)
+                        if pr:
+                            pr_found = True
+                            pr_number = pr.number
+                            try:
+                                pr_detail = await github.get_pull_request_details(step.repository, pr.number)
+                                pr_mergeable_state = pr_detail.mergeable_state
+                                pr_is_clean = pr_detail.mergeable_state == "clean"
+                            except Exception:
+                                pr_is_clean = False
+                    except Exception:
+                        pr_found = False
+
+                try:
+                    jenkins_job_exists = await jenkins.job_exists(step.job.path)
+                except Exception:
+                    jenkins_job_exists = False
+
+                step_valid = branch_exists and pr_found and pr_is_clean and jenkins_job_exists
+                if not step_valid:
+                    all_valid = False
+
+                steps_results.append(DryRunStepResult(
+                    step_id=step.id,
+                    stage_id=stage.id,
+                    repository=step.repository,
+                    branch=step.release,
+                    branch_exists=branch_exists,
+                    pr_found=pr_found,
+                    pr_number=pr_number,
+                    pr_mergeable_state=pr_mergeable_state,
+                    pr_is_clean=pr_is_clean,
+                    jenkins_job_path=step.job.path,
+                    jenkins_job_exists=jenkins_job_exists,
+                ))
+
+            stages_results.append(DryRunStageResult(
+                stage_id=stage.id,
+                steps=steps_results,
+            ))
+
+        return DryRunResponse(
+            name=name,
+            valid=all_valid,
+            stages=stages_results,
+        )
 
     async def execute_release(self, name: str, background_tasks: BackgroundTasks) -> int:
         descriptor = await self.repository.get_by_name(name)

@@ -38,6 +38,19 @@ class GithubIntegration:
             response.raise_for_status()
             return PullRequestDetailSchema(**response.json())
 
+    async def branch_exists(self, repo_name: str, branch_name: str) -> bool:
+        """
+        Verifica se uma branch existe no repositório.
+
+        :param repo_name: Nome do repositório.
+        :param branch_name: Nome da branch.
+        :return: True se a branch existir, False caso contrário.
+        """
+        async with self._get_client() as client:
+            endpoint = f"/repos/{self.organization}/{repo_name}/branches/{branch_name}"
+            response = await client.get(endpoint)
+            return response.status_code == 200
+
     async def get_pull_request_by_branch(self, repo_name: str, branch_name: str) -> Optional[PullRequestSchema]:
         """
         Obtém o Pull Request aberto associado a uma determinada branch.

@@ -73,3 +73,28 @@ class ReleaseStepResponse(BaseModel):
 
 class ReleaseDetailsResponse(ReleaseStatusResponse):
     steps: List[ReleaseStepResponse]
+
+
+class DryRunStepResult(BaseModel):
+    step_id: str
+    stage_id: str
+    repository: str
+    branch: str
+    branch_exists: bool
+    pr_found: bool
+    pr_number: Optional[int] = None
+    pr_mergeable_state: Optional[str] = None
+    pr_is_clean: bool
+    jenkins_job_path: str
+    jenkins_job_exists: bool
+
+
+class DryRunStageResult(BaseModel):
+    stage_id: str
+    steps: List[DryRunStepResult]
+
+
+class DryRunResponse(BaseModel):
+    name: str
+    valid: bool
+    stages: List[DryRunStageResult]
