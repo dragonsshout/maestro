@@ -18,24 +18,28 @@
                     <div class="flex items-center gap-2">
                         <span>{{ ex.id }}</span>
                         <button
-                            class="btn btn-xs btn-success btn-circle hover:scale-110 active:scale-95 transition-transform shadow-sm"
+                            class="btn btn-xs btn-success btn-circle hover:scale-110 active:scale-95 transition-transform shadow-sm relative group"
                             hx-post="/ui/execute/{{ ex.name }}"
                             hx-target="body"
                             hx-swap="beforeend"
                             hx-confirm="Executar a release '{{ ex.name }}'?"
                             onclick="event.stopPropagation()"
                             title="Executar release"
-                        ><svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg></button>
+                        >
+                            <svg class="w-3 h-3 group-[.htmx-request]:hidden" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
+                            <span class="loading loading-spinner loading-xs hidden group-[.htmx-request]:inline-block"></span>
+                        </button>
                         <button
-                            class="btn btn-xs btn-info btn-circle hover:scale-110 active:scale-95 transition-transform shadow-sm"
+                            class="btn btn-xs btn-info btn-circle hover:scale-110 active:scale-95 transition-transform shadow-sm relative group"
                             hx-post="/ui/dry-run/{{ ex.name }}"
                             hx-target="body"
                             hx-swap="beforeend"
-                            hx-indicator="#dry-run-loading-exec-{{ ex.id }}"
                             onclick="event.stopPropagation()"
                             title="Validar pré-requisitos"
-                        ><svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg></button>
-                        <span id="dry-run-loading-exec-{{ ex.id }}" class="loading loading-bars loading-xs htmx-indicator text-info ml-2" title="Processando..."></span>
+                        >
+                            <svg class="w-3 h-3 group-[.htmx-request]:hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                            <span class="loading loading-spinner loading-xs hidden group-[.htmx-request]:inline-block"></span>
+                        </button>
                     </div>
                 </td>
                 <td class="font-semibold">{{ ex.name }}</td>
@@ -58,7 +62,7 @@
                 <td class="text-sm text-base-content/60">{{ ex.created_at.strftime('%d/%m/%Y %H:%M') }}</td>
                 <td class="text-sm text-base-content/60">{{ ex.updated_at.strftime('%d/%m/%Y %H:%M') }}</td>
                 <td>
-                    <div class="flex gap-1 items-center">
+                    <div class="flex gap-2 items-center">
                         <a href="/ui/execution/{{ ex.id }}" class="btn btn-xs btn-outline btn-primary hover:scale-105 active:scale-95 transition-transform" onclick="event.stopPropagation()">Ver detalhes</a>
                         <button
                             class="btn btn-xs btn-outline hover:scale-105 active:scale-95 transition-transform"
