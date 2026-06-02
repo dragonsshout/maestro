@@ -1,3 +1,103 @@
+{% macro step_flow_icon(sv) %}
+{% if sv == "success" %}
+    <span class="flow-step-icon icon-success">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+    </span>
+{% elif sv == "failure" %}
+    <span class="flow-step-icon icon-failure">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
+    </span>
+{% elif sv == "in_progress" %}
+    <span class="flow-step-icon icon-in_progress">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><circle cx="12" cy="12" r="9" stroke-width="2" stroke-dasharray="30 56" stroke-linecap="round"><animateTransform attributeName="transform" type="rotate" from="0 12 12" to="360 12 12" dur="0.9s" repeatCount="indefinite"/></circle></svg>
+    </span>
+{% elif sv == "timeout" %}
+    <span class="flow-step-icon icon-timeout">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+    </span>
+{% elif sv == "waiting_approval" %}
+    <span class="flow-step-icon icon-waiting_approval">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+    </span>
+{% elif sv == "aborted" %}
+    <span class="flow-step-icon icon-aborted">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>
+    </span>
+{% else %}
+    <span class="flow-step-icon icon-pending">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><circle cx="12" cy="12" r="9" stroke-width="2"/></svg>
+    </span>
+{% endif %}
+{% endmacro %}
+
+{% macro stage_flow_status(stage_statuses) %}
+{% if "failure" in stage_statuses %}failure
+{% elif "timeout" in stage_statuses %}timeout
+{% elif "in_progress" in stage_statuses %}in_progress
+{% elif stage_statuses | select("equalto", "success") | list | length == stage_statuses | length %}success
+{% elif "waiting_approval" in stage_statuses %}waiting_approval
+{% else %}pending
+{% endif %}
+{% endmacro %}
+
+{# ═══════════════════════════════════════════════════════════════
+   FLOW GRAPH — GitHub Actions style
+════════════════════════════════════════════════════════════════ #}
+<div class="flow-graph overflow-x-auto">
+    <div class="flow-graph-inner">
+        {% for stage in stages %}
+        {% set stage_statuses = stage.steps | map(attribute='execution') | map(attribute='status') | list %}
+        {% set fstatus = stage_flow_status(stage_statuses) | trim %}
+
+        <div class="flow-stage-card flow-status-{{ fstatus }}">
+            {# Stage header #}
+            <div class="flow-stage-header">
+                <span class="flow-stage-name" title="{{ stage.id }}">{{ stage.id }}</span>
+                <span class="flow-stage-dot dot-{{ fstatus }}"></span>
+            </div>
+            <div class="flow-card-divider"></div>
+
+            {# Step list #}
+            {% for step in stage.steps %}
+            {% set se = step.execution %}
+            {% set sv = se.status %}
+            <a class="flow-step-item"
+               href="#step-{{ se.id }}"
+               onclick="flowScrollTo('step-{{ se.id }}'); return false;"
+               title="{{ se.step_id }}">
+                {{ step_flow_icon(sv) }}
+                <span class="flow-step-label">{{ se.step_id }}</span>
+            </a>
+            {% endfor %}
+        </div>
+
+        {# Arrow between stages #}
+        {% if not loop.last %}
+        <div class="flow-arrow">
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+            </svg>
+        </div>
+        {% endif %}
+        {% endfor %}
+    </div>
+</div>
+
+<script>
+function flowScrollTo(id) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    el.classList.remove('flow-highlight');
+    void el.offsetWidth; // reflow to restart animation
+    el.classList.add('flow-highlight');
+    setTimeout(() => el.classList.remove('flow-highlight'), 1900);
+}
+</script>
+
+{# ═══════════════════════════════════════════════════════════════
+   STAGE TABLES (original)
+════════════════════════════════════════════════════════════════ #}
 {% for stage in stages %}
 {% set stage_statuses = stage.steps | map(attribute='execution') | map(attribute='status') | list %}
 {% if "failure" in stage_statuses %}
@@ -56,7 +156,7 @@
                     {% for step in stage.steps %}
                     {% set se = step.execution %}
                     {% set sv = se.status %}
-                    <tr class="hover">
+                    <tr id="step-{{ se.id }}" class="hover">
                         <!-- Status icon + retry -->
                         <td class="text-center">
                             {% if sv == "failure" %}

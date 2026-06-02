@@ -98,6 +98,175 @@
             display: inline-flex;
         }
 
+        /* ─── Flow Graph ─────────────────────────────────────────────────────── */
+        .flow-graph {
+            padding: 1.25rem 0;
+        }
+        .flow-graph-inner {
+            display: flex;
+            align-items: flex-start;
+            gap: 0;
+            min-width: max-content;
+        }
+
+        /* Stage card */
+        .flow-stage-card {
+            width: 11rem;
+            min-height: 6rem;
+            border-radius: 0.875rem;
+            border: 1.5px solid;
+            padding: 0.75rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.35rem;
+            transition: box-shadow 0.2s ease, transform 0.15s ease;
+            cursor: default;
+            position: relative;
+            background: oklch(var(--b1) / 0.6);
+            backdrop-filter: blur(8px);
+        }
+        .flow-stage-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px oklch(var(--bc) / 0.12);
+        }
+
+        /* Stage card color variants */
+        .flow-stage-card.flow-status-success {
+            border-color: oklch(var(--su) / 0.6);
+            box-shadow: 0 0 0 1px oklch(var(--su) / 0.15), 0 2px 12px oklch(var(--su) / 0.08);
+        }
+        .flow-stage-card.flow-status-failure {
+            border-color: oklch(var(--er) / 0.6);
+            box-shadow: 0 0 0 1px oklch(var(--er) / 0.15), 0 2px 12px oklch(var(--er) / 0.08);
+        }
+        .flow-stage-card.flow-status-in_progress {
+            border-color: oklch(var(--wa) / 0.7);
+            box-shadow: 0 0 0 1px oklch(var(--wa) / 0.2), 0 2px 12px oklch(var(--wa) / 0.1);
+        }
+        .flow-stage-card.flow-status-timeout {
+            border-color: oklch(var(--wa) / 0.6);
+            box-shadow: 0 0 0 1px oklch(var(--wa) / 0.15), 0 2px 12px oklch(var(--wa) / 0.08);
+        }
+        .flow-stage-card.flow-status-waiting_approval {
+            border-color: oklch(var(--in) / 0.6);
+            box-shadow: 0 0 0 1px oklch(var(--in) / 0.15), 0 2px 12px oklch(var(--in) / 0.08);
+        }
+        .flow-stage-card.flow-status-pending {
+            border-color: oklch(var(--bc) / 0.2);
+        }
+
+        /* Stage header */
+        .flow-stage-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 0.35rem;
+            gap: 0.35rem;
+        }
+        .flow-stage-name {
+            font-size: 0.7rem;
+            font-weight: 700;
+            font-family: ui-monospace, monospace;
+            letter-spacing: 0.02em;
+            color: oklch(var(--bc) / 0.9);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            flex: 1;
+        }
+        .flow-stage-dot {
+            width: 0.55rem;
+            height: 0.55rem;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+        .flow-stage-dot.dot-success      { background: oklch(var(--su)); }
+        .flow-stage-dot.dot-failure      { background: oklch(var(--er)); }
+        .flow-stage-dot.dot-in_progress  { background: oklch(var(--wa)); animation: flow-pulse 1.2s ease-in-out infinite; }
+        .flow-stage-dot.dot-timeout      { background: oklch(var(--wa)); }
+        .flow-stage-dot.dot-waiting_approval { background: oklch(var(--in)); }
+        .flow-stage-dot.dot-pending      { background: oklch(var(--bc) / 0.3); }
+        .flow-stage-dot.dot-aborted      { background: oklch(var(--n) / 0.6); }
+
+        @keyframes flow-pulse {
+            0%, 100% { opacity: 1;   transform: scale(1); }
+            50%       { opacity: 0.5; transform: scale(0.75); }
+        }
+
+        /* Divider inside card */
+        .flow-card-divider {
+            height: 1px;
+            background: oklch(var(--bc) / 0.08);
+            margin: 0.1rem 0 0.4rem;
+        }
+
+        /* Step item inside a flow card */
+        .flow-step-item {
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+            padding: 0.2rem 0.3rem;
+            border-radius: 0.4rem;
+            cursor: pointer;
+            transition: background 0.15s ease;
+            text-decoration: none;
+        }
+        .flow-step-item:hover {
+            background: oklch(var(--bc) / 0.07);
+        }
+        .flow-step-icon {
+            width: 0.9rem;
+            height: 0.9rem;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .flow-step-icon svg {
+            width: 100%;
+            height: 100%;
+        }
+        .flow-step-label {
+            font-size: 0.65rem;
+            font-family: ui-monospace, monospace;
+            color: oklch(var(--bc) / 0.75);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            flex: 1;
+        }
+        .flow-step-icon.icon-success      { color: oklch(var(--su)); }
+        .flow-step-icon.icon-failure      { color: oklch(var(--er)); }
+        .flow-step-icon.icon-in_progress  { color: oklch(var(--wa)); }
+        .flow-step-icon.icon-timeout      { color: oklch(var(--wa)); }
+        .flow-step-icon.icon-waiting_approval { color: oklch(var(--in)); }
+        .flow-step-icon.icon-pending      { color: oklch(var(--bc) / 0.3); }
+        .flow-step-icon.icon-aborted      { color: oklch(var(--n) / 0.5); }
+
+        /* Arrow between stages */
+        .flow-arrow {
+            display: flex;
+            align-items: center;
+            padding: 0 0.3rem;
+            margin-top: 2.5rem; /* vertically centres arrow relative to card top area */
+            color: oklch(var(--bc) / 0.25);
+            flex-shrink: 0;
+        }
+        .flow-arrow svg {
+            width: 1.25rem;
+            height: 1.25rem;
+        }
+
+        /* Highlight on a table row when navigated from the graph */
+        tr.flow-highlight {
+            animation: row-highlight 1.8s ease forwards;
+        }
+        @keyframes row-highlight {
+            0%   { background: oklch(var(--p) / 0.18); }
+            100% { background: transparent; }
+        }
+        /* ─── end Flow Graph ─────────────────────────────────────────────────── */
+
         /* Disable buttons and links during HTMX requests to prevent double-clicks */
         button.htmx-request, a.htmx-request {
             pointer-events: none !important;

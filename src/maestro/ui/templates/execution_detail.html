@@ -73,6 +73,11 @@
     {% include "partials/stages.html" %}
 </div>
 
+<!-- Histórico de ações (atualizado via SSE OOB) -->
+{% with action_logs=action_logs %}
+{% include "partials/action_log.html" %}
+{% endwith %}
+
 <!-- Container onde o modal de eventos é injetado via HTMX -->
 <div id="events-modal-container"></div>
 

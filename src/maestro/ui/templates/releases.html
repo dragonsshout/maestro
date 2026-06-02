@@ -73,26 +73,54 @@
                             <th>#</th>
                             <th>Nome</th>
                             <th>Criado em</th>
-                            <th>Acoes</th>
+                            <th>Execução ativa</th>
+                            <th>Ações</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for desc in descriptors %}
+                        {% set active = active_executions.get(desc.name) %}
                         <tr class="hover:bg-base-200/70 transition-colors duration-200">
                             <td class="font-mono text-base-content/50">{{ desc.id }}</td>
                             <td class="font-semibold font-mono">{{ desc.name }}</td>
                             <td class="text-base-content/60">{{ desc.created_at.strftime('%d/%m/%Y %H:%M') }}</td>
+
+                            {# Coluna de execução ativa #}
+                            <td>
+                                {% if active %}
+                                <a href="/ui/execution/{{ active.id }}"
+                                   class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold
+                                          bg-warning/15 text-warning border border-warning/30
+                                          hover:bg-warning/25 transition-colors"
+                                   title="Execução #{{ active.id }} em andamento">
+                                    <span class="relative flex h-2 w-2">
+                                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-warning opacity-75"></span>
+                                        <span class="relative inline-flex rounded-full h-2 w-2 bg-warning"></span>
+                                    </span>
+                                    #{{ active.id }}
+                                    <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                                </a>
+                                {% else %}
+                                <span class="text-base-content/30 text-xs">—</span>
+                                {% endif %}
+                            </td>
+
                             <td>
                                 <div class="flex items-center gap-2">
                                     <button
-                                        class="btn btn-xs btn-success btn-circle hover:scale-110 active:scale-95 transition-transform shadow-sm relative group"
+                                        class="btn btn-xs btn-circle hover:scale-110 active:scale-95 transition-transform shadow-sm relative group
+                                               {% if active %}btn-warning{% else %}btn-success{% endif %}"
                                         hx-post="/ui/execute/{{ desc.name }}"
                                         hx-target="body"
                                         hx-swap="beforeend"
-                                        hx-confirm="Executar a release '{{ desc.name }}'?"
-                                        title="Executar release"
+                                        hx-confirm="{% if active %}Já existe uma execução ativa (#{{ active.id }}) para '{{ desc.name }}'. Isso será bloqueado. Deseja verificar?{% else %}Executar a release '{{ desc.name }}'?{% endif %}"
+                                        title="{% if active %}Execução já em andamento{% else %}Executar release{% endif %}"
                                     >
+                                        {% if active %}
+                                        <svg class="w-3 h-3 group-[.htmx-request]:hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"/></svg>
+                                        {% else %}
                                         <svg class="w-3 h-3 group-[.htmx-request]:hidden" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
+                                        {% endif %}
                                         <span class="loading loading-spinner loading-xs hidden group-[.htmx-request]:inline-block"></span>
                                     </button>
                                     <button

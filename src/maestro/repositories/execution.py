@@ -2,7 +2,8 @@ from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from maestro.database.session import get_db
-from maestro.database.models import ReleaseExecution, ReleaseStepExecution, StepEvent
+from maestro.database.models import ReleaseExecution, ReleaseStepExecution, StepEvent, ExecutionActionLog
+from maestro.schemas.enums import ExecutionStatus
 from typing import List, Optional
 
 class ExecutionRepository:
@@ -86,6 +87,24 @@ class ExecutionRepository:
         )
         return result.scalars().first()
 
+    async def get_active_execution_by_name(self, name: str) -> ReleaseExecution | None:
+        """Retorna a execução ativa (pending/in_progress/waiting_approval) para uma release, ou None."""
+        active_statuses = [
+            ExecutionStatus.PENDING,
+            ExecutionStatus.IN_PROGRESS,
+            ExecutionStatus.WAITING_APPROVAL,
+        ]
+        result = await self.db.execute(
+            select(ReleaseExecution)
+            .where(
+                ReleaseExecution.name == name,
+                ReleaseExecution.status.in_([s.value for s in active_statuses]),
+            )
+            .order_by(ReleaseExecution.id.desc())
+            .limit(1)
+        )
+        return result.scalars().first()
+
     async def get_all_executions(self, limit: int = 50) -> List[ReleaseExecution]:
         result = await self.db.execute(
             select(ReleaseExecution)
@@ -105,5 +124,21 @@ class ExecutionRepository:
             select(StepEvent)
             .where(StepEvent.job_execution_correlation_id == correlation_id)
             .order_by(StepEvent.created_at.asc())
+        )
+        return list(result.scalars().all())
+
+    async def add_action_log(self, log: ExecutionActionLog) -> ExecutionActionLog:
+        """Persiste um novo registro no histórico de ações manuais."""
+        self.db.add(log)
+        await self.db.commit()
+        await self.db.refresh(log)
+        return log
+
+    async def get_action_logs_by_execution_id(self, execution_id: int) -> List[ExecutionActionLog]:
+        """Retorna todos os logs de ação de uma execução, do mais recente ao mais antigo."""
+        result = await self.db.execute(
+            select(ExecutionActionLog)
+            .where(ExecutionActionLog.release_execution_id == execution_id)
+            .order_by(ExecutionActionLog.created_at.desc())
         )
         return list(result.scalars().all())

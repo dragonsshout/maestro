@@ -1,0 +1,108 @@
+{# action_log.html — histórico de ações manuais, atualizado via SSE OOB #}
+<div id="action-log-panel"
+     hx-swap-oob="innerHTML">
+    {% if action_logs %}
+    <div class="card bg-base-100/50 backdrop-blur-sm border border-base-300/50 shadow-sm mt-8 rounded-xl overflow-hidden">
+        <div class="card-body p-4 md:p-6">
+            <div class="flex items-center gap-2 mb-4">
+                <svg class="w-5 h-5 text-base-content/60" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/>
+                </svg>
+                <h3 class="font-bold text-base tracking-tight">Histórico de ações</h3>
+                <span class="badge badge-ghost badge-sm font-mono">{{ action_logs | length }}</span>
+            </div>
+
+            <div class="overflow-x-auto rounded-lg border border-base-300/50 bg-base-100/30">
+                <table class="table table-sm w-full text-xs">
+                    <thead class="bg-base-200/50 text-base-content/70 uppercase tracking-wide text-xs">
+                        <tr>
+                            <th>Horário</th>
+                            <th>Ação</th>
+                            <th>Stage</th>
+                            <th>Step</th>
+                            <th>Detalhe</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for log in action_logs %}
+                        <tr class="hover">
+                            {# Horário #}
+                            <td class="text-base-content/50 whitespace-nowrap font-mono">
+                                {{ log.created_at.strftime('%d/%m %H:%M:%S') }}
+                            </td>
+
+                            {# Ação com ícone e badge colorido #}
+                            <td>
+                                {% if log.action == "approve" %}
+                                <span class="inline-flex items-center gap-1 text-success font-semibold">
+                                    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                                    Aprovado
+                                </span>
+                                {% elif log.action == "deny" %}
+                                <span class="inline-flex items-center gap-1 text-error font-semibold">
+                                    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
+                                    Negado
+                                </span>
+                                {% elif log.action == "retry_step" %}
+                                <span class="inline-flex items-center gap-1 text-warning font-semibold">
+                                    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                                    Reexecutado
+                                </span>
+                                {% elif log.action == "resolve_timeout_success" %}
+                                <span class="inline-flex items-center gap-1 text-success font-semibold">
+                                    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                    Timeout → Sucesso
+                                </span>
+                                {% elif log.action == "resolve_timeout_failure" %}
+                                <span class="inline-flex items-center gap-1 text-error font-semibold">
+                                    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                    Timeout → Falha
+                                </span>
+                                {% else %}
+                                <span class="text-base-content/60 font-mono">{{ log.action }}</span>
+                                {% endif %}
+                            </td>
+
+                            {# Stage #}
+                            <td class="font-mono text-base-content/60">
+                                {% if log.stage_id %}
+                                    {{ log.stage_id }}
+                                {% else %}
+                                    <span class="text-base-content/30">—</span>
+                                {% endif %}
+                            </td>
+
+                            {# Step #}
+                            <td class="font-mono text-base-content/60 max-w-[10rem] truncate" title="{{ log.step_id or '' }}">
+                                {% if log.step_id %}
+                                    {% if log.step_execution_id %}
+                                    <a class="link link-hover" href="#step-{{ log.step_execution_id }}"
+                                       onclick="flowScrollTo('step-{{ log.step_execution_id }}'); return false;">
+                                        {{ log.step_id }}
+                                    </a>
+                                    {% else %}
+                                    {{ log.step_id }}
+                                    {% endif %}
+                                {% else %}
+                                    <span class="text-base-content/30">—</span>
+                                {% endif %}
+                            </td>
+
+                            {# Detalhe #}
+                            <td class="text-base-content/50 max-w-[14rem] truncate" title="{{ log.detail or '' }}">
+                                {% if log.detail %}
+                                    {{ log.detail }}
+                                {% else %}
+                                    <span class="text-base-content/30">—</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>

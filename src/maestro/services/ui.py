@@ -38,14 +38,15 @@ class UIService:
     async def get_all_executions(self) -> list[ReleaseExecution]:
         return await self.execution_repo.get_all_executions()
 
-    async def get_execution_with_stages(self, execution_id: int) -> tuple[ReleaseExecution, list] | None:
-        """Retorna a execução e a lista de stages montada para renderização."""
+    async def get_execution_with_stages(self, execution_id: int) -> tuple[ReleaseExecution, list, list] | None:
+        """Retorna a execução, a lista de stages e o histórico de ações para renderização."""
         execution = await self.execution_repo.get_execution_by_id(execution_id)
         if not execution:
             return None
 
         stages = await self._build_stages_view(execution)
-        return execution, stages
+        action_logs = await self.execution_repo.get_action_logs_by_execution_id(execution_id)
+        return execution, stages, action_logs
 
     async def execution_sse_stream(self, execution_id: int) -> AsyncGenerator[dict, None]:
         """
@@ -70,12 +71,12 @@ class UIService:
                     if not result:
                         break
 
-                    execution, stages = result
+                    execution, stages, action_logs = result
                     jenkins_base_url = (await settings_repo.get(SETTING_JENKINS_BASE_URL) or "").rstrip("/")
                     github_base_url = (await settings_repo.get(SETTING_GITHUB_BASE_URL) or "").rstrip("/")
                     github_organization = await settings_repo.get(SETTING_GITHUB_ORGANIZATION) or ""
 
-                snapshot = _build_snapshot(stages, execution.status)
+                snapshot = _build_snapshot(stages, execution.status, len(action_logs))
 
                 if snapshot != last_snapshot:
                     last_snapshot = snapshot
@@ -93,8 +94,13 @@ class UIService:
                         execution=execution,
                         waiting_approval=(execution.status == ExecutionStatus.WAITING_APPROVAL)
                     )
+
+                    log_html = _render_partial(
+                        "partials/action_log.html",
+                        action_logs=action_logs,
+                    )
                     
-                    html = stages_html + "\n" + oob_html
+                    html = stages_html + "\n" + oob_html + "\n" + log_html
                     yield {"event": "stage-update", "data": html}
 
                     if execution.status in TERMINAL_STATUSES:
@@ -148,11 +154,12 @@ def _assemble_stages(config: ReleaseConfigSchema, steps: list[ReleaseStepExecuti
     return result
 
 
-def _build_snapshot(stages: list, execution_status: str) -> str:
+def _build_snapshot(stages: list, execution_status: str, log_count: int = 0) -> str:
     """Gera uma string compacta do estado atual para detectar mudanças."""
     return json.dumps(
         {
             "status": str(execution_status),
+            "log_count": log_count,
             "stages": [
             {
                 "stage": s["id"],

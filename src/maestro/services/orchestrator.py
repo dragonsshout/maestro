@@ -140,8 +140,12 @@ class OrchestratorService:
         if not descriptor:
             raise ValueError(f"Descritor com nome '{name}' não encontrado.")
 
-        if await self.execution_repo.exists_by_name(name):
-            raise ValueError(f"Já existe uma execução registrada para a release '{name}'.")
+        active = await self.execution_repo.get_active_execution_by_name(name)
+        if active:
+            raise ValueError(
+                f"Já existe uma execução ativa (#{active.id}) para a release '{name}' "
+                f"com status '{active.status}'. Aguarde a conclusão ou abort antes de iniciar uma nova."
+            )
 
         config = ReleaseConfigSchema(**yaml.safe_load(descriptor.yaml))
 

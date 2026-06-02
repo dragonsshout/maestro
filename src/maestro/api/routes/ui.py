@@ -9,6 +9,7 @@ from maestro.services.settings import UISettingsService, KNOWN_SETTINGS, SETTING
 from maestro.repositories.execution import ExecutionRepository
 from maestro.repositories.orchestrator import OrchestratorDescriptorRepository
 from maestro.schemas.enums import ExecutionStatus
+from maestro.database.models import ExecutionActionLog
 
 TEMPLATES_DIR = Path(__file__).parent.parent.parent / "ui" / "templates"
 templates = Jinja2Templates(directory=TEMPLATES_DIR)
@@ -42,7 +43,7 @@ async def execution_detail(
     if not result:
         raise HTTPException(status_code=404, detail="Execução não encontrada.")
 
-    execution, stages = result
+    execution, stages, action_logs = result
     jenkins_base_url = await settings_service.get(SETTING_JENKINS_BASE_URL)
     github_base_url = await settings_service.get(SETTING_GITHUB_BASE_URL)
     github_organization = await settings_service.get(SETTING_GITHUB_ORGANIZATION)
@@ -53,6 +54,7 @@ async def execution_detail(
         {
             "execution": execution,
             "stages": stages,
+            "action_logs": action_logs,
             "waiting_approval": execution.status == ExecutionStatus.WAITING_APPROVAL,
             "jenkins_base_url": (jenkins_base_url or "").rstrip("/"),
             "github_base_url": (github_base_url or "").rstrip("/"),
@@ -74,12 +76,13 @@ async def approve_execution(
     payload: ApproveRequest,
     ui_service: UIService = Depends(),
     orchestrator_service: OrchestratorService = Depends(),
+    execution_repo: ExecutionRepository = Depends(),
 ):
     result = await ui_service.get_execution_with_stages(execution_id)
     if not result:
         raise HTTPException(status_code=404, detail="Execução não encontrada.")
 
-    execution, _ = result
+    execution, _, _logs = result
 
     try:
         await orchestrator_service.approve_release(execution.name, background_tasks, status=payload.status)
@@ -90,6 +93,14 @@ async def approve_execution(
             {"error": str(e)},
             status_code=400,
         )
+
+    # Grava no histórico de ações
+    action = "approve" if payload.status == "Sucesso" else "deny"
+    await execution_repo.add_action_log(ExecutionActionLog(
+        release_execution_id=execution_id,
+        action=action,
+        detail=f"Status enviado: {payload.status}",
+    ))
 
     return templates.TemplateResponse(
         request,
@@ -108,7 +119,7 @@ async def execution_release_yaml(
     if not result:
         raise HTTPException(status_code=404, detail="Execução não encontrada.")
 
-    execution, _ = result
+    execution, _, _logs = result
     descriptor = await ui_service.orchestrator_repo.get_by_id(execution.orchestrator_descriptor_id)
     return templates.TemplateResponse(
         request,
@@ -143,10 +154,19 @@ async def retry_step_ui(
     step_execution_id: int,
     background_tasks: BackgroundTasks,
     orchestrator_service: OrchestratorService = Depends(),
+    execution_repo: ExecutionRepository = Depends(),
 ):
     """Reexecuta um step que falhou via UI."""
     try:
         step = await orchestrator_service.retry_step(step_execution_id, background_tasks)
+        # Grava no histórico de ações
+        await execution_repo.add_action_log(ExecutionActionLog(
+            release_execution_id=step.release_execution_id,
+            action="retry_step",
+            step_execution_id=step.id,
+            stage_id=step.stage_id,
+            step_id=step.step_id,
+        ))
         return templates.TemplateResponse(
             request,
             "partials/retry_result.html",
@@ -186,9 +206,11 @@ async def resolve_timeout_ui(
     if action == "success":
         step.status = ExecutionStatus.SUCCESS
         step.message = "Resolvido manualmente como sucesso."
+        log_action = "resolve_timeout_success"
     elif action == "failure":
         step.status = ExecutionStatus.FAILURE
         step.message = "Resolvido manualmente como falha."
+        log_action = "resolve_timeout_failure"
     else:
         return templates.TemplateResponse(
             request, "partials/resolve_timeout_result.html",
@@ -196,6 +218,16 @@ async def resolve_timeout_ui(
         )
 
     await execution_repo.update_step_execution(step)
+
+    # Grava no histórico de ações
+    await execution_repo.add_action_log(ExecutionActionLog(
+        release_execution_id=step.release_execution_id,
+        action=log_action,
+        step_execution_id=step.id,
+        stage_id=step.stage_id,
+        step_id=step.step_id,
+        detail=step.message,
+    ))
 
     # Re-dispara o workflow para que ele continue processando
     background_tasks.add_task(orchestrator_service.process_workflow, step.release_execution_id)
@@ -262,12 +294,19 @@ async def settings_save(request: Request, service: UISettingsService = Depends()
 async def releases_page(
     request: Request,
     orchestrator_repo: OrchestratorDescriptorRepository = Depends(),
+    execution_repo: ExecutionRepository = Depends(),
 ):
     descriptors = await orchestrator_repo.get_all()
+    # Monta mapa name -> execução ativa para exibir avisos na UI
+    active_executions: dict = {}
+    for desc in descriptors:
+        active = await execution_repo.get_active_execution_by_name(desc.name)
+        if active:
+            active_executions[desc.name] = active
     return templates.TemplateResponse(
         request,
         "releases.html",
-        {"descriptors": descriptors},
+        {"descriptors": descriptors, "active_executions": active_executions},
     )
 
 
@@ -277,6 +316,7 @@ async def releases_upload(
     file: UploadFile = File(...),
     orchestrator_service: OrchestratorService = Depends(),
     orchestrator_repo: OrchestratorDescriptorRepository = Depends(),
+    execution_repo: ExecutionRepository = Depends(),
 ):
     error = None
     if not file.filename.endswith((".yaml", ".yml")):
@@ -294,10 +334,15 @@ async def releases_upload(
                 error = str(e)
 
     descriptors = await orchestrator_repo.get_all()
+    active_executions: dict = {}
+    for desc in descriptors:
+        active = await execution_repo.get_active_execution_by_name(desc.name)
+        if active:
+            active_executions[desc.name] = active
     return templates.TemplateResponse(
         request,
         "releases.html",
-        {"descriptors": descriptors, "upload_error": error, "upload_success": error is None},
+        {"descriptors": descriptors, "active_executions": active_executions, "upload_error": error, "upload_success": error is None},
     )
 
 

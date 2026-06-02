@@ -56,3 +56,17 @@ class StepEvent(Base):
     job_execution_correlation_id = Column(Integer, nullable=False, index=True)
     message = Column(Text, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+
+class ExecutionActionLog(Base):
+    """Histórico de ações manuais tomadas sobre uma execução de release."""
+    __tablename__ = "execution_action_log"
+
+    id = Column(Integer, primary_key=True, autoincrement=True, nullable=False)
+    release_execution_id = Column(Integer, ForeignKey('release_execution.id'), nullable=False, index=True)
+    action = Column(String, nullable=False)  # approve | deny | retry_step | resolve_timeout_success | resolve_timeout_failure
+    step_execution_id = Column(Integer, ForeignKey('release_step_execution.id'), nullable=True)
+    stage_id = Column(String, nullable=True)
+    step_id = Column(String, nullable=True)
+    detail = Column(Text, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
