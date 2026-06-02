@@ -75,17 +75,26 @@ class UIService:
                     github_base_url = (await settings_repo.get(SETTING_GITHUB_BASE_URL) or "").rstrip("/")
                     github_organization = await settings_repo.get(SETTING_GITHUB_ORGANIZATION) or ""
 
-                snapshot = _build_snapshot(stages)
+                snapshot = _build_snapshot(stages, execution.status)
 
                 if snapshot != last_snapshot:
                     last_snapshot = snapshot
-                    html = _render_partial(
+                    
+                    stages_html = _render_partial(
                         "partials/stages.html",
                         stages=stages,
                         jenkins_base_url=jenkins_base_url,
                         github_base_url=github_base_url,
                         github_organization=github_organization,
                     )
+                    
+                    oob_html = _render_partial(
+                        "partials/execution_oob.html",
+                        execution=execution,
+                        waiting_approval=(execution.status == ExecutionStatus.WAITING_APPROVAL)
+                    )
+                    
+                    html = stages_html + "\n" + oob_html
                     yield {"event": "stage-update", "data": html}
 
                     if execution.status in TERMINAL_STATUSES:
@@ -139,10 +148,12 @@ def _assemble_stages(config: ReleaseConfigSchema, steps: list[ReleaseStepExecuti
     return result
 
 
-def _build_snapshot(stages: list) -> str:
+def _build_snapshot(stages: list, execution_status: str) -> str:
     """Gera uma string compacta do estado atual para detectar mudanças."""
     return json.dumps(
-        [
+        {
+            "status": str(execution_status),
+            "stages": [
             {
                 "stage": s["id"],
                 "steps": [
@@ -151,7 +162,7 @@ def _build_snapshot(stages: list) -> str:
                 ],
             }
             for s in stages
-        ],
+        ]},
         default=str,
     )
 

@@ -57,33 +57,12 @@ class JenkinsIntegration:
             return JenkinsQueueItemSchema(**response.json())
 
     async def approve_pipeline(self, job_name: str, build_number: int, input_id: Optional[str] = None, status: str = "Sucesso") -> None:
-        """
-        Aprova um pipeline que está aguardando input (waiting approval) enviando um parâmetro de formulário.
-        Se input_id não for fornecido, tenta buscar o ID e o nome do parâmetro automaticamente através da wfapi.
-        """
-        
+
         async with self._get_client() as client:
-            param_name = "STATUS"
-            
-            if not input_id:
-                pending_url = f"/{job_name.strip('/')}/{build_number}/wfapi/pendingInputActions"
-                response = await client.get(pending_url)
-                if response.status_code == 200:
-                    raw_inputs = response.json()
-                    if raw_inputs and len(raw_inputs) > 0:
-                        pending_input = JenkinsPendingInputSchema(**raw_inputs[0])
-                        input_id = pending_input.id
-
-                        if pending_input.inputs:
-                            param_name = pending_input.inputs[0].name
-                
-                if not input_id:
-                    input_id = "Submit"
-
             proceed_url = f"/{job_name.strip('/')}/{build_number}/input/{input_id}/proceed"
             
             form_data = {
-                "json": json.dumps({"parameter": [{"name": param_name, "value": status}]})
+                "json": json.dumps({"parameter": [{"name": "STATUS", "value": status}]})
             }
             
             response = await client.post(proceed_url, data=form_data)
