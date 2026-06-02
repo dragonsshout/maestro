@@ -60,12 +60,18 @@ async def execution_detail(
         }
     )
 
+from pydantic import BaseModel
+
+class ApproveRequest(BaseModel):
+    status: str
+
 
 @router.post("/execution/{execution_id}/approve", response_class=HTMLResponse)
 async def approve_execution(
     request: Request,
     execution_id: int,
     background_tasks: BackgroundTasks,
+    payload: ApproveRequest,
     ui_service: UIService = Depends(),
     orchestrator_service: OrchestratorService = Depends(),
 ):
@@ -76,7 +82,7 @@ async def approve_execution(
     execution, _ = result
 
     try:
-        await orchestrator_service.approve_release(execution.name, background_tasks)
+        await orchestrator_service.approve_release(execution.name, background_tasks, status=payload.status)
     except ValueError as e:
         return templates.TemplateResponse(
             request,

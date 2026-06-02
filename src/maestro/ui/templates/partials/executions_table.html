@@ -13,7 +13,7 @@
         </thead>
         <tbody>
             {% for ex in executions %}
-            <tr class="hover:bg-base-200/70 transition-colors duration-200 cursor-pointer group" onclick="window.location='/ui/execution/{{ ex.id }}'">
+            <tr class="hover:bg-base-200/70 transition-colors duration-200 group">
                 <td class="font-mono text-base-content/50">
                     <div class="flex items-center gap-2">
                         <span>{{ ex.id }}</span>
@@ -42,7 +42,9 @@
                         </button>
                     </div>
                 </td>
-                <td class="font-semibold">{{ ex.name }}</td>
+                <td class="font-semibold">
+                    <a href="/ui/execution/{{ ex.id }}" class="hover:underline hover:text-primary transition-colors cursor-pointer">{{ ex.name }}</a>
+                </td>
                 <td>
                     {% set status_val = ex.status.value if ex.status.value is defined else ex.status %}
                     {% if status_val == "pending" %}
