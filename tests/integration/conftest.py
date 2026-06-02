@@ -63,7 +63,7 @@ async def db_engine(postgres_container):
 
 
 @pytest.fixture(scope="session", autouse=True)
-def run_migrations(postgres_container):
+def ao(postgres_container):
     """Run Alembic migrations against the test database."""
     # Convert async URL to sync for Alembic
     sync_url = postgres_container.replace("+asyncpg", "")
@@ -107,17 +107,15 @@ async def db_session(db_engine):
 
 
 @pytest_asyncio.fixture(autouse=True)
-async def _cleanup_db(postgres_container):
+async def _cleanup_db(db_engine):
     """Truncate all tables BEFORE each test for isolation (setup-based cleanup)."""
-    cleanup_engine = create_async_engine(postgres_container, echo=False)
-    async with cleanup_engine.connect() as conn:
+    async with db_engine.connect() as conn:
         from sqlalchemy import text
         await conn.execute(text(
             "TRUNCATE step_event, release_step_execution, release_execution, "
             "orchestrator_descriptor, ui_settings CASCADE"
         ))
         await conn.commit()
-    await cleanup_engine.dispose()
     yield
 
 
@@ -131,12 +129,14 @@ async def app(db_engine):
     FastAPI app with the DB dependency overridden to use the test database.
     Each request gets its own session from the test engine.
     subprocess.run is patched to prevent Alembic from running in lifespan.
+    process_workflow is patched to prevent background tasks from using different sessions.
     """
-    from unittest.mock import patch
+    from unittest.mock import patch, AsyncMock
 
     session_factory = async_sessionmaker(bind=db_engine, expire_on_commit=False)
 
-    with patch("subprocess.run"):
+    with patch("subprocess.run"), \
+         patch("maestro.services.orchestrator.OrchestratorService.process_workflow", new_callable=AsyncMock):
         from maestro.main import app as _app
 
         async def _get_test_db():
