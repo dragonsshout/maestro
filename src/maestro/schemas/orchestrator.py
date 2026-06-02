@@ -13,6 +13,7 @@ class StepSchema(BaseModel):
     release: str
     critical: Optional[bool] = False
     requires_approval: Optional[bool] = False
+    timeout_minutes: Optional[int] = None
     job: JobSchema
 
 class StageSchema(BaseModel):

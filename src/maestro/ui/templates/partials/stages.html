@@ -7,6 +7,8 @@
         {% set stage_statuses = stage.steps | map(attribute='execution') | map(attribute='status') | list %}
         {% if "failure" in stage_statuses %}
             <span class="badge badge-error">❌ Falha</span>
+        {% elif "timeout" in stage_statuses %}
+            <span class="badge badge-warning">🕐 Timeout</span>
         {% elif "in_progress" in stage_statuses %}
             <span class="badge badge-warning">
                 <span class="loading loading-spinner loading-xs mr-1"></span> Em progresso
@@ -52,6 +54,26 @@
                                     hx-confirm="Reexecutar o step '{{ se.step_id }}'?"
                                     title="Reexecutar step"
                                 >🔄</button>
+                            {% elif sv == "timeout" %}
+                                <div class="flex items-center gap-1">
+                                    <span title="Timeout">🕐</span>
+                                    <button
+                                        class="btn btn-xs btn-success btn-circle"
+                                        hx-post="/ui/resolve-timeout/{{ se.id }}?action=success"
+                                        hx-target="body"
+                                        hx-swap="beforeend"
+                                        hx-confirm="Marcar step '{{ se.step_id }}' como sucesso?"
+                                        title="Marcar sucesso"
+                                    >✅</button>
+                                    <button
+                                        class="btn btn-xs btn-error btn-circle"
+                                        hx-post="/ui/resolve-timeout/{{ se.id }}?action=failure"
+                                        hx-target="body"
+                                        hx-swap="beforeend"
+                                        hx-confirm="Marcar step '{{ se.step_id }}' como falha?"
+                                        title="Marcar falha"
+                                    >❌</button>
+                                </div>
                             {% elif sv == "pending" %}
                                 <span title="Pendente">⏳</span>
                             {% elif sv == "in_progress" %}

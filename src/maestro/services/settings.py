@@ -5,6 +5,7 @@ from maestro.repositories.settings import UISettingsRepository
 SETTING_JENKINS_BASE_URL = "jenkins_base_url"
 SETTING_GITHUB_BASE_URL = "github_base_url"
 SETTING_GITHUB_ORGANIZATION = "github_organization"
+SETTING_STEP_TIMEOUT_MINUTES = "step_timeout_minutes"
 
 KNOWN_SETTINGS = {
     SETTING_JENKINS_BASE_URL: {
@@ -21,6 +22,11 @@ KNOWN_SETTINGS = {
         "label": "Organização do GitHub",
         "placeholder": "minha-org",
         "help": "Nome da organização usada para montar links de repositório.",
+    },
+    SETTING_STEP_TIMEOUT_MINUTES: {
+        "label": "Timeout global de steps (minutos)",
+        "placeholder": "60",
+        "help": "Tempo máximo (em minutos) que um step pode ficar em execução antes de ser marcado como timeout. Pode ser sobrescrito por step no YAML.",
     },
 }
 

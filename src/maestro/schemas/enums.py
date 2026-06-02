@@ -8,6 +8,7 @@ class ExecutionStatus(str, Enum):
     ERROR = "error"
     ABORTED = "aborted"
     WAITING_APPROVAL = "waiting_approval"
+    TIMEOUT = "timeout"
 
     @classmethod
     def from_string(cls, value: str) -> "ExecutionStatus":

@@ -1,5 +1,6 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
+import asyncio
 import uvicorn
 
 import subprocess
@@ -21,8 +22,19 @@ async def lifespan(app: FastAPI):
         logger.info("Migrations executadas com sucesso!")
     except subprocess.CalledProcessError as e:
         logger.error(f"Erro ao rodar migrations: {e}")
-        
+
+    # Inicia o checker de timeout em background
+    from maestro.services.timeout_checker import start_timeout_checker
+    timeout_task = asyncio.create_task(start_timeout_checker())
+
     yield
+
+    # Cancela o checker ao encerrar
+    timeout_task.cancel()
+    try:
+        await timeout_task
+    except asyncio.CancelledError:
+        pass
     logger.info("Encerrando o Maestro.")
 
 from maestro.api.routes.orchestrator import router as orchestrator_router

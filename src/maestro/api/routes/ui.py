@@ -46,7 +46,7 @@ async def execution_detail(
     jenkins_base_url = await settings_service.get(SETTING_JENKINS_BASE_URL)
     github_base_url = await settings_service.get(SETTING_GITHUB_BASE_URL)
     github_organization = await settings_service.get(SETTING_GITHUB_ORGANIZATION)
-    
+
     return templates.TemplateResponse(
         request,
         "execution_detail.html",
@@ -152,6 +152,52 @@ async def retry_step_ui(
             "partials/retry_result.html",
             {"error": str(e), "step": None},
         )
+
+
+@router.post("/resolve-timeout/{step_execution_id}", response_class=HTMLResponse)
+async def resolve_timeout_ui(
+    request: Request,
+    step_execution_id: int,
+    action: str,
+    background_tasks: BackgroundTasks,
+    execution_repo: ExecutionRepository = Depends(),
+    orchestrator_service: OrchestratorService = Depends(),
+):
+    """Resolve um step em timeout marcando como sucesso ou falha."""
+    step = await execution_repo.get_step_by_id(step_execution_id)
+    if not step:
+        return templates.TemplateResponse(
+            request, "partials/resolve_timeout_result.html",
+            {"error": "Step não encontrado.", "step": None, "action": action},
+        )
+
+    if step.status != ExecutionStatus.TIMEOUT:
+        return templates.TemplateResponse(
+            request, "partials/resolve_timeout_result.html",
+            {"error": f"Step não está em timeout (status: {step.status}).", "step": None, "action": action},
+        )
+
+    if action == "success":
+        step.status = ExecutionStatus.SUCCESS
+        step.message = "Resolvido manualmente como sucesso."
+    elif action == "failure":
+        step.status = ExecutionStatus.FAILURE
+        step.message = "Resolvido manualmente como falha."
+    else:
+        return templates.TemplateResponse(
+            request, "partials/resolve_timeout_result.html",
+            {"error": f"Ação inválida: '{action}'.", "step": None, "action": action},
+        )
+
+    await execution_repo.update_step_execution(step)
+
+    # Re-dispara o workflow para que ele continue processando
+    background_tasks.add_task(orchestrator_service.process_workflow, step.release_execution_id)
+
+    return templates.TemplateResponse(
+        request, "partials/resolve_timeout_result.html",
+        {"error": None, "step": step, "action": action},
+    )
 
 
 @router.get("/settings", response_class=HTMLResponse)

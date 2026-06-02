@@ -1,0 +1,38 @@
+{% if error %}
+<dialog id="resolve-timeout-modal" class="modal modal-open">
+    <div class="modal-box">
+        <div class="flex items-center gap-2 mb-4">
+            <span class="text-2xl">❌</span>
+            <h3 class="font-bold text-lg">Erro ao resolver timeout</h3>
+        </div>
+        <div class="alert alert-error">
+            <p class="text-sm">{{ error }}</p>
+        </div>
+        <div class="modal-action">
+            <button onclick="document.getElementById('resolve-timeout-modal').remove()" class="btn btn-sm">Fechar</button>
+        </div>
+    </div>
+    <div class="modal-backdrop" onclick="document.getElementById('resolve-timeout-modal').remove()"></div>
+</dialog>
+{% else %}
+<dialog id="resolve-timeout-modal" class="modal modal-open">
+    <div class="modal-box">
+        <div class="flex items-center gap-2 mb-4">
+            {% if action == "success" %}
+            <span class="text-2xl">✅</span>
+            <h3 class="font-bold text-lg">Step marcado como sucesso</h3>
+            {% else %}
+            <span class="text-2xl">❌</span>
+            <h3 class="font-bold text-lg">Step marcado como falha</h3>
+            {% endif %}
+        </div>
+        <div class="alert {% if action == 'success' %}alert-success{% else %}alert-error{% endif %}">
+            <p class="text-sm">O step <span class="font-mono font-bold">{{ step.step_id }}</span> foi resolvido manualmente. O fluxo continuará automaticamente.</p>
+        </div>
+        <div class="modal-action">
+            <button onclick="document.getElementById('resolve-timeout-modal').remove()" class="btn btn-sm">Fechar</button>
+        </div>
+    </div>
+    <div class="modal-backdrop" onclick="document.getElementById('resolve-timeout-modal').remove()"></div>
+</dialog>
+{% endif %}

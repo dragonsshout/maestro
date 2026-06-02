@@ -13,6 +13,8 @@
     <span class="badge badge-error badge-lg gap-1">💥 Erro</span>
 {% elif status_val == "aborted" %}
     <span class="badge badge-neutral badge-lg gap-1">🚫 Abortado</span>
+{% elif status_val == "timeout" %}
+    <span class="badge badge-warning badge-lg gap-1">🕐 Timeout</span>
 {% elif status_val == "waiting_approval" %}
     <span class="badge badge-info badge-lg gap-1">🔔 Aguardando aprovação</span>
 {% else %}

@@ -246,8 +246,8 @@ class OrchestratorService:
         if not step:
             raise ValueError(f"Step de execução #{step_execution_id} não encontrado.")
 
-        if step.status != ExecutionStatus.FAILURE:
-            raise ValueError(f"Só é possível reexecutar steps com status 'failure' (status atual: '{step.status}').")
+        if step.status not in (ExecutionStatus.FAILURE, ExecutionStatus.TIMEOUT):
+            raise ValueError(f"Só é possível reexecutar steps com status 'failure' ou 'timeout' (status atual: '{step.status}').")
 
         # Reseta o step
         step.status = ExecutionStatus.PENDING
@@ -258,19 +258,120 @@ class OrchestratorService:
 
         # Reseta a execução para IN_PROGRESS para que o workflow continue
         execution = await self.execution_repo.get_execution_by_id(step.release_execution_id)
-        if execution and execution.status == ExecutionStatus.FAILURE:
+        if execution and execution.status in (ExecutionStatus.FAILURE, ExecutionStatus.TIMEOUT, ExecutionStatus.SUCCESS):
             execution.status = ExecutionStatus.IN_PROGRESS
             execution.message = None
             await self.execution_repo.update_release_execution(execution)
 
         # Re-dispara o workflow
+        logger.info(f"Retry step {step_execution_id}: step resetado para PENDING, re-disparando workflow {step.release_execution_id}")
         background_tasks.add_task(self.process_workflow, step.release_execution_id)
         return step
 
     async def _trigger_step(self, step, se) -> ExecutionStatus:
-        """Dispara um único step e retorna o status resultante."""
+        """Dispara um único step e retorna o status resultante (usa repo do request)."""
+        return await self._trigger_step_standalone(step, se, self.execution_repo)
+
+    async def process_workflow(self, execution_id: int):
+        """
+        Processa o workflow de uma execução.
+        Cria sua própria sessão de banco para funcionar corretamente como background task.
+        """
+        from maestro.database.session import AsyncSessionLocal
+        from maestro.repositories.execution import ExecutionRepository as _ExecRepo
+        from maestro.repositories.orchestrator import OrchestratorDescriptorRepository as _OrcRepo
+
+        async with AsyncSessionLocal() as session:
+            exec_repo = _ExecRepo(db=session)
+            orch_repo = _OrcRepo(db=session)
+
+            execution = await exec_repo.get_execution_by_id(execution_id)
+            if not execution:
+                logger.warning(f"Execução {execution_id} não encontrada.")
+                return
+
+            if execution.status in [ExecutionStatus.SUCCESS, ExecutionStatus.FAILURE]:
+                return
+
+            # Garante que a execução está em IN_PROGRESS
+            if execution.status == ExecutionStatus.PENDING:
+                execution.status = ExecutionStatus.IN_PROGRESS
+                await exec_repo.update_release_execution(execution)
+
+            descriptor = await orch_repo.get_by_id(execution.orchestrator_descriptor_id)
+            config = ReleaseConfigSchema(**yaml.safe_load(descriptor.yaml))
+            steps_exec = await exec_repo.get_steps_by_execution_id(execution_id)
+
+            # Mapear as execuções de step
+            step_exec_map = {(se.stage_id, se.step_id): se for se in steps_exec}
+
+            execution_in_progress = False
+            execution_failed = False
+            execution_waiting_approval = False
+
+            for stage in config.spec.stages:
+                # Classifica os steps do stage pelo status atual
+                stage_has_failure = False
+                stage_has_in_progress = False
+                stage_has_waiting_approval = False
+                stage_has_timeout = False
+                pending_to_trigger = []
+
+                for step in stage.steps:
+                    se = step_exec_map.get((stage.id, step.id))
+                    if not se:
+                        continue
+
+                    if se.status == ExecutionStatus.FAILURE:
+                        stage_has_failure = True
+                        break
+                    elif se.status == ExecutionStatus.TIMEOUT:
+                        stage_has_timeout = True
+                    elif se.status == ExecutionStatus.IN_PROGRESS:
+                        stage_has_in_progress = True
+                    elif se.status == ExecutionStatus.WAITING_APPROVAL:
+                        stage_has_waiting_approval = True
+                    elif se.status == ExecutionStatus.PENDING:
+                        pending_to_trigger.append((step, se))
+
+                if stage_has_failure:
+                    execution.status = ExecutionStatus.FAILURE
+                    await exec_repo.update_release_execution(execution)
+                    return
+
+                if stage_has_timeout:
+                    execution_in_progress = True
+                    return
+
+                # Dispara todos os steps PENDING do stage sequencialmente
+                if pending_to_trigger:
+                    for step, se in pending_to_trigger:
+                        result = await self._trigger_step_standalone(step, se, exec_repo)
+                        if result == ExecutionStatus.FAILURE:
+                            execution.status = ExecutionStatus.FAILURE
+                            await exec_repo.update_release_execution(execution)
+                            return
+                        elif result == ExecutionStatus.IN_PROGRESS:
+                            stage_has_in_progress = True
+
+                if stage_has_in_progress:
+                    execution_in_progress = True
+                    return
+
+                if stage_has_waiting_approval:
+                    execution_waiting_approval = True
+
+            # Todos os stages foram processados
+            if execution_waiting_approval:
+                execution.status = ExecutionStatus.WAITING_APPROVAL
+            elif not execution_in_progress:
+                execution.status = ExecutionStatus.SUCCESS
+            await exec_repo.update_release_execution(execution)
+
+    async def _trigger_step_standalone(self, step, se, exec_repo) -> ExecutionStatus:
+        """Dispara um único step usando o repo fornecido (para background tasks)."""
         se.status = ExecutionStatus.IN_PROGRESS
-        await self.execution_repo.update_step_execution(se)
+        await exec_repo.update_step_execution(se)
 
         if step.job.type == "jenkins":
             logger.info(f"Starting job of type {step.job.type} at path {step.job.path} for step {step.id}")
@@ -286,90 +387,10 @@ class OrchestratorService:
                 logger.error(f"Error starting jenkins job {step.job.path}: {e}")
                 se.status = ExecutionStatus.FAILURE
                 se.message = str(e)
-                await self.execution_repo.update_step_execution(se)
+                await exec_repo.update_step_execution(se)
                 return ExecutionStatus.FAILURE
         else:
             logger.warning(f"Job type not supported yet: {step.job.type}")
-            # Simulating that it finished quickly
             se.status = ExecutionStatus.SUCCESS
-            await self.execution_repo.update_step_execution(se)
+            await exec_repo.update_step_execution(se)
             return ExecutionStatus.SUCCESS
-
-    async def process_workflow(self, execution_id: int):
-        execution = await self.execution_repo.get_execution_by_id(execution_id)
-        if not execution:
-            logger.warning(f"Execução {execution_id} não encontrada.")
-            return
-
-        if execution.status in [ExecutionStatus.SUCCESS, ExecutionStatus.FAILURE]:
-            return
-
-        descriptor = await self.repository.get_by_id(execution.orchestrator_descriptor_id)
-        config = ReleaseConfigSchema(**yaml.safe_load(descriptor.yaml))
-        steps_exec = await self.execution_repo.get_steps_by_execution_id(execution_id)
-
-        # Mapear as execuções de step
-        step_exec_map = {(se.stage_id, se.step_id): se for se in steps_exec}
-
-        execution_in_progress = False
-        execution_failed = False
-        execution_waiting_approval = False
-
-        for stage in config.spec.stages:
-            # Classifica os steps do stage pelo status atual
-            stage_has_failure = False
-            stage_has_in_progress = False
-            stage_has_waiting_approval = False
-            pending_to_trigger = []  # (step, se) que precisam ser disparados agora
-
-            for step in stage.steps:
-                se = step_exec_map.get((stage.id, step.id))
-                if not se:
-                    continue
-
-                if se.status == ExecutionStatus.FAILURE:
-                    stage_has_failure = True
-                    break
-                elif se.status == ExecutionStatus.IN_PROGRESS:
-                    stage_has_in_progress = True
-                elif se.status == ExecutionStatus.WAITING_APPROVAL:
-                    stage_has_waiting_approval = True
-                elif se.status == ExecutionStatus.PENDING:
-                    pending_to_trigger.append((step, se))
-                # SUCCESS: não faz nada, continua para o próximo step
-
-            if stage_has_failure:
-                execution.status = ExecutionStatus.FAILURE
-                await self.execution_repo.update_release_execution(execution)
-                execution_failed = True
-                return
-
-            # Dispara todos os steps PENDING do stage simultaneamente
-            if pending_to_trigger:
-                trigger_results = await asyncio.gather(
-                    *[self._trigger_step(step, se) for step, se in pending_to_trigger]
-                )
-                for result in trigger_results:
-                    if result == ExecutionStatus.FAILURE:
-                        execution.status = ExecutionStatus.FAILURE
-                        await self.execution_repo.update_release_execution(execution)
-                        execution_failed = True
-                        return
-                    elif result == ExecutionStatus.IN_PROGRESS:
-                        stage_has_in_progress = True
-
-            if stage_has_in_progress:
-                # Ainda há steps rodando neste stage — não avança para o próximo
-                execution_in_progress = True
-                return
-
-            if stage_has_waiting_approval:
-                execution_waiting_approval = True
-
-        # Todos os stages foram processados
-        if not execution_failed:
-            if execution_waiting_approval:
-                execution.status = ExecutionStatus.WAITING_APPROVAL
-            elif not execution_in_progress:
-                execution.status = ExecutionStatus.SUCCESS
-            await self.execution_repo.update_release_execution(execution)
