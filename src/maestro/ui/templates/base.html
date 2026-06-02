@@ -1,27 +1,91 @@
 <!DOCTYPE html>
-<html lang="pt-BR" data-theme="dark">
+<html lang="pt-BR" data-theme="night">
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>{% block title %}Maestro{% endblock %}</title>
 
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
     <!-- Tailwind + DaisyUI via CDN -->
     <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.10/dist/full.min.css" rel="stylesheet" />
     <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Tailwind config for Inter font -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', "Liberation Mono", "Courier New", 'monospace'],
+                    },
+                }
+            }
+        }
+    </script>
 
     <!-- HTMX -->
     <script src="https://unpkg.com/htmx.org@1.9.12"></script>
     <!-- HTMX SSE extension -->
     <script src="https://unpkg.com/htmx.org@1.9.12/dist/ext/sse.js"></script>
 
+    <!-- Highlight.js for syntax highlighting -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/tokyo-night-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/yaml.min.js"></script>
+
     <style>
-        .status-pending          { @apply badge badge-ghost; }
-        .status-in_progress      { @apply badge badge-warning; }
-        .status-success          { @apply badge badge-success; }
-        .status-failure          { @apply badge badge-error; }
-        .status-error            { @apply badge badge-error; }
-        .status-aborted          { @apply badge badge-neutral; }
-        .status-waiting_approval { @apply badge badge-info; }
+        /* Fix para alinhamento perfeito de icones e textos de status sem quebrar linha */
+        span[class^="status-"], span[class^="badge-modern-"] {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            white-space: nowrap;
+        }
+        span[class^="status-"] svg, span[class^="badge-modern-"] svg {
+            flex-shrink: 0;
+        }
+
+        /* Cores base para os badges modernos caso o apply falhe */
+        .badge-modern-success { color: oklch(var(--su)); }
+        .badge-modern-error { color: oklch(var(--er)); }
+        .badge-modern-warning { color: oklch(var(--wa)); }
+        .badge-modern-info { color: oklch(var(--in)); }
+        .badge-modern-ghost { color: oklch(var(--bc) / 0.7); }
+        .badge-modern-neutral { color: oklch(var(--n)); }
+
+        .status-pending          { color: oklch(var(--bc) / 0.7); }
+        .status-in_progress      { color: oklch(var(--in)); }
+        .status-success          { color: oklch(var(--su)); }
+        .status-failure          { color: oklch(var(--er)); }
+        .status-error            { color: oklch(var(--er)); }
+        .status-aborted          { color: oklch(var(--n)); }
+        .status-waiting_approval { color: oklch(var(--wa)); }
+
+        /* Override Highlight.js background inside mockup-code */
+        .mockup-code pre code.hljs {
+            background: transparent;
+            padding: 0;
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            @apply bg-base-300 rounded-full;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            @apply bg-base-content/30;
+        }
 
         /* HTMX indicator: hidden by default, shown during request */
         .htmx-indicator {
@@ -69,18 +133,18 @@
         }
     </style>
 </head>
-<body class="min-h-screen bg-base-200">
+<body class="min-h-screen bg-base-200 font-sans text-base-content selection:bg-primary/30">
 
     <!-- Navbar -->
-    <div class="navbar bg-base-100 shadow-md fixed top-0 left-0 right-0 z-50 px-4">
+    <div class="navbar bg-base-100/80 backdrop-blur-md shadow-sm border-b border-base-300/50 fixed top-0 left-0 right-0 z-50 px-4 transition-all duration-300">
         <!-- Toggle button -->
-        <button id="sidebar-toggle" class="btn btn-ghost btn-sm btn-square mr-2" title="Recolher menu">
+        <button id="sidebar-toggle" class="btn btn-ghost btn-sm btn-square mr-2 hover:bg-base-200/50 transition-colors" title="Recolher menu">
             <svg id="icon-collapse" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
             </svg>
         </button>
         <div class="flex-1">
-            <a href="/ui" class="text-xl font-bold tracking-wide text-primary">🎼 Maestro</a>
+            <a href="/ui" class="text-xl font-bold tracking-wide text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary">🎼 Maestro</a>
         </div>
     </div>
 
@@ -88,11 +152,11 @@
     <div class="flex pt-16 min-h-screen">
 
         <!-- Sidebar -->
-        <aside id="sidebar" class="bg-base-100 border-r border-base-300 fixed top-16 left-0 bottom-0 flex flex-col py-4 z-40">
+        <aside id="sidebar" class="bg-base-100/80 backdrop-blur-md border-r border-base-300/50 fixed top-16 left-0 bottom-0 flex flex-col py-4 z-40 transition-all duration-300">
             <ul class="menu px-2 gap-1 w-full">
                 <li>
                     <a href="/ui"
-                       class="nav-item flex items-center gap-3 {% if request.url.path in ['/ui', '/ui/'] %}active{% endif %}"
+                       class="nav-item flex items-center gap-3 transition-colors duration-200 hover:bg-base-200/70 {% if request.url.path in ['/ui', '/ui/'] %}active shadow-sm{% endif %}"
                        title="Execuções">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16" />
@@ -102,7 +166,7 @@
                 </li>
                 <li>
                     <a href="/ui/releases"
-                       class="nav-item flex items-center gap-3 {% if request.url.path == '/ui/releases' %}active{% endif %}"
+                       class="nav-item flex items-center gap-3 transition-colors duration-200 hover:bg-base-200/70 {% if request.url.path == '/ui/releases' %}active shadow-sm{% endif %}"
                        title="Releases">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A2 2 0 013 12V7a4 4 0 014-4z" />
@@ -112,7 +176,7 @@
                 </li>
                 <li>
                     <a href="/ui/settings"
-                       class="nav-item flex items-center gap-3 {% if request.url.path == '/ui/settings' %}active{% endif %}"
+                       class="nav-item flex items-center gap-3 transition-colors duration-200 hover:bg-base-200/70 {% if request.url.path == '/ui/settings' %}active shadow-sm{% endif %}"
                        title="Configurações">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
@@ -148,6 +212,15 @@
             const collapsed = sidebar.classList.toggle('collapsed');
             mainContent.classList.toggle('collapsed', collapsed);
             localStorage.setItem(STORAGE_KEY, collapsed);
+        });
+
+        // Setup Highlight.js to run on htmx:load (which fires for initial load and subsequent HTMX swaps)
+        document.body.addEventListener('htmx:load', function(evt) {
+            if (typeof hljs !== 'undefined') {
+                evt.detail.elt.querySelectorAll('pre code').forEach((block) => {
+                    hljs.highlightElement(block);
+                });
+            }
         });
     </script>
 

@@ -3,15 +3,15 @@
 
 {% block content %}
 <div class="mb-4">
-    <a href="/ui" class="btn btn-ghost btn-sm">← Voltar</a>
+    <a href="/ui" class="btn btn-ghost btn-sm hover:bg-base-200/50 transition-colors">← Voltar</a>
 </div>
 
 <!-- Header da execução -->
-<div class="card bg-base-100 shadow mb-6">
+<div class="card bg-base-100/50 backdrop-blur-sm border border-base-300/50 shadow-lg shadow-base-300/10 mb-8 rounded-2xl">
     <div class="card-body">
         <div class="flex items-center justify-between flex-wrap gap-4">
             <div>
-                <h2 class="card-title text-2xl">{{ execution.name }}</h2>
+                <h2 class="card-title text-3xl font-extrabold tracking-tight">{{ execution.name }}</h2>
                 <p class="text-base-content/60 text-sm mt-1">
                     Iniciado em {{ execution.created_at.strftime('%d/%m/%Y %H:%M:%S') }}
                     &nbsp;·&nbsp; ID #{{ execution.id }}
@@ -39,7 +39,7 @@
                         hx-confirm="Confirmar aprovação da release '{{ execution.name }}'?"
                     >
                         <span id="approve-spinner" class="loading loading-spinner loading-xs htmx-indicator"></span>
-                        🔔 Aprovar release
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg> Aprovar release
                     </button>
                 </div>
                 {% endif %}

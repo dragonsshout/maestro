@@ -2,12 +2,15 @@
 <dialog id="release-yaml-modal" class="modal modal-open">
     <div class="modal-box w-11/12 max-w-3xl">
         <div class="flex items-center justify-between mb-4">
-            <h3 class="font-bold text-lg">📄 Release: {{ execution.name }}</h3>
+            <h3 class="font-bold text-lg flex items-center">
+                <svg class="w-5 h-5 mr-2 text-base-content/70" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                Release: {{ execution.name }}
+            </h3>
             <button onclick="document.getElementById('release-yaml-modal').remove()" class="btn btn-sm btn-ghost btn-circle">✕</button>
         </div>
 
-        <div class="mockup-code text-xs overflow-auto max-h-[60vh]">
-            <pre><code>{{ yaml_content }}</code></pre>
+        <div class="mockup-code text-sm overflow-auto max-h-[60vh] text-left">
+            <pre><code class="language-yaml">{{ yaml_content }}</code></pre>
         </div>
 
         <div class="modal-action">

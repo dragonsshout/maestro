@@ -1,6 +1,6 @@
 {% if executions %}
-<div class="overflow-x-auto rounded-box shadow">
-    <table class="table table-zebra w-full bg-base-100">
+<div class="overflow-x-auto rounded-2xl shadow-lg shadow-base-300/10 border border-base-300/50 bg-base-100/50 backdrop-blur-sm">
+    <table class="table table-zebra w-full bg-transparent">
         <thead>
             <tr>
                 <th>#</th>
@@ -13,63 +13,61 @@
         </thead>
         <tbody>
             {% for ex in executions %}
-            <tr class="hover cursor-pointer" onclick="window.location='/ui/execution/{{ ex.id }}'">
+            <tr class="hover:bg-base-200/70 transition-colors duration-200 cursor-pointer group" onclick="window.location='/ui/execution/{{ ex.id }}'">
                 <td class="font-mono text-base-content/50">
                     <div class="flex items-center gap-2">
                         <span>{{ ex.id }}</span>
                         <button
-                            class="btn btn-xs btn-success btn-circle"
+                            class="btn btn-xs btn-success btn-circle hover:scale-110 active:scale-95 transition-transform shadow-sm"
                             hx-post="/ui/execute/{{ ex.name }}"
                             hx-target="body"
                             hx-swap="beforeend"
                             hx-confirm="Executar a release '{{ ex.name }}'?"
                             onclick="event.stopPropagation()"
                             title="Executar release"
-                        >▶</button>
+                        ><svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg></button>
                         <button
-                            class="btn btn-xs btn-info btn-circle"
+                            class="btn btn-xs btn-info btn-circle hover:scale-110 active:scale-95 transition-transform shadow-sm"
                             hx-post="/ui/dry-run/{{ ex.name }}"
                             hx-target="body"
                             hx-swap="beforeend"
                             hx-indicator="#dry-run-loading-exec-{{ ex.id }}"
                             onclick="event.stopPropagation()"
                             title="Validar pré-requisitos"
-                        >🔍</button>
-                        <span id="dry-run-loading-exec-{{ ex.id }}" class="loading loading-spinner loading-xs htmx-indicator text-info"></span>
+                        ><svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg></button>
+                        <span id="dry-run-loading-exec-{{ ex.id }}" class="loading loading-bars loading-xs htmx-indicator text-info ml-2" title="Processando..."></span>
                     </div>
                 </td>
                 <td class="font-semibold">{{ ex.name }}</td>
                 <td>
                     {% set status_val = ex.status.value if ex.status.value is defined else ex.status %}
                     {% if status_val == "pending" %}
-                        <span class="badge badge-ghost gap-1">⏳ Pendente</span>
+                        <span class="status-pending"><svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg> Pendente</span>
                     {% elif status_val == "in_progress" %}
-                        <span class="badge badge-warning gap-1">
-                            <span class="loading loading-spinner loading-xs"></span> Em progresso
-                        </span>
+                        <span class="status-in_progress"><span class="loading loading-spinner loading-xs"></span> Em progresso</span>
                     {% elif status_val == "success" %}
-                        <span class="badge badge-success gap-1">✅ Sucesso</span>
+                        <span class="status-success"><svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg> Sucesso</span>
                     {% elif status_val == "failure" %}
-                        <span class="badge badge-error gap-1">❌ Falha</span>
+                        <span class="status-failure"><svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg> Falha</span>
                     {% elif status_val == "waiting_approval" %}
-                        <span class="badge badge-info gap-1">🔔 Aprovação</span>
+                        <span class="status-waiting_approval"><svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg> Aprovação</span>
                     {% else %}
-                        <span class="badge badge-neutral gap-1">{{ status_val }}</span>
+                        <span class="status-pending">{{ status_val }}</span>
                     {% endif %}
                 </td>
                 <td class="text-sm text-base-content/60">{{ ex.created_at.strftime('%d/%m/%Y %H:%M') }}</td>
                 <td class="text-sm text-base-content/60">{{ ex.updated_at.strftime('%d/%m/%Y %H:%M') }}</td>
                 <td>
                     <div class="flex gap-1 items-center">
-                        <a href="/ui/execution/{{ ex.id }}" class="btn btn-xs btn-outline btn-primary" onclick="event.stopPropagation()">Ver detalhes</a>
+                        <a href="/ui/execution/{{ ex.id }}" class="btn btn-xs btn-outline btn-primary hover:scale-105 active:scale-95 transition-transform" onclick="event.stopPropagation()">Ver detalhes</a>
                         <button
-                            class="btn btn-xs btn-outline"
+                            class="btn btn-xs btn-outline hover:scale-105 active:scale-95 transition-transform"
                             hx-get="/ui/execution/{{ ex.id }}/release-yaml"
                             hx-target="body"
                             hx-swap="beforeend"
                             title="Ver YAML de release"
                             onclick="event.stopPropagation()"
-                        >📄 YAML</button>
+                        ><svg class="w-3 h-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg> YAML</button>
                     </div>
                 </td>
             </tr>

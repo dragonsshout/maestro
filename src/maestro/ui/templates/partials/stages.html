@@ -1,32 +1,46 @@
 {% for stage in stages %}
-<div class="mb-6">
-    <!-- Stage header -->
-    <div class="flex items-center gap-3 mb-2">
-        <div class="badge badge-outline badge-lg font-mono">Stage</div>
-        <h3 class="text-lg font-bold">{{ stage.id }}</h3>
-        {% set stage_statuses = stage.steps | map(attribute='execution') | map(attribute='status') | list %}
-        {% if "failure" in stage_statuses %}
-            <span class="badge badge-error">❌ Falha</span>
-        {% elif "timeout" in stage_statuses %}
-            <span class="badge badge-warning">🕐 Timeout</span>
-        {% elif "in_progress" in stage_statuses %}
-            <span class="badge badge-warning">
-                <span class="loading loading-spinner loading-xs mr-1"></span> Em progresso
-            </span>
-        {% elif stage_statuses | select("equalto", "success") | list | length == stage_statuses | length %}
-            <span class="badge badge-success">✅ Concluído</span>
-        {% elif "waiting_approval" in stage_statuses %}
-            <span class="badge badge-info">🔔 Aguardando aprovação</span>
-        {% else %}
-            <span class="badge badge-ghost">⏳ Pendente</span>
-        {% endif %}
-    </div>
+{% set stage_statuses = stage.steps | map(attribute='execution') | map(attribute='status') | list %}
+{% if "failure" in stage_statuses %}
+    {% set border_color = "border-error" %}
+{% elif "timeout" in stage_statuses %}
+    {% set border_color = "border-warning" %}
+{% elif "in_progress" in stage_statuses %}
+    {% set border_color = "border-warning" %}
+{% elif stage_statuses | select("equalto", "success") | list | length == stage_statuses | length %}
+    {% set border_color = "border-success" %}
+{% elif "waiting_approval" in stage_statuses %}
+    {% set border_color = "border-info" %}
+{% else %}
+    {% set border_color = "border-base-300" %}
+{% endif %}
 
-    <!-- Tabela de steps -->
-    <div class="pl-4 border-l-2 border-base-300">
-        <div class="overflow-x-auto rounded-lg border border-base-300">
+<div class="card bg-base-100/50 backdrop-blur-sm border-l-4 {{ border_color }} border-y border-r border-base-300/50 shadow-sm mb-6 rounded-xl overflow-hidden transition-all duration-300 hover:shadow-md">
+    <div class="card-body p-4 md:p-6">
+        <!-- Stage header -->
+        <div class="flex items-center gap-3 mb-4">
+            <div class="badge badge-outline badge-lg font-mono font-medium shadow-sm">Stage</div>
+            <h3 class="text-xl font-bold tracking-tight">{{ stage.id }}</h3>
+            {% if "failure" in stage_statuses %}
+                <span class="status-failure"><svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg> Falha</span>
+            {% elif "timeout" in stage_statuses %}
+                <span class="status-warning"><svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg> Timeout</span>
+            {% elif "in_progress" in stage_statuses %}
+                <span class="status-in_progress">
+                    <span class="loading loading-spinner loading-xs mr-1"></span> Em progresso
+                </span>
+            {% elif stage_statuses | select("equalto", "success") | list | length == stage_statuses | length %}
+                <span class="status-success"><svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg> Concluído</span>
+            {% elif "waiting_approval" in stage_statuses %}
+                <span class="status-waiting_approval"><svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg> Aguardando aprovação</span>
+            {% else %}
+                <span class="status-pending"><svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg> Pendente</span>
+            {% endif %}
+        </div>
+
+        <!-- Tabela de steps -->
+        <div class="overflow-x-auto rounded-lg border border-base-300/50 bg-base-100/30">
             <table class="table table-sm w-full text-xs">
-                <thead class="bg-base-200 text-base-content/60 uppercase tracking-wide text-xs">
+                <thead class="bg-base-200/50 text-base-content/70 uppercase tracking-wide text-xs">
                     <tr>
                         <th class="w-8"></th>
                         <th>Step</th>
@@ -53,10 +67,10 @@
                                     hx-swap="beforeend"
                                     hx-confirm="Reexecutar o step '{{ se.step_id }}'?"
                                     title="Reexecutar step"
-                                >🔄</button>
+                                ><svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg></button>
                             {% elif sv == "timeout" %}
                                 <div class="flex items-center gap-1">
-                                    <span title="Timeout">🕐</span>
+                                    <span title="Timeout" class="text-warning"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg></span>
                                     <button
                                         class="btn btn-xs btn-success btn-circle"
                                         hx-post="/ui/resolve-timeout/{{ se.id }}?action=success"
@@ -64,7 +78,7 @@
                                         hx-swap="beforeend"
                                         hx-confirm="Marcar step '{{ se.step_id }}' como sucesso?"
                                         title="Marcar sucesso"
-                                    >✅</button>
+                                    ><svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg></button>
                                     <button
                                         class="btn btn-xs btn-error btn-circle"
                                         hx-post="/ui/resolve-timeout/{{ se.id }}?action=failure"
@@ -72,20 +86,20 @@
                                         hx-swap="beforeend"
                                         hx-confirm="Marcar step '{{ se.step_id }}' como falha?"
                                         title="Marcar falha"
-                                    >❌</button>
+                                    ><svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg></button>
                                 </div>
                             {% elif sv == "pending" %}
-                                <span title="Pendente">⏳</span>
+                                <span title="Pendente" class="text-base-content/50"><svg class="w-4 h-4 inline-block" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg></span>
                             {% elif sv == "in_progress" %}
                                 <span class="loading loading-spinner loading-xs text-warning" title="Em progresso"></span>
                             {% elif sv == "success" %}
-                                <span title="Sucesso">✅</span>
+                                <span title="Sucesso" class="text-success"><svg class="w-4 h-4 inline-block" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg></span>
                             {% elif sv == "waiting_approval" %}
-                                <span title="Aguardando aprovação">🔔</span>
+                                <span title="Aguardando aprovação" class="text-info"><svg class="w-4 h-4 inline-block" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg></span>
                             {% elif sv == "aborted" %}
-                                <span title="Abortado">🚫</span>
+                                <span title="Abortado" class="text-neutral"><svg class="w-4 h-4 inline-block" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" /></svg></span>
                             {% else %}
-                                <span class="badge badge-ghost badge-xs">{{ sv }}</span>
+                                <span class="badge-modern-ghost">{{ sv }}</span>
                             {% endif %}
                         </td>
 
@@ -140,13 +154,13 @@
                         <!-- Build # -->
                         <td class="font-mono text-base-content/50">
                             {% if se.job_execution_correlation_id %}
-                                <button
-                                    class="link link-hover text-base-content/70"
-                                    hx-get="/ui/step-events/{{ se.job_execution_correlation_id }}"
-                                    hx-target="#events-modal-container"
-                                    hx-swap="innerHTML"
-                                    title="Ver eventos do build"
-                                >#{{ se.job_execution_correlation_id }} 📋</button>
+                                    <button
+                                        class="link link-hover text-base-content/70"
+                                        hx-get="/ui/step-events/{{ se.job_execution_correlation_id }}"
+                                        hx-target="#events-modal-container"
+                                        hx-swap="innerHTML"
+                                        title="Ver eventos do build"
+                                    >#{{ se.job_execution_correlation_id }} <svg class="w-3 h-3 inline-block" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg></button>
                             {% else %}
                                 <span class="text-base-content/30">—</span>
                             {% endif %}
