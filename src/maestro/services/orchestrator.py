@@ -358,12 +358,17 @@ class OrchestratorService:
                         elif result == ExecutionStatus.IN_PROGRESS:
                             stage_has_in_progress = True
 
-                if stage_has_in_progress:
-                    execution_in_progress = True
-                    return
-
                 if stage_has_waiting_approval:
                     execution_waiting_approval = True
+
+                if stage_has_in_progress:
+                    execution_in_progress = True
+                    # Enquanto há steps em andamento, a execução permanece IN_PROGRESS,
+                    # mesmo que stages anteriores tenham steps aguardando aprovação.
+                    # O status WAITING_APPROVAL só é gravado quando todo o fluxo terminar.
+                    execution.status = ExecutionStatus.IN_PROGRESS
+                    await exec_repo.update_release_execution(execution)
+                    return
 
             # Todos os stages foram processados
             if execution_waiting_approval:

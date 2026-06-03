@@ -57,10 +57,38 @@ class ExecutionRepository:
         return result.scalars().first()
 
     async def get_step_by_correlation_id(self, correlation_id: int) -> ReleaseStepExecution | None:
+        """
+        Retorna o step com o correlation_id dado, priorizando o step cuja execução
+        esteja ativa (pending/in_progress/waiting_approval). Isso evita que callbacks
+        do Jenkins — que reutiliza build numbers — atualizem steps de execuções antigas.
+        """
+        active_statuses = [
+            ExecutionStatus.PENDING.value,
+            ExecutionStatus.IN_PROGRESS.value,
+            ExecutionStatus.WAITING_APPROVAL.value,
+        ]
+
+        # Primeiro tenta encontrar o step numa execução ativa
         result = await self.db.execute(
-            select(ReleaseStepExecution).where(
-                ReleaseStepExecution.job_execution_correlation_id == correlation_id
+            select(ReleaseStepExecution)
+            .join(ReleaseExecution, ReleaseStepExecution.release_execution_id == ReleaseExecution.id)
+            .where(
+                ReleaseStepExecution.job_execution_correlation_id == correlation_id,
+                ReleaseExecution.status.in_(active_statuses),
             )
+            .order_by(ReleaseExecution.id.desc())
+            .limit(1)
+        )
+        step = result.scalars().first()
+        if step:
+            return step
+
+        # Fallback: retorna o step mais recente com esse correlation_id (qualquer execução)
+        result = await self.db.execute(
+            select(ReleaseStepExecution)
+            .where(ReleaseStepExecution.job_execution_correlation_id == correlation_id)
+            .order_by(ReleaseStepExecution.id.desc())
+            .limit(1)
         )
         return result.scalars().first()
 
