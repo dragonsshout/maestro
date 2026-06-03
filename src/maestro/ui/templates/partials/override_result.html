@@ -1,0 +1,48 @@
+{% if error %}
+<div id="override-toast-err-{{ range(1, 100000) | random }}"
+     class="toast toast-top toast-end z-50"
+     style="position:fixed;">
+    <div class="alert alert-error shadow-lg">
+        <svg class="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        <span class="text-sm grow">{{ error }}</span>
+        <button class="btn btn-sm btn-circle btn-ghost" onclick="this.closest('.toast').remove()">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+    </div>
+</div>
+<script>
+    setTimeout(() => {
+        const toast = document.currentScript.previousElementSibling;
+        if (toast) toast.remove();
+    }, 4000);
+</script>
+{% else %}
+<div id="override-toast-{{ step.id }}-{{ range(1, 100000) | random }}"
+     class="toast toast-top toast-end z-50"
+     style="position:fixed;">
+    <div class="alert {% if action == 'success' %}alert-success{% else %}alert-error{% endif %} shadow-lg">
+        <svg class="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            {% if action == 'success' %}
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
+            {% else %}
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/>
+            {% endif %}
+        </svg>
+        <span class="text-sm grow">
+            Step <strong>{{ step.step_id }}</strong> marcado como
+            <strong>{% if action == 'success' %}sucesso{% else %}falha{% endif %}</strong>.
+            {% if action == 'success' %}Fluxo retomado.{% endif %}
+        </span>
+        <button class="btn btn-sm btn-circle btn-ghost" onclick="this.closest('.toast').remove()">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+    </div>
+</div>
+<script>
+    setTimeout(() => {
+        const toast = document.currentScript.previousElementSibling;
+        if (toast) toast.remove();
+    }, 4000);
+</script>
+{% endif %}
+

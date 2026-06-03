@@ -21,10 +21,32 @@
                 {% endif %}
             </div>
 
-            <div class="flex items-center gap-3">
+            <div class="flex items-center gap-3 flex-wrap justify-end">
                 <!-- Badge de status -->
                 <div id="execution-status-badge">
                     {% include "partials/status_badge.html" %}
+                </div>
+
+                <!-- Botão cancelar — só exibido em execuções ativas, atualizado via SSE OOB -->
+                <div id="cancel-area">
+                {% set active_statuses = ["pending", "in_progress", "waiting_approval"] %}
+                {% set exec_status_val = execution.status.value if execution.status.value is defined else execution.status %}
+                {% if exec_status_val in active_statuses %}
+                <button
+                    id="cancel-execution-btn"
+                    class="btn btn-outline btn-error btn-sm gap-2"
+                    hx-post="/ui/execution/{{ execution.id }}/cancel"
+                    hx-target="body"
+                    hx-swap="beforeend"
+                    hx-confirm="Cancelar a execução '{{ execution.name }}'? Os jobs em andamento NÃO serão interrompidos."
+                    title="Cancelar execução (sem abortar jobs externos)"
+                >
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/>
+                    </svg>
+                    Cancelar
+                </button>
+                {% endif %}
                 </div>
 
                 <!-- Botão de aprovação — atualizado via SSE OOB -->

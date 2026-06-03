@@ -59,6 +59,21 @@
                                     <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                                     Timeout → Falha
                                 </span>
+                                {% elif log.action == "override_success" %}
+                                <span class="inline-flex items-center gap-1 text-success font-semibold">
+                                    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                                    Forçado → Sucesso
+                                </span>
+                                {% elif log.action == "override_failure" %}
+                                <span class="inline-flex items-center gap-1 text-error font-semibold">
+                                    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
+                                    Forçado → Falha
+                                </span>
+                                {% elif log.action == "cancel_execution" %}
+                                <span class="inline-flex items-center gap-1 text-neutral font-semibold">
+                                    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>
+                                    Execução cancelada
+                                </span>
                                 {% else %}
                                 <span class="text-base-content/60 font-mono">{{ log.action }}</span>
                                 {% endif %}

@@ -238,6 +238,101 @@ async def resolve_timeout_ui(
     )
 
 
+@router.post("/execution/{execution_id}/cancel", response_class=HTMLResponse)
+async def cancel_execution_ui(
+    request: Request,
+    execution_id: int,
+    execution_repo: ExecutionRepository = Depends(),
+):
+    """Cancela uma execução em andamento (apenas no Maestro, sem abortar jobs externos)."""
+    execution = await execution_repo.get_execution_by_id(execution_id)
+    if not execution:
+        raise HTTPException(status_code=404, detail="Execução não encontrada.")
+
+    terminal = {ExecutionStatus.SUCCESS, ExecutionStatus.FAILURE, ExecutionStatus.ABORTED}
+    if execution.status in terminal:
+        raise HTTPException(status_code=400, detail=f"Execução já está em status terminal: {execution.status}")
+
+    execution.status = ExecutionStatus.ABORTED
+    execution.message = "Cancelado manualmente pelo operador."
+    await execution_repo.update_release_execution(execution)
+
+    await execution_repo.add_action_log(ExecutionActionLog(
+        release_execution_id=execution_id,
+        action="cancel_execution",
+        detail="Execução cancelada manualmente. Jobs externos não foram interrompidos.",
+    ))
+
+    # Retorna o OOB do header atualizado (status badge + área de aprovação)
+    return templates.TemplateResponse(
+        request,
+        "partials/execution_oob.html",
+        {
+            "execution": execution,
+            "waiting_approval": False,
+        },
+    )
+
+
+# Steps terminais que o operador NÃO pode mais alterar via override.
+# FAILURE é intencional aqui fora — um step com falha PODE ser forçado para sucesso.
+TERMINAL_STEP_STATUSES = {ExecutionStatus.SUCCESS, ExecutionStatus.ABORTED}
+
+
+@router.post("/step/{step_execution_id}/override/{action}", response_class=HTMLResponse)
+async def override_step_ui(
+    request: Request,
+    step_execution_id: int,
+    action: str,  # "success" | "failure"
+    background_tasks: BackgroundTasks,
+    execution_repo: ExecutionRepository = Depends(),
+    orchestrator_service: OrchestratorService = Depends(),
+):
+    """
+    Permite ao operador forçar um step para sucesso ou falha,
+    independente do status atual (exceto steps já terminais).
+    Se marcado como sucesso, re-dispara o workflow para continuar o fluxo.
+    """
+    if action not in ("success", "failure"):
+        raise HTTPException(status_code=400, detail=f"Ação inválida: '{action}'. Use 'success' ou 'failure'.")
+
+    step = await execution_repo.get_step_by_id(step_execution_id)
+    if not step:
+        raise HTTPException(status_code=404, detail="Step não encontrado.")
+
+    if step.status in TERMINAL_STEP_STATUSES:
+        raise HTTPException(status_code=400, detail=f"Step já está em status terminal: {step.status}")
+
+    previous_status = step.status
+    if action == "success":
+        step.status = ExecutionStatus.SUCCESS
+        step.message = f"Marcado manualmente como sucesso (era: {previous_status})."
+        log_action = "override_success"
+    else:
+        step.status = ExecutionStatus.FAILURE
+        step.message = f"Marcado manualmente como falha (era: {previous_status})."
+        log_action = "override_failure"
+
+    await execution_repo.update_step_execution(step)
+
+    await execution_repo.add_action_log(ExecutionActionLog(
+        release_execution_id=step.release_execution_id,
+        action=log_action,
+        step_execution_id=step.id,
+        stage_id=step.stage_id,
+        step_id=step.step_id,
+        detail=step.message,
+    ))
+
+    # Re-dispara o workflow para refletir a mudança no fluxo
+    background_tasks.add_task(orchestrator_service.process_workflow, step.release_execution_id)
+
+    return templates.TemplateResponse(
+        request, "partials/override_result.html",
+        {"error": None, "step": step, "action": action},
+    )
+
+
 @router.get("/settings", response_class=HTMLResponse)
 async def settings_page(request: Request, service: UISettingsService = Depends()):
     current = await service.get_all()
