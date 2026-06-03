@@ -1,9 +1,11 @@
 {% if error %}
-<div id="override-toast-err-{{ range(1, 100000) | random }}"
+{% set rand_id = range(1, 100000) | random %}
+<div id="override-toast-err-{{ rand_id }}"
      class="toast toast-top toast-end z-50"
      style="position:fixed;">
     <div class="alert alert-error shadow-lg">
-        <svg class="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        <!-- Ícone de erro: Exclamação ao invés de X -->
+        <svg class="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
         <span class="text-sm grow">{{ error }}</span>
         <button class="btn btn-sm btn-circle btn-ghost" onclick="this.closest('.toast').remove()">
             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
@@ -12,25 +14,30 @@
 </div>
 <script>
     setTimeout(() => {
-        const toast = document.currentScript.previousElementSibling;
+        const toast = document.getElementById('override-toast-err-{{ rand_id }}');
         if (toast) toast.remove();
     }, 4000);
 </script>
+
 {% else %}
-<div id="override-toast-{{ step.id }}-{{ range(1, 100000) | random }}"
+{% set rand_id = range(1, 100000) | random %}
+<div id="override-toast-{{ step.id }}-{{ rand_id }}"
      class="toast toast-top toast-end z-50"
      style="position:fixed;">
-    <div class="alert {% if action == 'success' %}alert-success{% else %}alert-error{% endif %} shadow-lg">
+    <div class="alert {% if action == 'success' %}alert-success{% elif action == 'waiting_approval' %}alert-info{% else %}alert-error{% endif %} shadow-lg">
         <svg class="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             {% if action == 'success' %}
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
+            {% elif action == 'waiting_approval' %}
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
             {% else %}
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/>
+            <!-- Ícone de erro: Exclamação ao invés de X -->
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
             {% endif %}
         </svg>
         <span class="text-sm grow">
             Step <strong>{{ step.step_id }}</strong> marcado como
-            <strong>{% if action == 'success' %}sucesso{% else %}falha{% endif %}</strong>.
+            <strong>{% if action == 'success' %}sucesso{% elif action == 'waiting_approval' %}aguardando aprovação{% else %}falha{% endif %}</strong>.
             {% if action == 'success' %}Fluxo retomado.{% endif %}
         </span>
         <button class="btn btn-sm btn-circle btn-ghost" onclick="this.closest('.toast').remove()">
@@ -40,7 +47,7 @@
 </div>
 <script>
     setTimeout(() => {
-        const toast = document.currentScript.previousElementSibling;
+        const toast = document.getElementById('override-toast-{{ step.id }}-{{ rand_id }}');
         if (toast) toast.remove();
     }, 4000);
 </script>

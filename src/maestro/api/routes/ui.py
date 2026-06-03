@@ -283,18 +283,18 @@ TERMINAL_STEP_STATUSES = {ExecutionStatus.SUCCESS, ExecutionStatus.ABORTED}
 async def override_step_ui(
     request: Request,
     step_execution_id: int,
-    action: str,  # "success" | "failure"
+    action: str,  # "success" | "failure" | "waiting_approval"
     background_tasks: BackgroundTasks,
     execution_repo: ExecutionRepository = Depends(),
     orchestrator_service: OrchestratorService = Depends(),
 ):
     """
-    Permite ao operador forçar um step para sucesso ou falha,
+    Permite ao operador forçar um step para sucesso, falha ou aguardando aprovação,
     independente do status atual (exceto steps já terminais).
     Se marcado como sucesso, re-dispara o workflow para continuar o fluxo.
     """
-    if action not in ("success", "failure"):
-        raise HTTPException(status_code=400, detail=f"Ação inválida: '{action}'. Use 'success' ou 'failure'.")
+    if action not in ("success", "failure", "waiting_approval"):
+        raise HTTPException(status_code=400, detail=f"Ação inválida: '{action}'. Use 'success', 'failure' ou 'waiting_approval'.")
 
     step = await execution_repo.get_step_by_id(step_execution_id)
     if not step:
@@ -308,6 +308,10 @@ async def override_step_ui(
         step.status = ExecutionStatus.SUCCESS
         step.message = f"Marcado manualmente como sucesso (era: {previous_status})."
         log_action = "override_success"
+    elif action == "waiting_approval":
+        step.status = ExecutionStatus.WAITING_APPROVAL
+        step.message = f"Marcado manualmente como aguardando aprovação (era: {previous_status})."
+        log_action = "override_waiting_approval"
     else:
         step.status = ExecutionStatus.FAILURE
         step.message = f"Marcado manualmente como falha (era: {previous_status})."
@@ -324,8 +328,10 @@ async def override_step_ui(
         detail=step.message,
     ))
 
-    # Re-dispara o workflow para refletir a mudança no fluxo
-    background_tasks.add_task(orchestrator_service.process_workflow, step.release_execution_id)
+    # Re-dispara o workflow apenas se for success, pois falha ou waiting approval pausam o fluxo
+    if action == "success":
+        background_tasks.add_task(orchestrator_service.process_workflow, step.release_execution_id)
+
 
     return templates.TemplateResponse(
         request, "partials/override_result.html",
