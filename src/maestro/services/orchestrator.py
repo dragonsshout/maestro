@@ -272,6 +272,53 @@ class OrchestratorService:
         background_tasks.add_task(self.process_workflow, step.release_execution_id)
         return step
 
+    async def cancel_execution(self, execution_id: int, abort_jobs: bool = False) -> ReleaseExecution:
+        """
+        Cancela uma execução em andamento.
+
+        :param execution_id: ID da execução a cancelar.
+        :param abort_jobs: Se True, além de cancelar no Maestro, envia abort ao Jenkins
+                           para todos os steps in_progress ou waiting_approval com build number.
+        :returns: A execução atualizada.
+        """
+        execution = await self.execution_repo.get_execution_by_id(execution_id)
+        if not execution:
+            raise ValueError("Execução não encontrada.")
+
+        terminal = {ExecutionStatus.SUCCESS, ExecutionStatus.FAILURE, ExecutionStatus.ABORTED}
+        if execution.status in terminal:
+            raise ValueError(f"Execução já está em status terminal: {execution.status}")
+
+        # Se abort_jobs, envia abort ao Jenkins para cada step ativo
+        aborted_steps = []
+        if abort_jobs:
+            steps = await self.execution_repo.get_steps_by_execution_id(execution_id)
+            abortable_statuses = {ExecutionStatus.IN_PROGRESS, ExecutionStatus.WAITING_APPROVAL}
+
+            for step in steps:
+                if step.status in abortable_statuses and step.job_execution_correlation_id:
+                    job_path = await self._resolve_job_path(step)
+                    if job_path:
+                        try:
+                            await self.jenkins_service.abort_build(job_path, step.job_execution_correlation_id)
+                        except Exception as e:
+                            logger.warning(
+                                f"Falha ao enviar abort para step {step.step_id} "
+                                f"(build #{step.job_execution_correlation_id}): {e}"
+                            )
+                    step.status = ExecutionStatus.ABORTED
+                    step.message = "Abortado pelo cancelamento da execução."
+                    await self.execution_repo.update_step_execution(step)
+                    aborted_steps.append(step)
+
+        execution.status = ExecutionStatus.ABORTED
+        if abort_jobs and aborted_steps:
+            execution.message = f"Cancelado com abort de {len(aborted_steps)} job(s) no Jenkins."
+        else:
+            execution.message = "Cancelado manualmente pelo operador."
+        await self.execution_repo.update_release_execution(execution)
+        return execution
+
     async def abort_step(self, step_execution_id: int) -> ReleaseStepExecution:
         """
         Envia um cancelamento forçado (abort/stop) ao Jenkins e marca o step como ABORTED.

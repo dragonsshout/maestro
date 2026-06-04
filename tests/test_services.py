@@ -239,6 +239,113 @@ class TestOrchestratorServiceExecuteRelease:
             await service.execute_release("test-release", background_tasks)
 
 
+class TestOrchestratorServiceCancelExecution:
+    @pytest.fixture
+    def service(self):
+        svc = OrchestratorService.__new__(OrchestratorService)
+        svc.repository = AsyncMock()
+        svc.execution_repo = AsyncMock()
+        svc.jenkins_service = AsyncMock()
+        return svc
+
+    async def test_cancel_not_found(self, service):
+        service.execution_repo.get_execution_by_id = AsyncMock(return_value=None)
+
+        with pytest.raises(ValueError, match="não encontrada"):
+            await service.cancel_execution(999)
+
+    async def test_cancel_already_terminal(self, service):
+        execution = MagicMock()
+        execution.status = ExecutionStatus.SUCCESS
+        service.execution_repo.get_execution_by_id = AsyncMock(return_value=execution)
+
+        with pytest.raises(ValueError, match="terminal"):
+            await service.cancel_execution(1)
+
+    async def test_cancel_maestro_only(self, service):
+        execution = MagicMock()
+        execution.id = 1
+        execution.status = ExecutionStatus.IN_PROGRESS
+        service.execution_repo.get_execution_by_id = AsyncMock(return_value=execution)
+        service.execution_repo.update_release_execution = AsyncMock()
+
+        result = await service.cancel_execution(1, abort_jobs=False)
+
+        assert result.status == ExecutionStatus.ABORTED
+        assert "manualmente" in result.message
+        service.jenkins_service.abort_build.assert_not_awaited()
+
+    async def test_cancel_with_abort_jobs(self, service):
+        execution = MagicMock()
+        execution.id = 1
+        execution.status = ExecutionStatus.IN_PROGRESS
+        execution.orchestrator_descriptor_id = 10
+        service.execution_repo.get_execution_by_id = AsyncMock(return_value=execution)
+        service.execution_repo.update_release_execution = AsyncMock()
+        service.execution_repo.update_step_execution = AsyncMock()
+
+        step_active = MagicMock()
+        step_active.status = ExecutionStatus.IN_PROGRESS
+        step_active.job_execution_correlation_id = 100
+        step_active.release_execution_id = 1
+        step_active.stage_id = "stage-1"
+        step_active.step_id = "step-1"
+
+        step_pending = MagicMock()
+        step_pending.status = ExecutionStatus.PENDING
+        step_pending.job_execution_correlation_id = None
+
+        service.execution_repo.get_steps_by_execution_id = AsyncMock(return_value=[step_active, step_pending])
+
+        # Mock _resolve_job_path
+        descriptor = MagicMock()
+        descriptor.yaml = SAMPLE_RELEASE_YAML
+        service.repository.get_by_id = AsyncMock(return_value=descriptor)
+
+        service.jenkins_service.abort_build = AsyncMock()
+
+        result = await service.cancel_execution(1, abort_jobs=True)
+
+        assert result.status == ExecutionStatus.ABORTED
+        assert "1 job(s)" in result.message
+        assert step_active.status == ExecutionStatus.ABORTED
+        service.jenkins_service.abort_build.assert_awaited_once_with("job/path/deploy", 100)
+        # The pending step without correlation_id should NOT be aborted
+        assert step_pending.status == ExecutionStatus.PENDING
+
+    async def test_cancel_with_abort_jenkins_error_continues(self, service):
+        """If Jenkins abort fails for one step, the execution is still cancelled."""
+        execution = MagicMock()
+        execution.id = 1
+        execution.status = ExecutionStatus.IN_PROGRESS
+        execution.orchestrator_descriptor_id = 10
+        service.execution_repo.get_execution_by_id = AsyncMock(return_value=execution)
+        service.execution_repo.update_release_execution = AsyncMock()
+        service.execution_repo.update_step_execution = AsyncMock()
+
+        step = MagicMock()
+        step.status = ExecutionStatus.IN_PROGRESS
+        step.job_execution_correlation_id = 100
+        step.release_execution_id = 1
+        step.stage_id = "stage-1"
+        step.step_id = "step-1"
+
+        service.execution_repo.get_steps_by_execution_id = AsyncMock(return_value=[step])
+
+        descriptor = MagicMock()
+        descriptor.yaml = SAMPLE_RELEASE_YAML
+        service.repository.get_by_id = AsyncMock(return_value=descriptor)
+
+        service.jenkins_service.abort_build = AsyncMock(side_effect=Exception("Connection refused"))
+
+        result = await service.cancel_execution(1, abort_jobs=True)
+
+        # Execution still cancelled despite Jenkins error
+        assert result.status == ExecutionStatus.ABORTED
+        # Step still marked aborted even though Jenkins call failed
+        assert step.status == ExecutionStatus.ABORTED
+
+
 class TestOrchestratorServiceRetryStep:
     @pytest.fixture
     def service(self):

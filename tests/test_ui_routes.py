@@ -47,43 +47,46 @@ async def client(app_override):
 # ===========================================================================
 
 class TestCancelExecution:
-    async def test_cancel_not_found(self, client, mock_session):
-        mock_result = MagicMock()
-        mock_result.scalars.return_value.first.return_value = None
-        mock_session.execute.return_value = mock_result
+    @patch("maestro.services.orchestrator.OrchestratorService.cancel_execution")
+    async def test_cancel_not_found(self, mock_cancel, client, mock_session):
+        mock_cancel.side_effect = ValueError("Execução não encontrada.")
 
         response = await client.post("/ui/execution/999/cancel")
-        assert response.status_code == 404
+        assert response.status_code == 400
 
-    async def test_cancel_already_terminal(self, client, mock_session):
-        execution = MagicMock(spec=ReleaseExecution)
-        execution.id = 1
-        execution.status = ExecutionStatus.SUCCESS
-
-        mock_result = MagicMock()
-        mock_result.scalars.return_value.first.return_value = execution
-        mock_session.execute.return_value = mock_result
+    @patch("maestro.services.orchestrator.OrchestratorService.cancel_execution")
+    async def test_cancel_already_terminal(self, mock_cancel, client, mock_session):
+        mock_cancel.side_effect = ValueError("Execução já está em status terminal: success")
 
         response = await client.post("/ui/execution/1/cancel")
         assert response.status_code == 400
         assert "terminal" in response.json()["detail"]
 
-    @patch("maestro.services.orchestrator.OrchestratorService.process_workflow", new_callable=AsyncMock)
-    async def test_cancel_success(self, mock_process, client, mock_session):
+    @patch("maestro.services.orchestrator.OrchestratorService.cancel_execution")
+    async def test_cancel_success_maestro_only(self, mock_cancel, client, mock_session):
         execution = MagicMock(spec=ReleaseExecution)
         execution.id = 1
         execution.name = "test-release"
-        execution.status = ExecutionStatus.IN_PROGRESS
-        execution.orchestrator_descriptor_id = 1
-
-        mock_result = MagicMock()
-        mock_result.scalars.return_value.first.return_value = execution
-        mock_session.execute.return_value = mock_result
+        execution.status = ExecutionStatus.ABORTED
+        execution.message = "Cancelado manualmente pelo operador."
+        mock_cancel.return_value = execution
 
         response = await client.post("/ui/execution/1/cancel")
         assert response.status_code == 200
-        # Execution should have been set to ABORTED
-        assert execution.status == ExecutionStatus.ABORTED
+        mock_cancel.assert_awaited_once_with(1, abort_jobs=False)
+
+    @patch("maestro.services.orchestrator.OrchestratorService.cancel_execution")
+    async def test_cancel_with_abort_jobs(self, mock_cancel, client, mock_session):
+        execution = MagicMock(spec=ReleaseExecution)
+        execution.id = 1
+        execution.name = "test-release"
+        execution.status = ExecutionStatus.ABORTED
+        execution.message = "Cancelado com abort de 2 job(s) no Jenkins."
+        mock_cancel.return_value = execution
+
+        response = await client.post("/ui/execution/1/cancel?abort_jobs=true")
+        assert response.status_code == 200
+        mock_cancel.assert_awaited_once_with(1, abort_jobs=True)
 
 
 # ===========================================================================
