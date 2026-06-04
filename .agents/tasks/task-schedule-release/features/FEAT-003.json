@@ -2,7 +2,7 @@
   "id": "FEAT-003",
   "type": "feat",
   "description": "Add unit tests for the Schedule Release feature covering service logic, repository, and scheduler background task",
-  "status": "in_progress",
+  "status": "completed",
   "steps": [
     "Step 1 - Create tests/test_scheduler.py with comprehensive tests following the patterns in test_services.py and test_timeout_checker.py",
     "Step 2 - Test SchedulerService.schedule_release: (a) successful scheduling, (b) scheduling in the past raises ValueError, (c) duplicate pending schedule raises ValueError, (d) descriptor not found raises ValueError",
@@ -22,5 +22,5 @@
     "uv run pytest tests/ -x --ignore=tests/integration -q"
   ],
   "blocked_reason": null,
-  "findings": ""
+  "findings": "All 15 tests pass. Had to patch imports at their source locations (maestro.database.session.AsyncSessionLocal, maestro.repositories.*, maestro.services.*) because _process_due_schedules uses local imports. Used OrchestratorService.execute_release patch instead of mocking __new__ since MagicMock does not support setting __new__ on mock objects."
 }
