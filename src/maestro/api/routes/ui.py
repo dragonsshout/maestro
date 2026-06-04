@@ -635,16 +635,17 @@ async def cancel_schedule_ui(
     scheduler_service: SchedulerService = Depends(),
 ):
     """Cancela um agendamento pela UI e retorna a lista atualizada."""
+    cancel_error = None
     try:
         await scheduler_service.cancel_schedule(schedule_id)
-    except ValueError:
-        pass
+    except ValueError as e:
+        cancel_error = str(e)
 
     schedules = await scheduler_service.get_all_schedules()
     return templates.TemplateResponse(
         request,
         "partials/schedules_list.html",
-        {"schedules": schedules},
+        {"schedules": schedules, "cancel_error": cancel_error},
     )
 
 

@@ -104,6 +104,9 @@ async def _process_due_schedules():
         exec_repo = ExecutionRepository(db=session)
         orch_repo = OrchestratorDescriptorRepository(db=session)
 
+        # NOTE: No row-level locking (SELECT FOR UPDATE SKIP LOCKED) is used here.
+        # This is acceptable for single-worker deployments. If Maestro is scaled
+        # horizontally, a concurrency guard must be added to prevent double-dispatch.
         pending = await schedule_repo.get_pending_due_schedules()
         if not pending:
             return
@@ -120,21 +123,25 @@ async def _process_due_schedules():
                     )
                     continue
 
-                # Monta o OrchestratorService manualmente (como process_workflow faz)
+                # Monta o OrchestratorService com as dependencias explicitamente
                 jenkins_service = JenkinsService()
-                svc = OrchestratorService.__new__(OrchestratorService)
-                svc.repository = orch_repo
-                svc.execution_repo = exec_repo
-                svc.jenkins_service = jenkins_service
+                svc = OrchestratorService(
+                    repository=orch_repo,
+                    execution_repo=exec_repo,
+                    jenkins_service=jenkins_service,
+                )
 
                 bg = BackgroundTasks()
                 execution_id = await svc.execute_release(schedule.name, bg)
 
                 await schedule_repo.mark_executed(schedule.id, execution_id)
 
-                # Executa as background tasks que foram enfileiradas
+                # Executa as background tasks enfileiradas (process_workflow)
                 for task in bg.tasks:
-                    asyncio.create_task(task.func(*task.args, **task.kwargs))
+                    try:
+                        await task.func(*task.args, **task.kwargs)
+                    except Exception as e:
+                        logger.error(f"Erro ao executar background task do agendamento: {e}")
 
             except Exception as e:
                 logger.error(f"Falha ao executar agendamento da release '{schedule.name}': {e}")

@@ -66,7 +66,7 @@
                                 </label>
                                 <div tabindex="0" class="dropdown-content z-[1] card card-compact shadow-lg bg-base-100 border border-base-300 w-64 p-3 mt-2">
                                     <form hx-post="/ui/schedule/{{ desc.name }}" hx-target="body" hx-swap="beforeend">
-                                        <label class="label"><span class="label-text text-xs">Data/hora de execução</span></label>
+                                        <label class="label"><span class="label-text text-xs">Data/hora de execução (UTC)</span></label>
                                         <input type="datetime-local" name="scheduled_at" class="input input-xs input-bordered w-full mb-2" required />
                                         <button type="submit" class="btn btn-xs btn-secondary w-full">Agendar</button>
                                     </form>
