@@ -1,0 +1,26 @@
+{
+  "id": "FEAT-003",
+  "type": "feat",
+  "description": "Add unit tests for the Schedule Release feature covering service logic, repository, and scheduler background task",
+  "status": "pending",
+  "steps": [
+    "Step 1 - Create tests/test_scheduler.py with comprehensive tests following the patterns in test_services.py and test_timeout_checker.py",
+    "Step 2 - Test SchedulerService.schedule_release: (a) successful scheduling, (b) scheduling in the past raises ValueError, (c) duplicate pending schedule raises ValueError, (d) descriptor not found raises ValueError",
+    "Step 3 - Test SchedulerService.cancel_schedule: (a) successful cancellation, (b) schedule not found raises ValueError, (c) schedule not pending raises ValueError",
+    "Step 4 - Test _process_due_schedules: (a) no pending schedules does nothing, (b) due schedule triggers execution and marks as executed, (c) due schedule with active execution marks as failed, (d) due schedule where execute_release raises exception marks as failed with error message",
+    "Step 5 - Test the REST API endpoints: POST /orchestrator/schedule (success + validation errors), GET /orchestrator/schedules, DELETE /orchestrator/schedule/{id}",
+    "Step 6 - Ensure tests exercise real logic paths and would fail if the scheduling code were reverted"
+  ],
+  "acceptance_criteria": [
+    "tests/test_scheduler.py exists with at least 10 test cases",
+    "Tests cover: schedule creation, validation (past date, duplicate), cancellation, background task execution, API endpoints",
+    "All tests pass: uv run pytest tests/test_scheduler.py -v",
+    "Full test suite still passes: uv run pytest tests/ -x --ignore=tests/integration -q"
+  ],
+  "verification": [
+    "uv run pytest tests/test_scheduler.py -v",
+    "uv run pytest tests/ -x --ignore=tests/integration -q"
+  ],
+  "blocked_reason": null,
+  "findings": ""
+}

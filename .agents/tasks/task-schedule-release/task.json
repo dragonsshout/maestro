@@ -1,0 +1,7 @@
+{
+  "task_id": "task-schedule-release",
+  "task_description": "Implement Schedule Release for Execution feature: database model, migration, repository, schemas, service with background scheduler task, REST API endpoints, UI routes, and templates. Allows users to schedule a release for future execution, with automatic dispatch at the scheduled time.",
+  "status": "in_progress",
+  "feature_order": ["FEAT-001", "FEAT-002", "FEAT-003"],
+  "blocked_reason": null
+}

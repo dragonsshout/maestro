@@ -1,0 +1,38 @@
+{
+  "id": "FEAT-002",
+  "type": "feat",
+  "description": "Add ScheduledRelease model, Alembic migration, enum, schemas, repository layer, service with background scheduler task, REST API routes, UI routes, and UI templates for the Schedule Release feature",
+  "status": "pending",
+  "steps": [
+    "Step 1 - Enum: Add ScheduledReleaseStatus enum to src/maestro/schemas/enums.py with values: pending, executed, cancelled, failed (following the ExecutionStatus pattern as str Enum)",
+    "Step 2 - Model: Add ScheduledRelease model to src/maestro/database/models.py with columns: id (Integer PK), orchestrator_descriptor_id (FK to orchestrator_descriptor.id), name (String), scheduled_at (DateTime(timezone=True)), status (String, default 'pending'), release_execution_id (Integer FK to release_execution.id, nullable), created_at (DateTime(timezone=True), server_default=func.now()), created_by (String, nullable), error_message (Text, nullable)",
+    "Step 3 - Migration: Create new Alembic migration file in migrations/versions/ following the pattern of existing migrations (e.g., 5995f0803bff_create_release_execution.py). Use revision ID 'd4e5f6a7b8c9' with down_revision pointing to 'c3d4e5f6a7b8' (the latest). Create table 'scheduled_release' with all columns from step 2.",
+    "Step 4 - Schemas: Add Pydantic schemas to a new file src/maestro/schemas/schedule.py: ScheduleReleaseRequest (name: str, scheduled_at: datetime), ScheduleReleaseResponse (id, name, scheduled_at, status, release_execution_id, created_at, created_by, error_message with model_config from_attributes=True), ScheduleListResponse (list wrapper)",
+    "Step 5 - Repository: Create src/maestro/repositories/schedule.py with class ScheduleRepository (following ExecutionRepository pattern with Depends(get_db)). Methods: create_schedule(schedule: ScheduledRelease) -> ScheduledRelease, get_pending_due_schedules() -> List[ScheduledRelease] (status=pending AND scheduled_at <= now()), cancel_schedule(schedule_id: int) -> ScheduledRelease | None (set status=cancelled, return None if not found or not pending), mark_executed(schedule_id: int, execution_id: int) -> None (set status=executed, release_execution_id=execution_id), mark_failed(schedule_id: int, error_message: str) -> None (set status=failed, error_message), get_schedules_for_release(name: str) -> List[ScheduledRelease], get_all_schedules(skip: int = 0, limit: int = 50) -> List[ScheduledRelease], has_pending_schedule_for_release(name: str) -> bool (check if a pending schedule exists for the given release name)",
+    "Step 6 - Service: Create src/maestro/services/scheduler.py with class SchedulerService (using Depends() for ScheduleRepository, OrchestratorDescriptorRepository, ExecutionRepository). Methods: schedule_release(name: str, scheduled_at: datetime, created_by: str | None = None) -> ScheduledRelease (validate: scheduled_at must be in the future, no existing pending schedule for same release name, descriptor must exist; create ScheduledRelease with orchestrator_descriptor_id from the descriptor found by name), cancel_schedule(schedule_id: int) -> ScheduledRelease (delegate to repo, raise ValueError if not found or not pending), get_all_schedules(skip, limit) -> List, get_schedules_for_release(name) -> List",
+    "Step 7 - Background task: In the same src/maestro/services/scheduler.py file, add an async function start_scheduler_checker() following the exact pattern of start_timeout_checker() in timeout_checker.py. It should loop every 30 seconds, call _process_due_schedules(). The _process_due_schedules function opens its own AsyncSessionLocal session (like timeout_checker does), fetches pending due schedules, and for each: (a) checks if there is an active execution for that release name (using the pattern from execution_repo.get_active_execution_by_name), (b) if active execution exists, mark schedule as failed with error_message explaining conflict, (c) if no conflict, call the OrchestratorService.execute_release logic - specifically: instantiate repos from the session, instantiate OrchestratorService manually (like process_workflow does), create a BackgroundTasks() instance, call execute_release, then mark as executed with the returned execution_id. If execute_release raises an exception, mark as failed with the error message.",
+    "Step 8 - Register background task: In src/maestro/main.py, import start_scheduler_checker from maestro.services.scheduler and register it in the lifespan alongside the timeout_checker (create_task + cancel on shutdown).",
+    "Step 9 - REST API routes: Add to src/maestro/api/routes/orchestrator.py: (a) POST /orchestrator/schedule with body ScheduleReleaseRequest, returns ScheduleReleaseResponse (calls SchedulerService.schedule_release), (b) GET /orchestrator/schedules with optional query param 'name' to filter by release name, returns list of ScheduleReleaseResponse, (c) DELETE /orchestrator/schedule/{schedule_id} to cancel a schedule (calls SchedulerService.cancel_schedule).",
+    "Step 10 - UI routes: Add to src/maestro/api/routes/ui.py: (a) POST /ui/schedule/{name} that accepts form data with 'scheduled_at' (datetime string), calls SchedulerService.schedule_release, returns a template response with success/error modal (create partials/schedule_result.html), (b) DELETE /ui/schedule/{schedule_id} that cancels a schedule and returns updated schedules partial, (c) GET /ui/partials/schedules that returns the schedules listing partial (showing pending/upcoming schedules).",
+    "Step 11 - UI Templates: (a) Create src/maestro/ui/templates/partials/schedule_result.html - modal showing success (schedule confirmed with datetime) or error (validation message), following execute_result.html pattern. (b) Create src/maestro/ui/templates/partials/schedules_list.html - partial listing pending schedules with columns: release name, scheduled time, status, created_by, and a cancel button (hx-delete). (c) Modify src/maestro/ui/templates/partials/releases_table.html - add a 'Schedule' button (clock icon) next to the existing execute and dry-run buttons. The button should open a small modal/popover with a datetime-local input and a submit button that posts to /ui/schedule/{name}. (d) Modify src/maestro/ui/templates/releases.html to include a section for upcoming schedules that loads the schedules_list partial via hx-get on page load.",
+    "Step 12 - Add import for ScheduleRepository in relevant route files where needed."
+  ],
+  "acceptance_criteria": [
+    "New ScheduledReleaseStatus enum exists in schemas/enums.py",
+    "ScheduledRelease model exists in database/models.py with all specified columns",
+    "Alembic migration file creates the scheduled_release table correctly",
+    "Repository file src/maestro/repositories/schedule.py has all CRUD methods",
+    "Service file src/maestro/services/scheduler.py has SchedulerService class and start_scheduler_checker function",
+    "Validation: scheduling in the past raises ValueError, duplicate pending schedule raises ValueError",
+    "Background scheduler task is registered in main.py lifespan",
+    "REST endpoints POST/GET/DELETE on /orchestrator/schedule(s) work",
+    "UI routes for scheduling exist and render templates",
+    "Schedule button appears in releases table alongside execute and dry-run buttons",
+    "All existing tests continue to pass after changes"
+  ],
+  "verification": [
+    "uv run pytest tests/ -x --ignore=tests/integration -q"
+  ],
+  "blocked_reason": null,
+  "findings": ""
+}
