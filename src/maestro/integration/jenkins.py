@@ -69,6 +69,19 @@ class JenkinsIntegration:
             if response.status_code not in (200, 302):
                 response.raise_for_status()
 
+    async def abort_build(self, job_name: str, build_number: int) -> None:
+        """
+        Envia um request de abort (stop) para um build específico no Jenkins.
+
+        :param job_name: Nome/caminho do job.
+        :param build_number: Número do build a ser abortado.
+        """
+        async with self._get_client() as client:
+            endpoint = f"/{job_name.strip('/')}/{build_number}/stop"
+            response = await client.post(endpoint)
+            if response.status_code not in (200, 302):
+                response.raise_for_status()
+
     async def job_exists(self, job_name: str) -> bool:
         """
         Verifica se um job existe no Jenkins.

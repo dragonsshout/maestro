@@ -5,11 +5,14 @@ from fastapi.templating import Jinja2Templates
 from sse_starlette.sse import EventSourceResponse
 from maestro.services.ui import UIService
 from maestro.services.orchestrator import OrchestratorService
+from maestro.services.jenkins import JenkinsService
 from maestro.services.settings import UISettingsService, KNOWN_SETTINGS, SETTING_JENKINS_BASE_URL, SETTING_GITHUB_BASE_URL, SETTING_GITHUB_ORGANIZATION
 from maestro.repositories.execution import ExecutionRepository
 from maestro.repositories.orchestrator import OrchestratorDescriptorRepository
 from maestro.schemas.enums import ExecutionStatus
+from maestro.schemas.orchestrator import ReleaseConfigSchema
 from maestro.database.models import ExecutionActionLog
+import yaml
 
 TEMPLATES_DIR = Path(__file__).parent.parent.parent / "ui" / "templates"
 templates = Jinja2Templates(directory=TEMPLATES_DIR)
@@ -336,6 +339,179 @@ async def override_step_ui(
     return templates.TemplateResponse(
         request, "partials/override_result.html",
         {"error": None, "step": step, "action": action},
+    )
+
+
+@router.post("/step/{step_execution_id}/abort", response_class=HTMLResponse)
+async def abort_step_ui(
+    request: Request,
+    step_execution_id: int,
+    background_tasks: BackgroundTasks,
+    execution_repo: ExecutionRepository = Depends(),
+    orchestrator_repo: OrchestratorDescriptorRepository = Depends(),
+    jenkins_service: JenkinsService = Depends(),
+):
+    """
+    Envia um cancelamento forçado (abort/stop) ao Jenkins para o step e marca-o como ABORTED.
+    Requer que o step tenha um build em andamento (job_execution_correlation_id preenchido).
+    """
+    step = await execution_repo.get_step_by_id(step_execution_id)
+    if not step:
+        return templates.TemplateResponse(
+            request, "partials/abort_step_result.html",
+            {"error": "Step não encontrado.", "step": None},
+        )
+
+    if step.status in {ExecutionStatus.SUCCESS, ExecutionStatus.ABORTED}:
+        return templates.TemplateResponse(
+            request, "partials/abort_step_result.html",
+            {"error": f"Step já está em status terminal: {step.status}.", "step": None},
+        )
+
+    if not step.job_execution_correlation_id:
+        return templates.TemplateResponse(
+            request, "partials/abort_step_result.html",
+            {"error": "Step não possui build number associado (correlation_id ausente).", "step": None},
+        )
+
+    # Descobre o job_path a partir do descritor YAML
+    execution = await execution_repo.get_execution_by_id(step.release_execution_id)
+    descriptor = await orchestrator_repo.get_by_id(execution.orchestrator_descriptor_id)
+    config = ReleaseConfigSchema(**yaml.safe_load(descriptor.yaml))
+
+    job_path = None
+    for stage in config.spec.stages:
+        for step_def in stage.steps:
+            if stage.id == step.stage_id and step_def.id == step.step_id:
+                job_path = step_def.job.path
+                break
+
+    if not job_path:
+        return templates.TemplateResponse(
+            request, "partials/abort_step_result.html",
+            {"error": "Não foi possível determinar o job path para este step.", "step": None},
+        )
+
+    # Envia abort ao Jenkins
+    try:
+        await jenkins_service.abort_build(job_path, step.job_execution_correlation_id)
+    except Exception as e:
+        return templates.TemplateResponse(
+            request, "partials/abort_step_result.html",
+            {"error": f"Erro ao enviar abort ao Jenkins: {str(e)}", "step": None},
+        )
+
+    # Marca step como abortado
+    step.status = ExecutionStatus.ABORTED
+    step.message = f"Cancelamento forçado enviado ao Jenkins (build #{step.job_execution_correlation_id})."
+    await execution_repo.update_step_execution(step)
+
+    await execution_repo.add_action_log(ExecutionActionLog(
+        release_execution_id=step.release_execution_id,
+        action="abort_step",
+        step_execution_id=step.id,
+        stage_id=step.stage_id,
+        step_id=step.step_id,
+        detail=step.message,
+    ))
+
+    return templates.TemplateResponse(
+        request, "partials/abort_step_result.html",
+        {"error": None, "step": step},
+    )
+
+
+@router.post("/step/{step_execution_id}/approve", response_class=HTMLResponse)
+async def approve_step_ui(
+    request: Request,
+    step_execution_id: int,
+    background_tasks: BackgroundTasks,
+    execution_repo: ExecutionRepository = Depends(),
+    orchestrator_repo: OrchestratorDescriptorRepository = Depends(),
+    orchestrator_service: OrchestratorService = Depends(),
+    jenkins_service: JenkinsService = Depends(),
+):
+    """
+    Aprova individualmente um step que está aguardando aprovação no Jenkins.
+    Requer que o step tenha job_input_id preenchido.
+    """
+    step = await execution_repo.get_step_by_id(step_execution_id)
+    if not step:
+        return templates.TemplateResponse(
+            request, "partials/approve_step_result.html",
+            {"error": "Step não encontrado.", "step": None},
+        )
+
+    if step.status != ExecutionStatus.WAITING_APPROVAL:
+        return templates.TemplateResponse(
+            request, "partials/approve_step_result.html",
+            {"error": f"Step não está aguardando aprovação (status: {step.status}).", "step": None},
+        )
+
+    if not step.job_input_id:
+        return templates.TemplateResponse(
+            request, "partials/approve_step_result.html",
+            {"error": "Step não possui input_id preenchido. Não é possível aprovar.", "step": None},
+        )
+
+    if not step.job_execution_correlation_id:
+        return templates.TemplateResponse(
+            request, "partials/approve_step_result.html",
+            {"error": "Step não possui build number associado (correlation_id ausente).", "step": None},
+        )
+
+    # Descobre o job_path a partir do descritor YAML
+    execution = await execution_repo.get_execution_by_id(step.release_execution_id)
+    descriptor = await orchestrator_repo.get_by_id(execution.orchestrator_descriptor_id)
+    config = ReleaseConfigSchema(**yaml.safe_load(descriptor.yaml))
+
+    job_path = None
+    for stage in config.spec.stages:
+        for step_def in stage.steps:
+            if stage.id == step.stage_id and step_def.id == step.step_id:
+                job_path = step_def.job.path
+                break
+
+    if not job_path:
+        return templates.TemplateResponse(
+            request, "partials/approve_step_result.html",
+            {"error": "Não foi possível determinar o job path para este step.", "step": None},
+        )
+
+    # Envia aprovação ao Jenkins
+    try:
+        await jenkins_service.approve_job(
+            job_path=job_path,
+            build_number=step.job_execution_correlation_id,
+            input_id=step.job_input_id,
+            status="Sucesso",
+        )
+    except Exception as e:
+        return templates.TemplateResponse(
+            request, "partials/approve_step_result.html",
+            {"error": f"Erro ao enviar aprovação ao Jenkins: {str(e)}", "step": None},
+        )
+
+    # Atualiza status do step
+    step.status = ExecutionStatus.IN_PROGRESS
+    step.message = f"Aprovação individual enviada ao Jenkins (build #{step.job_execution_correlation_id})."
+    await execution_repo.update_step_execution(step)
+
+    await execution_repo.add_action_log(ExecutionActionLog(
+        release_execution_id=step.release_execution_id,
+        action="approve_step",
+        step_execution_id=step.id,
+        stage_id=step.stage_id,
+        step_id=step.step_id,
+        detail=step.message,
+    ))
+
+    # Re-dispara o workflow para continuar o fluxo
+    background_tasks.add_task(orchestrator_service.process_workflow, step.release_execution_id)
+
+    return templates.TemplateResponse(
+        request, "partials/approve_step_result.html",
+        {"error": None, "step": step},
     )
 
 
