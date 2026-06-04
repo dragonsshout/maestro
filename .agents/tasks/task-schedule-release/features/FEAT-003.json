@@ -2,7 +2,7 @@
   "id": "FEAT-003",
   "type": "feat",
   "description": "Add unit tests for the Schedule Release feature covering service logic, repository, and scheduler background task",
-  "status": "pending",
+  "status": "in_progress",
   "steps": [
     "Step 1 - Create tests/test_scheduler.py with comprehensive tests following the patterns in test_services.py and test_timeout_checker.py",
     "Step 2 - Test SchedulerService.schedule_release: (a) successful scheduling, (b) scheduling in the past raises ValueError, (c) duplicate pending schedule raises ValueError, (d) descriptor not found raises ValueError",
