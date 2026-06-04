@@ -27,12 +27,21 @@ async def lifespan(app: FastAPI):
     from maestro.services.timeout_checker import start_timeout_checker
     timeout_task = asyncio.create_task(start_timeout_checker())
 
+    # Inicia o checker de agendamentos em background
+    from maestro.services.scheduler import start_scheduler_checker
+    scheduler_task = asyncio.create_task(start_scheduler_checker())
+
     yield
 
-    # Cancela o checker ao encerrar
+    # Cancela os checkers ao encerrar
     timeout_task.cancel()
+    scheduler_task.cancel()
     try:
         await timeout_task
+    except asyncio.CancelledError:
+        pass
+    try:
+        await scheduler_task
     except asyncio.CancelledError:
         pass
     logger.info("Encerrando o Maestro.")

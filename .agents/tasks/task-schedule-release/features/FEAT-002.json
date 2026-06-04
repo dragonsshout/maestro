@@ -2,7 +2,7 @@
   "id": "FEAT-002",
   "type": "feat",
   "description": "Add ScheduledRelease model, Alembic migration, enum, schemas, repository layer, service with background scheduler task, REST API routes, UI routes, and UI templates for the Schedule Release feature",
-  "status": "pending",
+  "status": "in_progress",
   "steps": [
     "Step 1 - Enum: Add ScheduledReleaseStatus enum to src/maestro/schemas/enums.py with values: pending, executed, cancelled, failed (following the ExecutionStatus pattern as str Enum)",
     "Step 2 - Model: Add ScheduledRelease model to src/maestro/database/models.py with columns: id (Integer PK), orchestrator_descriptor_id (FK to orchestrator_descriptor.id), name (String), scheduled_at (DateTime(timezone=True)), status (String, default 'pending'), release_execution_id (Integer FK to release_execution.id, nullable), created_at (DateTime(timezone=True), server_default=func.now()), created_by (String, nullable), error_message (Text, nullable)",

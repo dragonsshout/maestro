@@ -1,13 +1,15 @@
 from pathlib import Path
-from fastapi import APIRouter, Depends, HTTPException, Request, BackgroundTasks, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, Request, BackgroundTasks, UploadFile, File, Form
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from sse_starlette.sse import EventSourceResponse
 from maestro.services.ui import UIService
 from maestro.services.orchestrator import OrchestratorService
+from maestro.services.scheduler import SchedulerService
 from maestro.services.settings import UISettingsService, KNOWN_SETTINGS, SETTING_JENKINS_BASE_URL, SETTING_GITHUB_BASE_URL, SETTING_GITHUB_ORGANIZATION
 from maestro.repositories.execution import ExecutionRepository
 from maestro.repositories.orchestrator import OrchestratorDescriptorRepository
+from maestro.repositories.schedule import ScheduleRepository
 from maestro.schemas.enums import ExecutionStatus
 from maestro.database.models import ExecutionActionLog
 
@@ -589,4 +591,72 @@ async def release_descriptor_yaml(
         request,
         "partials/release_yaml_modal.html",
         {"yaml_content": descriptor.yaml, "execution": descriptor},
+    )
+
+
+@router.post("/schedule/{name}", response_class=HTMLResponse)
+async def schedule_release_ui(
+    request: Request,
+    name: str,
+    scheduled_at: str = Form(...),
+    scheduler_service: SchedulerService = Depends(),
+):
+    """Agenda a execucao de uma release pela UI."""
+    from datetime import datetime as dt, timezone as tz
+    try:
+        parsed_dt = dt.fromisoformat(scheduled_at)
+        if not parsed_dt.tzinfo:
+            parsed_dt = parsed_dt.replace(tzinfo=tz.utc)
+        schedule = await scheduler_service.schedule_release(name, parsed_dt)
+        return templates.TemplateResponse(
+            request,
+            "partials/schedule_result.html",
+            {"error": None, "schedule": schedule, "name": name},
+            headers={"HX-Trigger": "refreshSchedules"}
+        )
+    except ValueError as e:
+        return templates.TemplateResponse(
+            request,
+            "partials/schedule_result.html",
+            {"error": str(e), "schedule": None, "name": name},
+        )
+    except Exception as e:
+        return templates.TemplateResponse(
+            request,
+            "partials/schedule_result.html",
+            {"error": f"Erro inesperado: {str(e)}", "schedule": None, "name": name},
+        )
+
+
+@router.delete("/schedule/{schedule_id}", response_class=HTMLResponse)
+async def cancel_schedule_ui(
+    request: Request,
+    schedule_id: int,
+    scheduler_service: SchedulerService = Depends(),
+):
+    """Cancela um agendamento pela UI e retorna a lista atualizada."""
+    try:
+        await scheduler_service.cancel_schedule(schedule_id)
+    except ValueError:
+        pass
+
+    schedules = await scheduler_service.get_all_schedules()
+    return templates.TemplateResponse(
+        request,
+        "partials/schedules_list.html",
+        {"schedules": schedules},
+    )
+
+
+@router.get("/partials/schedules", response_class=HTMLResponse)
+async def partials_schedules(
+    request: Request,
+    scheduler_service: SchedulerService = Depends(),
+):
+    """Retorna a lista de agendamentos (partial para HTMX)."""
+    schedules = await scheduler_service.get_all_schedules()
+    return templates.TemplateResponse(
+        request,
+        "partials/schedules_list.html",
+        {"schedules": schedules},
     )

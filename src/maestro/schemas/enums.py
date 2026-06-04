@@ -1,5 +1,13 @@
 from enum import Enum
 
+
+class ScheduledReleaseStatus(str, Enum):
+    PENDING = "pending"
+    EXECUTED = "executed"
+    CANCELLED = "cancelled"
+    FAILED = "failed"
+
+
 class ExecutionStatus(str, Enum):
     PENDING = "pending"
     IN_PROGRESS = "in_progress"
