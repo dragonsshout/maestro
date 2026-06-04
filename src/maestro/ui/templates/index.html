@@ -10,11 +10,8 @@
     </div>
 </div>
 
-<!-- Tabela de execuções com polling a cada 5s via HTMX -->
-<div id="executions-table"
-     hx-get="/ui/partials/executions"
-     hx-trigger="load, every 5s"
-     hx-swap="innerHTML">
+<!-- Container inicial da tabela -->
+<div hx-get="/ui/partials/executions" hx-trigger="load" hx-swap="outerHTML">
     <div class="flex justify-center py-12">
         <span class="loading loading-spinner loading-lg text-primary"></span>
     </div>

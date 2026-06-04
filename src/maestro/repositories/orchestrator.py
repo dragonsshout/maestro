@@ -26,8 +26,18 @@ class OrchestratorDescriptorRepository:
         )
         return result.scalars().first()
 
-    async def get_all(self) -> list[OrchestratorDescriptor]:
-        result = await self.db.execute(
-            select(OrchestratorDescriptor).order_by(OrchestratorDescriptor.id)
-        )
+    async def get_all(self, skip: int = 0, limit: int = 15, search: str | None = None) -> list[OrchestratorDescriptor]:
+        query = select(OrchestratorDescriptor)
+        if search:
+            query = query.where(OrchestratorDescriptor.name.ilike(f"%{search}%"))
+        query = query.order_by(OrchestratorDescriptor.id).offset(skip).limit(limit)
+        result = await self.db.execute(query)
         return list(result.scalars().all())
+
+    async def get_count(self, search: str | None = None) -> int:
+        from sqlalchemy import func
+        query = select(func.count(OrchestratorDescriptor.id))
+        if search:
+            query = query.where(OrchestratorDescriptor.name.ilike(f"%{search}%"))
+        result = await self.db.execute(query)
+        return result.scalar()

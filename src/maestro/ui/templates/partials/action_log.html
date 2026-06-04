@@ -80,6 +80,21 @@
                                     <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>
                                     Execução cancelada
                                 </span>
+                                {% elif log.action == "cancel_execution_with_abort" %}
+                                <span class="inline-flex items-center gap-1 text-error font-semibold">
+                                    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>
+                                    Cancelada + Abort
+                                </span>
+                                {% elif log.action == "approve_step" %}
+                                <span class="inline-flex items-center gap-1 text-success font-semibold">
+                                    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                                    Step Aprovado
+                                </span>
+                                {% elif log.action == "abort_step" %}
+                                <span class="inline-flex items-center gap-1 text-error font-semibold">
+                                    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>
+                                    Step Abortado
+                                </span>
                                 {% else %}
                                 <span class="text-base-content/60 font-mono">{{ log.action }}</span>
                                 {% endif %}

@@ -133,13 +133,19 @@ class ExecutionRepository:
         )
         return result.scalars().first()
 
-    async def get_all_executions(self, limit: int = 50) -> List[ReleaseExecution]:
+    async def get_all_executions(self, skip: int = 0, limit: int = 50) -> List[ReleaseExecution]:
         result = await self.db.execute(
             select(ReleaseExecution)
             .order_by(ReleaseExecution.id.desc())
+            .offset(skip)
             .limit(limit)
         )
         return list(result.scalars().all())
+
+    async def get_executions_count(self) -> int:
+        from sqlalchemy import func
+        result = await self.db.execute(select(func.count(ReleaseExecution.id)))
+        return result.scalar()
 
     async def add_step_event(self, event: StepEvent) -> StepEvent:
         self.db.add(event)

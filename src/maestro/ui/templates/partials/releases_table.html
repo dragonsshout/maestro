@@ -1,0 +1,119 @@
+<div id="releases-table-container"
+     hx-get="/ui/partials/releases?page={{ current_page|default(1) }}&search={{ search_term|urlencode }}"
+     hx-trigger="refreshReleases from:body"
+     hx-swap="outerHTML">
+    {% if descriptors %}
+    <div class="overflow-x-auto">
+        <table class="table table-sm w-full text-sm">
+            <thead class="text-xs uppercase text-base-content/60">
+                <tr>
+                    <th>#</th>
+                    <th>Nome</th>
+                    <th>Criado em</th>
+                    <th>Execução ativa</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for desc in descriptors %}
+                {% set active = active_executions.get(desc.name) %}
+                <tr class="hover:bg-base-200/70 transition-colors duration-200">
+                    <td class="font-mono text-base-content/50">{{ desc.id }}</td>
+                    <td class="font-semibold font-mono">{{ desc.name }}</td>
+                    <td class="text-base-content/60">{{ desc.created_at.strftime('%d/%m/%Y %H:%M') }}</td>
+
+                    {# Coluna de execução ativa #}
+                    <td>
+                        {% if active %}
+                        <a href="/ui/execution/{{ active.id }}"
+                           class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold
+                                  bg-warning/15 text-warning border border-warning/30
+                                  hover:bg-warning/25 transition-colors"
+                           title="Execução #{{ active.id }} em andamento">
+                            <span class="relative flex h-2 w-2">
+                                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-warning opacity-75"></span>
+                                <span class="relative inline-flex rounded-full h-2 w-2 bg-warning"></span>
+                            </span>
+                            #{{ active.id }}
+                            <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                        </a>
+                        {% else %}
+                        <span class="text-base-content/30 text-xs">—</span>
+                        {% endif %}
+                    </td>
+
+                    <td>
+                        <div class="flex items-center gap-2">
+                            <button
+                                class="btn btn-xs btn-circle hover:scale-110 active:scale-95 transition-transform shadow-sm relative group
+                                       {% if active %}btn-warning{% else %}btn-success{% endif %}"
+                                hx-post="/ui/execute/{{ desc.name }}"
+                                hx-target="body"
+                                hx-swap="beforeend"
+                                hx-confirm="{% if active %}Já existe uma execução ativa (#{{ active.id }}) para '{{ desc.name }}'. Isso será bloqueado. Deseja verificar?{% else %}Executar a release '{{ desc.name }}'?{% endif %}"
+                                title="{% if active %}Execução já em andamento{% else %}Executar release{% endif %}"
+                            >
+                                {% if active %}
+                                <svg class="w-3 h-3 group-[.htmx-request]:hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"/></svg>
+                                {% else %}
+                                <svg class="w-3 h-3 group-[.htmx-request]:hidden" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
+                                {% endif %}
+                                <span class="loading loading-spinner loading-xs hidden group-[.htmx-request]:inline-block"></span>
+                            </button>
+                            <button
+                                class="btn btn-xs btn-info btn-circle hover:scale-110 active:scale-95 transition-transform shadow-sm relative group"
+                                hx-post="/ui/dry-run/{{ desc.name }}"
+                                hx-target="body"
+                                hx-swap="beforeend"
+                                title="Dry Run - validar pré-requisitos"
+                            >
+                                <svg class="w-3 h-3 group-[.htmx-request]:hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                                <span class="loading loading-spinner loading-xs hidden group-[.htmx-request]:inline-block"></span>
+                            </button>
+                            <button
+                                class="btn btn-xs btn-outline hover:scale-105 active:scale-95 transition-transform"
+                                hx-get="/ui/releases/{{ desc.id }}/yaml"
+                                hx-target="body"
+                                hx-swap="beforeend"
+                                title="Ver YAML"
+                            ><svg class="w-3 h-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg> YAML</button>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Paginação -->
+    {% if total_pages and total_pages > 1 %}
+    <div class="flex justify-center mt-6">
+        <div class="join">
+            <button class="join-item btn"
+                    hx-get="/ui/partials/releases?page={{ current_page - 1 }}&search={{ search_term|urlencode }}"
+                    hx-target="#releases-table-container"
+                    hx-swap="outerHTML"
+                    {% if current_page <= 1 %}disabled{% endif %}>
+                «
+            </button>
+            <button class="join-item btn cursor-default text-base font-medium">
+                Página {{ current_page }} de {{ total_pages }}
+            </button>
+            <button class="join-item btn"
+                    hx-get="/ui/partials/releases?page={{ current_page + 1 }}&search={{ search_term|urlencode }}"
+                    hx-target="#releases-table-container"
+                    hx-swap="outerHTML"
+                    {% if current_page >= total_pages %}disabled{% endif %}>
+                »
+            </button>
+        </div>
+    </div>
+    {% endif %}
+
+    {% else %}
+    <div class="text-center py-8 text-base-content/50">
+        <svg class="w-12 h-12 mx-auto mb-4 text-base-content/30" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" /></svg>
+        <p>Nenhuma release cadastrada encontrada.</p>
+    </div>
+    {% endif %}
+</div>

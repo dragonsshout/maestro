@@ -38,6 +38,13 @@ class UIService:
     async def get_all_executions(self) -> list[ReleaseExecution]:
         return await self.execution_repo.get_all_executions()
 
+    async def get_executions_paginated(self, page: int = 1, per_page: int = 15) -> tuple[list[ReleaseExecution], int]:
+        skip = (page - 1) * per_page
+        executions = await self.execution_repo.get_all_executions(skip=skip, limit=per_page)
+        total_count = await self.execution_repo.get_executions_count()
+        total_pages = max(1, (total_count + per_page - 1) // per_page)
+        return executions, total_pages
+
     async def get_execution_with_stages(self, execution_id: int) -> tuple[ReleaseExecution, list, list] | None:
         """Retorna a execução, a lista de stages e o histórico de ações para renderização."""
         execution = await self.execution_repo.get_execution_by_id(execution_id)

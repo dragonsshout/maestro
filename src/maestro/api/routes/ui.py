@@ -23,12 +23,16 @@ async def index(request: Request):
 
 
 @router.get("/partials/executions", response_class=HTMLResponse)
-async def partials_executions(request: Request, service: UIService = Depends()):
-    executions = await service.get_all_executions()
+async def partials_executions(request: Request, page: int = 1, service: UIService = Depends()):
+    executions, total_pages = await service.get_executions_paginated(page=page, per_page=15)
     return templates.TemplateResponse(
         request,
         "partials/executions_table.html",
-        {"executions": executions}
+        {
+            "executions": executions,
+            "current_page": page,
+            "total_pages": total_pages,
+        }
     )
 
 
@@ -436,6 +440,7 @@ async def execute_release_ui(
             request,
             "partials/execute_result.html",
             {"error": None, "execution_id": execution_id, "name": name},
+            headers={"HX-Trigger": "refreshReleases"}
         )
     except ValueError as e:
         return templates.TemplateResponse(
@@ -464,23 +469,46 @@ async def settings_save(request: Request, service: UISettingsService = Depends()
     )
 
 
-@router.get("/releases", response_class=HTMLResponse)
-async def releases_page(
+@router.get("/partials/releases", response_class=HTMLResponse)
+async def partials_releases(
     request: Request,
+    page: int = 1,
+    search: str | None = None,
     orchestrator_repo: OrchestratorDescriptorRepository = Depends(),
     execution_repo: ExecutionRepository = Depends(),
 ):
-    descriptors = await orchestrator_repo.get_all()
-    # Monta mapa name -> execução ativa para exibir avisos na UI
+    per_page = 15
+    skip = (page - 1) * per_page
+    descriptors = await orchestrator_repo.get_all(skip=skip, limit=per_page, search=search)
+    total_count = await orchestrator_repo.get_count(search=search)
+    total_pages = max(1, (total_count + per_page - 1) // per_page)
+    
     active_executions: dict = {}
     for desc in descriptors:
         active = await execution_repo.get_active_execution_by_name(desc.name)
         if active:
             active_executions[desc.name] = active
+
+    return templates.TemplateResponse(
+        request,
+        "partials/releases_table.html",
+        {
+            "descriptors": descriptors,
+            "active_executions": active_executions,
+            "current_page": page,
+            "total_pages": total_pages,
+            "search_term": search or "",
+        }
+    )
+
+
+@router.get("/releases", response_class=HTMLResponse)
+async def releases_page(
+    request: Request,
+):
     return templates.TemplateResponse(
         request,
         "releases.html",
-        {"descriptors": descriptors, "active_executions": active_executions},
     )
 
 
