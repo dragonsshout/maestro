@@ -41,6 +41,7 @@ class TestExecutionStatus:
         assert ExecutionStatus.ERROR == "error"
         assert ExecutionStatus.ABORTED == "aborted"
         assert ExecutionStatus.WAITING_APPROVAL == "waiting_approval"
+        assert ExecutionStatus.TIMEOUT == "timeout"
 
     def test_from_string_valid(self):
         assert ExecutionStatus.from_string("pending") == ExecutionStatus.PENDING
@@ -48,6 +49,7 @@ class TestExecutionStatus:
         assert ExecutionStatus.from_string("success") == ExecutionStatus.SUCCESS
         assert ExecutionStatus.from_string("failure") == ExecutionStatus.FAILURE
         assert ExecutionStatus.from_string("waiting_approval") == ExecutionStatus.WAITING_APPROVAL
+        assert ExecutionStatus.from_string("timeout") == ExecutionStatus.TIMEOUT
 
     def test_from_string_case_insensitive(self):
         assert ExecutionStatus.from_string("PENDING") == ExecutionStatus.PENDING

@@ -263,6 +263,52 @@ class TestExecutionRepository:
         result = await repo.get_events_by_correlation_id(100)
         assert len(result) == 2
 
+    async def test_get_active_execution_by_name_found(self, repo, mock_db_session):
+        exec_mock = MagicMock(spec=ReleaseExecution)
+        exec_mock.name = "my-release"
+        exec_mock.status = ExecutionStatus.IN_PROGRESS
+
+        mock_result = MagicMock()
+        mock_result.scalars.return_value.first.return_value = exec_mock
+        mock_db_session.execute.return_value = mock_result
+
+        result = await repo.get_active_execution_by_name("my-release")
+        assert result is not None
+        assert result.name == "my-release"
+
+    async def test_get_active_execution_by_name_not_found(self, repo, mock_db_session):
+        mock_result = MagicMock()
+        mock_result.scalars.return_value.first.return_value = None
+        mock_db_session.execute.return_value = mock_result
+
+        result = await repo.get_active_execution_by_name("no-active")
+        assert result is None
+
+    async def test_add_action_log(self, repo, mock_db_session):
+        from maestro.database.models import ExecutionActionLog
+        log = ExecutionActionLog(
+            release_execution_id=1,
+            action="approve",
+            detail="Approved",
+        )
+        await repo.add_action_log(log)
+
+        mock_db_session.add.assert_called_once_with(log)
+        mock_db_session.commit.assert_awaited_once()
+        mock_db_session.refresh.assert_awaited_once_with(log)
+
+    async def test_get_action_logs_by_execution_id(self, repo, mock_db_session):
+        from maestro.database.models import ExecutionActionLog
+        log1 = MagicMock(spec=ExecutionActionLog)
+        log2 = MagicMock(spec=ExecutionActionLog)
+
+        mock_result = MagicMock()
+        mock_result.scalars.return_value.all.return_value = [log1, log2]
+        mock_db_session.execute.return_value = mock_result
+
+        result = await repo.get_action_logs_by_execution_id(1)
+        assert len(result) == 2
+
 
 # ===========================================================================
 # UISettingsRepository

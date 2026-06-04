@@ -178,7 +178,10 @@ class TestOrchestratorServiceExecuteRelease:
     @patch("maestro.services.orchestrator.GithubIntegration")
     async def test_execute_duplicate(self, mock_github_cls, service):
         service.repository.get_by_name = AsyncMock(return_value=MagicMock())
-        service.execution_repo.exists_by_name = AsyncMock(return_value=True)
+        active_mock = MagicMock()
+        active_mock.id = 99
+        active_mock.status = ExecutionStatus.IN_PROGRESS
+        service.execution_repo.get_active_execution_by_name = AsyncMock(return_value=active_mock)
         background_tasks = MagicMock()
 
         with pytest.raises(ValueError, match="Já existe"):
@@ -190,7 +193,7 @@ class TestOrchestratorServiceExecuteRelease:
         descriptor.id = 1
         descriptor.yaml = SAMPLE_RELEASE_YAML
         service.repository.get_by_name = AsyncMock(return_value=descriptor)
-        service.execution_repo.exists_by_name = AsyncMock(return_value=False)
+        service.execution_repo.get_active_execution_by_name = AsyncMock(return_value=None)
 
         exec_mock = MagicMock()
         exec_mock.id = 42
@@ -216,7 +219,7 @@ class TestOrchestratorServiceExecuteRelease:
         descriptor.id = 1
         descriptor.yaml = SAMPLE_RELEASE_YAML
         service.repository.get_by_name = AsyncMock(return_value=descriptor)
-        service.execution_repo.exists_by_name = AsyncMock(return_value=False)
+        service.execution_repo.get_active_execution_by_name = AsyncMock(return_value=None)
 
         exec_mock = MagicMock()
         exec_mock.id = 1
@@ -542,13 +545,15 @@ class TestUIService:
         step.step_id = "step-1"
         step.status = ExecutionStatus.SUCCESS
         service.execution_repo.get_steps_by_execution_id = AsyncMock(return_value=[step])
+        service.execution_repo.get_action_logs_by_execution_id = AsyncMock(return_value=[])
 
         result = await service.get_execution_with_stages(1)
         assert result is not None
-        exec_result, stages = result
+        exec_result, stages, action_logs = result
         assert exec_result == execution
         assert len(stages) == 1
         assert stages[0]["id"] == "stage-1"
+        assert action_logs == []
 
 
 class TestAssembleStages:
@@ -588,7 +593,7 @@ class TestBuildSnapshot:
                 ],
             }
         ]
-        snapshot = _build_snapshot(stages)
+        snapshot = _build_snapshot(stages, "pending")
         assert "stage-1" in snapshot
         assert "step-1" in snapshot
         assert "pending" in snapshot
@@ -604,6 +609,6 @@ class TestBuildSnapshot:
                 }
             ]
 
-        s1 = _build_snapshot(make_stages("pending"))
-        s2 = _build_snapshot(make_stages("success"))
+        s1 = _build_snapshot(make_stages("pending"), "pending")
+        s2 = _build_snapshot(make_stages("success"), "success")
         assert s1 != s2
