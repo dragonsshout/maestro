@@ -339,6 +339,75 @@ async def override_step_ui(
     )
 
 
+@router.post("/step/{step_execution_id}/abort", response_class=HTMLResponse)
+async def abort_step_ui(
+    request: Request,
+    step_execution_id: int,
+    orchestrator_service: OrchestratorService = Depends(),
+    execution_repo: ExecutionRepository = Depends(),
+):
+    """Envia cancelamento forçado ao Jenkins e marca o step como ABORTED."""
+    try:
+        step = await orchestrator_service.abort_step(step_execution_id)
+        await execution_repo.add_action_log(ExecutionActionLog(
+            release_execution_id=step.release_execution_id,
+            action="abort_step",
+            step_execution_id=step.id,
+            stage_id=step.stage_id,
+            step_id=step.step_id,
+            detail=step.message,
+        ))
+        return templates.TemplateResponse(
+            request, "partials/abort_step_result.html",
+            {"error": None, "step": step},
+        )
+    except ValueError as e:
+        return templates.TemplateResponse(
+            request, "partials/abort_step_result.html",
+            {"error": str(e), "step": None},
+        )
+    except Exception as e:
+        return templates.TemplateResponse(
+            request, "partials/abort_step_result.html",
+            {"error": f"Erro ao enviar abort ao Jenkins: {str(e)}", "step": None},
+        )
+
+
+@router.post("/step/{step_execution_id}/approve", response_class=HTMLResponse)
+async def approve_step_ui(
+    request: Request,
+    step_execution_id: int,
+    background_tasks: BackgroundTasks,
+    orchestrator_service: OrchestratorService = Depends(),
+    execution_repo: ExecutionRepository = Depends(),
+):
+    """Aprova individualmente um step que está aguardando aprovação no Jenkins."""
+    try:
+        step = await orchestrator_service.approve_step(step_execution_id, background_tasks)
+        await execution_repo.add_action_log(ExecutionActionLog(
+            release_execution_id=step.release_execution_id,
+            action="approve_step",
+            step_execution_id=step.id,
+            stage_id=step.stage_id,
+            step_id=step.step_id,
+            detail=step.message,
+        ))
+        return templates.TemplateResponse(
+            request, "partials/approve_step_result.html",
+            {"error": None, "step": step},
+        )
+    except ValueError as e:
+        return templates.TemplateResponse(
+            request, "partials/approve_step_result.html",
+            {"error": str(e), "step": None},
+        )
+    except Exception as e:
+        return templates.TemplateResponse(
+            request, "partials/approve_step_result.html",
+            {"error": f"Erro ao enviar aprovação ao Jenkins: {str(e)}", "step": None},
+        )
+
+
 @router.get("/settings", response_class=HTMLResponse)
 async def settings_page(request: Request, service: UISettingsService = Depends()):
     current = await service.get_all()

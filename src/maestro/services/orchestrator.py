@@ -272,6 +272,83 @@ class OrchestratorService:
         background_tasks.add_task(self.process_workflow, step.release_execution_id)
         return step
 
+    async def abort_step(self, step_execution_id: int) -> ReleaseStepExecution:
+        """
+        Envia um cancelamento forçado (abort/stop) ao Jenkins e marca o step como ABORTED.
+        Requer que o step tenha job_execution_correlation_id preenchido.
+        """
+        step = await self.execution_repo.get_step_by_id(step_execution_id)
+        if not step:
+            raise ValueError(f"Step de execução #{step_execution_id} não encontrado.")
+
+        if step.status in (ExecutionStatus.SUCCESS, ExecutionStatus.ABORTED):
+            raise ValueError(f"Step já está em status terminal: {step.status}.")
+
+        if not step.job_execution_correlation_id:
+            raise ValueError("Step não possui build number associado (correlation_id ausente).")
+
+        job_path = await self._resolve_job_path(step)
+        if not job_path:
+            raise ValueError("Não foi possível determinar o job path para este step.")
+
+        await self.jenkins_service.abort_build(job_path, step.job_execution_correlation_id)
+
+        step.status = ExecutionStatus.ABORTED
+        step.message = f"Cancelamento forçado enviado ao Jenkins (build #{step.job_execution_correlation_id})."
+        await self.execution_repo.update_step_execution(step)
+        return step
+
+    async def approve_step(self, step_execution_id: int, background_tasks: BackgroundTasks) -> ReleaseStepExecution:
+        """
+        Aprova individualmente um step que está aguardando aprovação no Jenkins.
+        Requer que o step tenha job_input_id preenchido.
+        """
+        step = await self.execution_repo.get_step_by_id(step_execution_id)
+        if not step:
+            raise ValueError(f"Step de execução #{step_execution_id} não encontrado.")
+
+        if step.status != ExecutionStatus.WAITING_APPROVAL:
+            raise ValueError(f"Step não está aguardando aprovação (status: {step.status}).")
+
+        if not step.job_input_id:
+            raise ValueError("Step não possui input_id preenchido. Não é possível aprovar.")
+
+        if not step.job_execution_correlation_id:
+            raise ValueError("Step não possui build number associado (correlation_id ausente).")
+
+        job_path = await self._resolve_job_path(step)
+        if not job_path:
+            raise ValueError("Não foi possível determinar o job path para este step.")
+
+        await self.jenkins_service.approve_job(
+            job_path=job_path,
+            build_number=step.job_execution_correlation_id,
+            input_id=step.job_input_id,
+            status="Sucesso",
+        )
+
+        step.status = ExecutionStatus.IN_PROGRESS
+        step.message = f"Aprovação individual enviada ao Jenkins (build #{step.job_execution_correlation_id})."
+        await self.execution_repo.update_step_execution(step)
+
+        background_tasks.add_task(self.process_workflow, step.release_execution_id)
+        return step
+
+    async def _resolve_job_path(self, step: ReleaseStepExecution) -> str | None:
+        """Resolve o job_path de um step a partir do descritor YAML da execução."""
+        execution = await self.execution_repo.get_execution_by_id(step.release_execution_id)
+        if not execution:
+            return None
+        descriptor = await self.repository.get_by_id(execution.orchestrator_descriptor_id)
+        if not descriptor:
+            return None
+        config = ReleaseConfigSchema(**yaml.safe_load(descriptor.yaml))
+        for stage in config.spec.stages:
+            for step_def in stage.steps:
+                if stage.id == step.stage_id and step_def.id == step.step_id:
+                    return step_def.job.path
+        return None
+
     async def _trigger_step(self, step, se) -> ExecutionStatus:
         """Dispara um único step e retorna o status resultante (usa repo do request)."""
         return await self._trigger_step_standalone(step, se, self.execution_repo)

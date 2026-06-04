@@ -65,3 +65,8 @@ class JenkinsService:
         logger.info(f"Approving job {job_path} build {build_number} with status {status}")
         await self.jenkins_integration.approve_pipeline(job_path, build_number, input_id, status=status)
 
+    async def abort_build(self, job_path: str, build_number: int):
+        """Envia request de abort/stop para um build no Jenkins."""
+        logger.info(f"Aborting job {job_path} build {build_number}")
+        await self.jenkins_integration.abort_build(job_path, build_number)
+

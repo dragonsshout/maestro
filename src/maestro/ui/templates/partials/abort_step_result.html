@@ -1,0 +1,44 @@
+{% if error %}
+{% set rand_id = range(1, 100000) | random %}
+<div id="abort-toast-err-{{ rand_id }}"
+     class="toast toast-top toast-end z-50"
+     style="position:fixed;">
+    <div class="alert alert-error shadow-lg">
+        <svg class="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        <span class="text-sm grow">{{ error }}</span>
+        <button class="btn btn-sm btn-circle btn-ghost" onclick="this.closest('.toast').remove()">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+    </div>
+</div>
+<script>
+    setTimeout(() => {
+        const toast = document.getElementById('abort-toast-err-{{ rand_id }}');
+        if (toast) toast.remove();
+    }, 4000);
+</script>
+
+{% else %}
+{% set rand_id = range(1, 100000) | random %}
+<div id="abort-toast-{{ step.id }}-{{ rand_id }}"
+     class="toast toast-top toast-end z-50"
+     style="position:fixed;">
+    <div class="alert alert-warning shadow-lg">
+        <svg class="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/>
+        </svg>
+        <span class="text-sm grow">
+            Step <strong>{{ step.step_id }}</strong> abortado. Cancelamento enviado ao Jenkins.
+        </span>
+        <button class="btn btn-sm btn-circle btn-ghost" onclick="this.closest('.toast').remove()">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+    </div>
+</div>
+<script>
+    setTimeout(() => {
+        const toast = document.getElementById('abort-toast-{{ step.id }}-{{ rand_id }}');
+        if (toast) toast.remove();
+    }, 4000);
+</script>
+{% endif %}
