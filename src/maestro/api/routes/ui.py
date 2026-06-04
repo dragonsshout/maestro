@@ -242,25 +242,29 @@ async def resolve_timeout_ui(
 async def cancel_execution_ui(
     request: Request,
     execution_id: int,
+    abort_jobs: bool = False,
+    orchestrator_service: OrchestratorService = Depends(),
     execution_repo: ExecutionRepository = Depends(),
 ):
-    """Cancela uma execução em andamento (apenas no Maestro, sem abortar jobs externos)."""
-    execution = await execution_repo.get_execution_by_id(execution_id)
-    if not execution:
-        raise HTTPException(status_code=404, detail="Execução não encontrada.")
+    """
+    Cancela uma execução em andamento.
+    Se abort_jobs=true, também envia abort ao Jenkins para os steps ativos.
+    """
+    try:
+        execution = await orchestrator_service.cancel_execution(execution_id, abort_jobs=abort_jobs)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
-    terminal = {ExecutionStatus.SUCCESS, ExecutionStatus.FAILURE, ExecutionStatus.ABORTED}
-    if execution.status in terminal:
-        raise HTTPException(status_code=400, detail=f"Execução já está em status terminal: {execution.status}")
-
-    execution.status = ExecutionStatus.ABORTED
-    execution.message = "Cancelado manualmente pelo operador."
-    await execution_repo.update_release_execution(execution)
+    detail = "Execução cancelada manualmente."
+    if abort_jobs:
+        detail += " Abort enviado aos jobs ativos no Jenkins."
+    else:
+        detail += " Jobs externos não foram interrompidos."
 
     await execution_repo.add_action_log(ExecutionActionLog(
         release_execution_id=execution_id,
-        action="cancel_execution",
-        detail="Execução cancelada manualmente. Jobs externos não foram interrompidos.",
+        action="cancel_execution" if not abort_jobs else "cancel_execution_with_abort",
+        detail=detail,
     ))
 
     # Retorna o OOB do header atualizado (status badge + área de aprovação)
