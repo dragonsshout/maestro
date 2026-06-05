@@ -20,7 +20,7 @@ from maestro.schemas.enums import ScheduledReleaseStatus
 
 logger = get_logger(__name__)
 
-CHECK_INTERVAL_SECONDS = 30
+CHECK_INTERVAL_SECONDS = 10
 
 
 class SchedulerService:
@@ -70,9 +70,13 @@ class SchedulerService:
         """Cancela um agendamento pendente."""
         return await self.schedule_repo.cancel_schedule(schedule_id)
 
-    async def get_all_schedules(self, skip: int = 0, limit: int = 50) -> List[ScheduledRelease]:
+    async def get_all_schedules(self, skip: int = 0, limit: int = 50, search: str = None) -> List[ScheduledRelease]:
         """Retorna todos os agendamentos."""
-        return await self.schedule_repo.get_all_schedules(skip=skip, limit=limit)
+        return await self.schedule_repo.get_all_schedules(skip=skip, limit=limit, search=search)
+
+    async def get_schedules_count(self, search: str = None) -> int:
+        """Retorna a contagem total de agendamentos."""
+        return await self.schedule_repo.get_schedules_count(search=search)
 
     async def get_schedules_for_release(self, name: str) -> List[ScheduledRelease]:
         """Retorna agendamentos de uma release especifica."""

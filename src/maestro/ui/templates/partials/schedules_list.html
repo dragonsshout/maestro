@@ -1,6 +1,15 @@
+{% set has_pending = namespace(value=false) %}
+{% if schedules %}
+    {% for s in schedules %}
+        {% if s.status == 'pending' %}
+            {% set has_pending.value = true %}
+        {% endif %}
+    {% endfor %}
+{% endif %}
 <div id="schedules-container"
-     hx-get="/ui/partials/schedules"
-     hx-trigger="refreshSchedules from:body">
+     hx-get="/ui/partials/schedules?page={{ current_page|default(1) }}&search={{ search_term|urlencode }}"
+     hx-trigger="refreshSchedules from:body{% if has_pending.value %}, every 10s{% endif %}"
+     hx-swap="outerHTML">
     {% if cancel_error is defined and cancel_error %}
     <div class="alert alert-error text-sm mb-4">
         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"/></svg>
@@ -28,40 +37,68 @@
                     <td class="text-base-content/60">{{ schedule.scheduled_at.strftime('%d/%m/%Y %H:%M') }} UTC</td>
                     <td>
                         {% if schedule.status == 'pending' %}
-                        <span class="badge badge-warning badge-sm">Pendente</span>
+                            <span class="status-pending"><svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg> Pendente</span>
                         {% elif schedule.status == 'executed' %}
-                        <span class="badge badge-success badge-sm">Executado</span>
+                            <span class="status-success"><svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg> Executado</span>
                         {% elif schedule.status == 'cancelled' %}
-                        <span class="badge badge-ghost badge-sm">Cancelado</span>
+                            <span class="status-failure"><svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" /></svg> Cancelado</span>
                         {% elif schedule.status == 'failed' %}
-                        <span class="badge badge-error badge-sm">Falhou</span>
+                            <span class="status-failure"><svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg> Falhou</span>
                         {% endif %}
                     </td>
                     <td class="text-base-content/60">{{ schedule.created_by or '—' }}</td>
                     <td>
-                        {% if schedule.status == 'pending' %}
-                        <button
-                            class="btn btn-xs btn-error btn-outline hover:scale-105 active:scale-95 transition-transform"
-                            hx-delete="/ui/schedule/{{ schedule.id }}"
-                            hx-target="#schedules-container"
-                            hx-swap="outerHTML"
-                            hx-confirm="Cancelar o agendamento #{{ schedule.id }} da release '{{ schedule.name }}'?"
-                            title="Cancelar agendamento"
-                        >
-                            <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
-                            Cancelar
-                        </button>
-                        {% elif schedule.status == 'failed' and schedule.error_message %}
-                        <span class="text-xs text-error" title="{{ schedule.error_message }}">{{ schedule.error_message[:50] }}{% if schedule.error_message|length > 50 %}...{% endif %}</span>
-                        {% elif schedule.status == 'executed' and schedule.release_execution_id %}
-                        <a href="/ui/execution/{{ schedule.release_execution_id }}" class="btn btn-xs btn-ghost">Ver execução</a>
-                        {% endif %}
+                        <div class="flex items-center gap-2">
+                            {% if schedule.status == 'pending' %}
+                            <button
+                                class="btn btn-xs btn-outline btn-error hover:scale-105 active:scale-95 transition-transform"
+                                hx-delete="/ui/schedule/{{ schedule.id }}?page={{ current_page|default(1) }}&search={{ search_term|urlencode }}"
+                                hx-target="#schedules-container"
+                                hx-swap="outerHTML"
+                                hx-confirm="Cancelar o agendamento #{{ schedule.id }} da release '{{ schedule.name }}'?"
+                                title="Cancelar agendamento"
+                            >
+                                <svg class="w-3 h-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                                Cancelar
+                            </button>
+                            {% elif schedule.status == 'failed' and schedule.error_message %}
+                            <span class="text-xs text-error" title="{{ schedule.error_message }}">{{ schedule.error_message[:50] }}{% if schedule.error_message|length > 50 %}...{% endif %}</span>
+                            {% elif schedule.status == 'executed' and schedule.release_execution_id %}
+                            <a href="/ui/execution/{{ schedule.release_execution_id }}" class="btn btn-xs btn-outline btn-primary hover:scale-105 active:scale-95 transition-transform">Ver detalhes</a>
+                            {% endif %}
+                        </div>
                     </td>
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
     </div>
+
+    <!-- Paginação -->
+    {% if total_pages and total_pages > 1 %}
+    <div class="flex justify-center mt-6">
+        <div class="join">
+            <button class="join-item btn"
+                    hx-get="/ui/partials/schedules?page={{ current_page - 1 }}&search={{ search_term|urlencode }}"
+                    hx-target="#schedules-container"
+                    hx-swap="outerHTML"
+                    {% if current_page <= 1 %}disabled{% endif %}>
+                «
+            </button>
+            <button class="join-item btn cursor-default text-base font-medium">
+                Página {{ current_page }} de {{ total_pages }}
+            </button>
+            <button class="join-item btn"
+                    hx-get="/ui/partials/schedules?page={{ current_page + 1 }}&search={{ search_term|urlencode }}"
+                    hx-target="#schedules-container"
+                    hx-swap="outerHTML"
+                    {% if current_page >= total_pages %}disabled{% endif %}>
+                »
+            </button>
+        </div>
+    </div>
+    {% endif %}
+
     {% else %}
     <div class="text-center py-6 text-base-content/50">
         <svg class="w-10 h-10 mx-auto mb-3 text-base-content/30" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>

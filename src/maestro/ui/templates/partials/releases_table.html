@@ -60,18 +60,41 @@
                                 {% endif %}
                                 <span class="loading loading-spinner loading-xs hidden group-[.htmx-request]:inline-block"></span>
                             </button>
-                            <div class="dropdown dropdown-end">
-                                <label tabindex="0" class="btn btn-xs btn-secondary btn-circle hover:scale-110 active:scale-95 transition-transform shadow-sm" title="Agendar execução">
-                                    <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                                </label>
-                                <div tabindex="0" class="dropdown-content z-[1] card card-compact shadow-lg bg-base-100 border border-base-300 w-64 p-3 mt-2">
-                                    <form hx-post="/ui/schedule/{{ desc.name }}" hx-target="body" hx-swap="beforeend">
-                                        <label class="label"><span class="label-text text-xs">Data/hora de execução (UTC)</span></label>
-                                        <input type="datetime-local" name="scheduled_at" class="input input-xs input-bordered w-full mb-2" required />
-                                        <button type="submit" class="btn btn-xs btn-secondary w-full">Agendar</button>
+                            <button
+                                type="button"
+                                class="btn btn-xs btn-secondary btn-circle hover:scale-110 active:scale-95 transition-transform shadow-sm"
+                                title="Agendar execução"
+                                onclick="document.getElementById('schedule-modal-{{ desc.id }}').showModal()"
+                            >
+                                <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                            </button>
+                            <dialog id="schedule-modal-{{ desc.id }}" class="modal text-left">
+                                <div class="modal-box w-full max-w-sm p-6 overflow-visible">
+                                    <h3 class="font-bold text-lg mb-2 flex items-center gap-2">
+                                        <svg class="w-5 h-5 text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                        Agendar <span class="font-mono font-normal ml-1">{{ desc.name }}</span>
+                                    </h3>
+                                    <p class="text-sm text-base-content/60 mb-6">Escolha a data e hora para execução automática na sua região.</p>
+                                    <form hx-post="/ui/schedule/{{ desc.name }}" hx-target="body" hx-swap="beforeend" onsubmit="
+                                        const dtInput = this.querySelector('[type=datetime-local]');
+                                        if (dtInput.value) {
+                                            const d = new Date(dtInput.value);
+                                            this.querySelector('[name=scheduled_at]').value = d.toISOString();
+                                        }
+                                        document.getElementById('schedule-modal-{{ desc.id }}').close();
+                                    ">
+                                        <input type="datetime-local" class="input input-bordered w-full mb-6" required />
+                                        <input type="hidden" name="scheduled_at" />
+                                        <div class="flex justify-end gap-2">
+                                            <button type="button" class="btn btn-ghost" onclick="document.getElementById('schedule-modal-{{ desc.id }}').close()">Cancelar</button>
+                                            <button type="submit" class="btn btn-secondary">Confirmar Agendamento</button>
+                                        </div>
                                     </form>
                                 </div>
-                            </div>
+                                <form method="dialog" class="modal-backdrop">
+                                    <button>close</button>
+                                </form>
+                            </dialog>
                             <button
                                 class="btn btn-xs btn-info btn-circle hover:scale-110 active:scale-95 transition-transform shadow-sm relative group"
                                 hx-post="/ui/dry-run/{{ desc.name }}"

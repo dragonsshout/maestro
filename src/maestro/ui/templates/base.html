@@ -352,6 +352,16 @@
                     </a>
                 </li>
                 <li>
+                    <a href="/ui/schedules"
+                       class="nav-item flex items-center gap-3 transition-colors duration-200 hover:bg-base-200/70 {% if request.url.path == '/ui/schedules' %}active shadow-sm{% endif %}"
+                       title="Agendamentos">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <span class="nav-label">Agendamentos</span>
+                    </a>
+                </li>
+                <li>
                     <a href="/ui/settings"
                        class="nav-item flex items-center gap-3 transition-colors duration-200 hover:bg-base-200/70 {% if request.url.path == '/ui/settings' %}active shadow-sm{% endif %}"
                        title="Configurações">

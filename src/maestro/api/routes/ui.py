@@ -604,7 +604,8 @@ async def schedule_release_ui(
     """Agenda a execucao de uma release pela UI."""
     from datetime import datetime as dt, timezone as tz
     try:
-        parsed_dt = dt.fromisoformat(scheduled_at)
+        # Substitui 'Z' por '+00:00' para compatibilidade com fromisoformat no Python < 3.11
+        parsed_dt = dt.fromisoformat(scheduled_at.replace("Z", "+00:00"))
         if not parsed_dt.tzinfo:
             parsed_dt = parsed_dt.replace(tzinfo=tz.utc)
         schedule = await scheduler_service.schedule_release(name, parsed_dt)
@@ -628,10 +629,16 @@ async def schedule_release_ui(
         )
 
 
+@router.get("/schedules", response_class=HTMLResponse)
+async def schedules_page(request: Request):
+    return templates.TemplateResponse(request, "schedules.html")
+
 @router.delete("/schedule/{schedule_id}", response_class=HTMLResponse)
 async def cancel_schedule_ui(
     request: Request,
     schedule_id: int,
+    page: int = 1,
+    search: str | None = None,
     scheduler_service: SchedulerService = Depends(),
 ):
     """Cancela um agendamento pela UI e retorna a lista atualizada."""
@@ -641,23 +648,46 @@ async def cancel_schedule_ui(
     except ValueError as e:
         cancel_error = str(e)
 
-    schedules = await scheduler_service.get_all_schedules()
+    per_page = 15
+    skip = (page - 1) * per_page
+    schedules = await scheduler_service.get_all_schedules(skip=skip, limit=per_page, search=search)
+    total_count = await scheduler_service.get_schedules_count(search=search)
+    total_pages = max(1, (total_count + per_page - 1) // per_page)
+    
     return templates.TemplateResponse(
         request,
         "partials/schedules_list.html",
-        {"schedules": schedules, "cancel_error": cancel_error},
+        {
+            "schedules": schedules,
+            "cancel_error": cancel_error,
+            "current_page": page,
+            "total_pages": total_pages,
+            "search_term": search or "",
+        },
     )
 
 
 @router.get("/partials/schedules", response_class=HTMLResponse)
 async def partials_schedules(
     request: Request,
+    page: int = 1,
+    search: str | None = None,
     scheduler_service: SchedulerService = Depends(),
 ):
     """Retorna a lista de agendamentos (partial para HTMX)."""
-    schedules = await scheduler_service.get_all_schedules()
+    per_page = 15
+    skip = (page - 1) * per_page
+    schedules = await scheduler_service.get_all_schedules(skip=skip, limit=per_page, search=search)
+    total_count = await scheduler_service.get_schedules_count(search=search)
+    total_pages = max(1, (total_count + per_page - 1) // per_page)
+    
     return templates.TemplateResponse(
         request,
         "partials/schedules_list.html",
-        {"schedules": schedules},
+        {
+            "schedules": schedules,
+            "current_page": page,
+            "total_pages": total_pages,
+            "search_term": search or "",
+        },
     )

@@ -23,11 +23,10 @@ class ScheduleRepository:
 
     async def get_pending_due_schedules(self) -> List[ScheduledRelease]:
         """Retorna agendamentos pendentes cuja data ja passou (prontos para execucao)."""
-        now = datetime.now(timezone.utc)
         result = await self.db.execute(
             select(ScheduledRelease).where(
                 ScheduledRelease.status == ScheduledReleaseStatus.PENDING.value,
-                ScheduledRelease.scheduled_at <= now,
+                ScheduledRelease.scheduled_at <= func.now(),
             ).order_by(ScheduledRelease.scheduled_at.asc())
         )
         return list(result.scalars().all())
@@ -83,15 +82,26 @@ class ScheduleRepository:
         )
         return list(result.scalars().all())
 
-    async def get_all_schedules(self, skip: int = 0, limit: int = 50) -> List[ScheduledRelease]:
-        """Retorna todos os agendamentos ordenados por data de criacao."""
+    async def get_all_schedules(self, skip: int = 0, limit: int = 50, search: str = None) -> List[ScheduledRelease]:
+        """Retorna todos os agendamentos ordenados por data de criacao, com suporte a busca."""
+        query = select(ScheduledRelease)
+        if search:
+            query = query.where(ScheduledRelease.name.ilike(f"%{search}%"))
+        
         result = await self.db.execute(
-            select(ScheduledRelease)
-            .order_by(ScheduledRelease.scheduled_at.desc())
+            query.order_by(ScheduledRelease.scheduled_at.desc())
             .offset(skip)
             .limit(limit)
         )
         return list(result.scalars().all())
+
+    async def get_schedules_count(self, search: str = None) -> int:
+        """Retorna a contagem total de agendamentos."""
+        query = select(func.count(ScheduledRelease.id))
+        if search:
+            query = query.where(ScheduledRelease.name.ilike(f"%{search}%"))
+        result = await self.db.execute(query)
+        return result.scalar()
 
     async def has_pending_schedule_for_release(self, name: str) -> bool:
         """Verifica se existe um agendamento pendente para a release informada."""
