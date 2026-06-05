@@ -1,13 +1,15 @@
 from pathlib import Path
-from fastapi import APIRouter, Depends, HTTPException, Request, BackgroundTasks, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, Request, BackgroundTasks, UploadFile, File, Form
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from sse_starlette.sse import EventSourceResponse
 from maestro.services.ui import UIService
 from maestro.services.orchestrator import OrchestratorService
+from maestro.services.scheduler import SchedulerService
 from maestro.services.settings import UISettingsService, KNOWN_SETTINGS, SETTING_JENKINS_BASE_URL, SETTING_GITHUB_BASE_URL, SETTING_GITHUB_ORGANIZATION
 from maestro.repositories.execution import ExecutionRepository
 from maestro.repositories.orchestrator import OrchestratorDescriptorRepository
+from maestro.repositories.schedule import ScheduleRepository
 from maestro.schemas.enums import ExecutionStatus
 from maestro.database.models import ExecutionActionLog
 
@@ -589,4 +591,103 @@ async def release_descriptor_yaml(
         request,
         "partials/release_yaml_modal.html",
         {"yaml_content": descriptor.yaml, "execution": descriptor},
+    )
+
+
+@router.post("/schedule/{name}", response_class=HTMLResponse)
+async def schedule_release_ui(
+    request: Request,
+    name: str,
+    scheduled_at: str = Form(...),
+    scheduler_service: SchedulerService = Depends(),
+):
+    """Agenda a execucao de uma release pela UI."""
+    from datetime import datetime as dt, timezone as tz
+    try:
+        # Substitui 'Z' por '+00:00' para compatibilidade com fromisoformat no Python < 3.11
+        parsed_dt = dt.fromisoformat(scheduled_at.replace("Z", "+00:00"))
+        if not parsed_dt.tzinfo:
+            parsed_dt = parsed_dt.replace(tzinfo=tz.utc)
+        schedule = await scheduler_service.schedule_release(name, parsed_dt)
+        return templates.TemplateResponse(
+            request,
+            "partials/schedule_result.html",
+            {"error": None, "schedule": schedule, "name": name},
+            headers={"HX-Trigger": "refreshSchedules"}
+        )
+    except ValueError as e:
+        return templates.TemplateResponse(
+            request,
+            "partials/schedule_result.html",
+            {"error": str(e), "schedule": None, "name": name},
+        )
+    except Exception as e:
+        return templates.TemplateResponse(
+            request,
+            "partials/schedule_result.html",
+            {"error": f"Erro inesperado: {str(e)}", "schedule": None, "name": name},
+        )
+
+
+@router.get("/schedules", response_class=HTMLResponse)
+async def schedules_page(request: Request):
+    return templates.TemplateResponse(request, "schedules.html")
+
+@router.delete("/schedule/{schedule_id}", response_class=HTMLResponse)
+async def cancel_schedule_ui(
+    request: Request,
+    schedule_id: int,
+    page: int = 1,
+    search: str | None = None,
+    scheduler_service: SchedulerService = Depends(),
+):
+    """Cancela um agendamento pela UI e retorna a lista atualizada."""
+    cancel_error = None
+    try:
+        await scheduler_service.cancel_schedule(schedule_id)
+    except ValueError as e:
+        cancel_error = str(e)
+
+    per_page = 15
+    skip = (page - 1) * per_page
+    schedules = await scheduler_service.get_all_schedules(skip=skip, limit=per_page, search=search)
+    total_count = await scheduler_service.get_schedules_count(search=search)
+    total_pages = max(1, (total_count + per_page - 1) // per_page)
+    
+    return templates.TemplateResponse(
+        request,
+        "partials/schedules_list.html",
+        {
+            "schedules": schedules,
+            "cancel_error": cancel_error,
+            "current_page": page,
+            "total_pages": total_pages,
+            "search_term": search or "",
+        },
+    )
+
+
+@router.get("/partials/schedules", response_class=HTMLResponse)
+async def partials_schedules(
+    request: Request,
+    page: int = 1,
+    search: str | None = None,
+    scheduler_service: SchedulerService = Depends(),
+):
+    """Retorna a lista de agendamentos (partial para HTMX)."""
+    per_page = 15
+    skip = (page - 1) * per_page
+    schedules = await scheduler_service.get_all_schedules(skip=skip, limit=per_page, search=search)
+    total_count = await scheduler_service.get_schedules_count(search=search)
+    total_pages = max(1, (total_count + per_page - 1) // per_page)
+    
+    return templates.TemplateResponse(
+        request,
+        "partials/schedules_list.html",
+        {
+            "schedules": schedules,
+            "current_page": page,
+            "total_pages": total_pages,
+            "search_term": search or "",
+        },
     )

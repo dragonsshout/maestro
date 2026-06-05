@@ -58,6 +58,24 @@ class StepEvent(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
 
+class ScheduledRelease(Base):
+    __tablename__ = "scheduled_release"
+
+    id = Column(Integer, primary_key=True, autoincrement=True, nullable=False)
+    orchestrator_descriptor_id = Column(Integer, ForeignKey('orchestrator_descriptor.id'), nullable=False)
+    name = Column(String, nullable=False)
+    scheduled_at = Column(DateTime(timezone=True), nullable=False)
+    status = Column(String, nullable=False, default='pending')
+    release_execution_id = Column(Integer, ForeignKey('release_execution.id'), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    created_by = Column(String, nullable=True)
+    error_message = Column(Text, nullable=True)
+
+    __table_args__ = (
+        Index('ix_scheduled_release_name_status', 'name', 'status'),
+    )
+
+
 class ExecutionActionLog(Base):
     """Histórico de ações manuais tomadas sobre uma execução de release."""
     __tablename__ = "execution_action_log"

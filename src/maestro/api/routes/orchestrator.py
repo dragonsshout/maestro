@@ -1,6 +1,9 @@
 from fastapi import APIRouter, Depends, UploadFile, File, HTTPException, BackgroundTasks
+from typing import Optional, List
 from maestro.services.orchestrator import OrchestratorService
+from maestro.services.scheduler import SchedulerService
 from maestro.schemas.orchestrator import ExecuteReleaseRequest, ReleaseStatusResponse, ReleaseDetailsResponse, ApproveReleaseRequest, DryRunResponse
+from maestro.schemas.schedule import ScheduleReleaseRequest, ScheduleReleaseResponse
 from maestro.repositories.execution import ExecutionRepository
 
 router = APIRouter(prefix="/orchestrator", tags=["Orchestrator"])
@@ -117,3 +120,40 @@ async def get_release_details(
         created_at=execution.created_at,
         steps=steps
     )
+
+
+@router.post("/schedule", response_model=ScheduleReleaseResponse)
+async def schedule_release(
+    payload: ScheduleReleaseRequest,
+    service: SchedulerService = Depends()
+):
+    """Agenda a execucao de uma release para uma data/hora futura."""
+    try:
+        schedule = await service.schedule_release(payload.name, payload.scheduled_at)
+        return schedule
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.get("/schedules", response_model=List[ScheduleReleaseResponse])
+async def list_schedules(
+    name: Optional[str] = None,
+    service: SchedulerService = Depends()
+):
+    """Lista agendamentos. Filtra por nome da release se informado."""
+    if name:
+        return await service.get_schedules_for_release(name)
+    return await service.get_all_schedules()
+
+
+@router.delete("/schedule/{schedule_id}")
+async def cancel_schedule(
+    schedule_id: int,
+    service: SchedulerService = Depends()
+):
+    """Cancela um agendamento pendente."""
+    try:
+        await service.cancel_schedule(schedule_id)
+        return {"message": "Agendamento cancelado com sucesso."}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
