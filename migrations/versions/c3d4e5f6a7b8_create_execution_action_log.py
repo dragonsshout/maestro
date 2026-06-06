@@ -27,7 +27,7 @@ def upgrade() -> None:
         sa.Column('stage_id', sa.String(), nullable=True),
         sa.Column('step_id', sa.String(), nullable=True),
         sa.Column('detail', sa.Text(), nullable=True),
-        sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+        sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('CURRENT_TIMESTAMP'), nullable=False),
         sa.ForeignKeyConstraint(['release_execution_id'], ['release_execution.id']),
         sa.ForeignKeyConstraint(['step_execution_id'], ['release_step_execution.id']),
         sa.PrimaryKeyConstraint('id'),

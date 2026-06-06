@@ -8,6 +8,7 @@ dependencies = [
     "fastapi[standard]",
     "sqlalchemy",
     "asyncpg",
+    "aiosqlite",
     "pydantic-settings",
     "alembic>=1.18.4",
     "python-multipart>=0.0.29",
