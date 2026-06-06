@@ -1,0 +1,33 @@
+{
+  "id": "FEAT-001",
+  "type": "feat",
+  "description": "Add SQLite support as an alternative persistence backend, switchable via DB_URL configuration. Keep full PostgreSQL compatibility intact.",
+  "status": "completed",
+  "steps": [
+    "Step 1: Add `aiosqlite` to the project dependencies in `pyproject.toml` under `dependencies`.",
+    "Step 2: Update `src/maestro/database/session.py` to detect whether DB_URL points to SQLite or PostgreSQL. For SQLite, the engine needs `connect_args={'check_same_thread': False}` and should NOT use poolclass settings that conflict. Use conditional logic based on the URL scheme (sqlite+aiosqlite:// vs postgresql+asyncpg://).",
+    "Step 3: Update `src/maestro/database/models.py` to replace `server_default=func.now()` with a dialect-agnostic alternative. Use `sa.text('(CURRENT_TIMESTAMP)')` which works in both PostgreSQL and SQLite, OR use SQLAlchemy's `func.now()` which compiles correctly for both dialects when used as `server_default`.",
+    "Step 4: Update `src/maestro/repositories/settings.py` to replace the PostgreSQL-specific `pg_insert(...).on_conflict_do_update(...)` upsert with a dialect-agnostic approach. Use SQLAlchemy's `sqlite` dialect detection: if the engine is SQLite, use a SELECT-then-INSERT-or-UPDATE pattern; if PostgreSQL, keep the existing pg_insert. Alternatively, use the generic `insert().on_conflict_do_update()` from `sqlalchemy.dialects.sqlite` for SQLite or keep two code paths.",
+    "Step 5: Update `migrations/env.py` to handle both async drivers. When DB_URL uses `sqlite+aiosqlite://`, the engine creation and migration running should work correctly. The key change: for SQLite, use `render_as_batch=True` in `context.configure()` since SQLite doesn't support ALTER TABLE well and batch mode is needed for Alembic.",
+    "Step 6: Update all 7 migration files in `migrations/versions/` to replace `server_default=sa.text('now()')` with `server_default=sa.text('CURRENT_TIMESTAMP')` which is valid SQL in both PostgreSQL and SQLite. The files to update: 528447aa8a58, 5995f0803bff, 77fa95ecd37b, a1b2c3d4e5f6, b2c3d4e5f6a7, c3d4e5f6a7b8, d4e5f6a7b8c9.",
+    "Step 7: Update `.env.example` to document both DB_URL options (PostgreSQL and SQLite). Add a commented example: `# DB_URL=sqlite+aiosqlite:///./maestro.db` as an alternative to the PostgreSQL URL.",
+    "Step 8: Update `alembic.ini` to change the default `sqlalchemy.url` to a placeholder or comment that it is overridden by env.py from settings, since the hardcoded PostgreSQL URL there could confuse developers.",
+    "Step 9: Run `uv sync` to install the new aiosqlite dependency, then run `uv run pytest tests/ -m 'not integration' -v` to confirm all existing unit tests still pass."
+  ],
+  "acceptance_criteria": [
+    "aiosqlite is listed in pyproject.toml dependencies and installs successfully via uv sync",
+    "Setting DB_URL=sqlite+aiosqlite:///./maestro.db in .env creates a valid SQLAlchemy async engine",
+    "The UISettingsRepository.upsert method works for both SQLite and PostgreSQL dialects",
+    "Alembic migrations run successfully against SQLite (with render_as_batch=True)",
+    "All server_default values in migrations use CURRENT_TIMESTAMP (compatible with both dialects)",
+    "All existing unit tests pass without modification (they use mocked sessions)",
+    "The application can start and run Alembic migrations against a local SQLite file"
+  ],
+  "verification": [
+    "Run `uv sync` and confirm aiosqlite is installed",
+    "Run `uv run pytest tests/ -m 'not integration' -v` and confirm all tests pass",
+    "Run `DB_URL=sqlite+aiosqlite:///./test_verify.db uv run python -m alembic upgrade head` and confirm migrations succeed against SQLite"
+  ],
+  "blocked_reason": null,
+  "findings": "All 252 unit tests pass. SQLite migrations run successfully with render_as_batch=True. CURRENT_TIMESTAMP works for both PostgreSQL and SQLite. func.now() in models.py compiles correctly for both dialects so no changes needed there. The dialect-agnostic upsert uses self.db.bind.dialect.name to select the appropriate insert dialect at runtime. Post-review fixes applied: (1) WAL mode enabled via SQLAlchemy connect event listener to prevent 'database is locked' errors under concurrent async access. (2) Upsert dialect detection now raises RuntimeError if session bind is None instead of silently defaulting to postgresql."
+}
