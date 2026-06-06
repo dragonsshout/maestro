@@ -24,7 +24,12 @@ class UISettingsRepository:
 
     async def upsert(self, key: str, value: str | None) -> None:
         """Insere ou atualiza uma configuração pelo key."""
-        dialect_name = self.db.bind.dialect.name if self.db.bind else "postgresql"
+        if not self.db.bind:
+            raise RuntimeError(
+                "Database session has no bind configured. "
+                "Verify that DB_URL is set and the session factory is properly initialized."
+            )
+        dialect_name = self.db.bind.dialect.name
 
         if dialect_name == "sqlite":
             from sqlalchemy.dialects.sqlite import insert as sqlite_insert
