@@ -26,9 +26,9 @@ O Maestro atua como um ponto central de controle para releases multi-repositorio
 | Linguagem | Python 3.11+ (3.14-slim no Docker) |
 | Framework Web | FastAPI + Uvicorn |
 | ORM | SQLAlchemy (async) |
-| Driver DB | asyncpg |
-| Banco de Dados | PostgreSQL 15 |
-| Migrations | Alembic |
+| Driver DB | asyncpg (PostgreSQL) / aiosqlite (SQLite) |
+| Banco de Dados | PostgreSQL 15 ou SQLite 3 |
+| Migrations | Alembic (com `render_as_batch` para SQLite) |
 | Validacao | Pydantic v2 + pydantic-settings |
 | HTTP Client | httpx (async) |
 | UI Server-side | Jinja2 + HTMX |
@@ -55,11 +55,11 @@ src/maestro/
 │   └── logger.py                        # JSON structured logger
 ├── database/
 │   ├── models.py                        # SQLAlchemy ORM (5 modelos)
-│   └── session.py                       # AsyncSession factory (asyncpg)
+│   └── session.py                       # AsyncSession factory (asyncpg ou aiosqlite, detectado via DB_URL)
 ├── repositories/
 │   ├── orchestrator.py                  # CRUD para OrchestratorDescriptor
 │   ├── execution.py                     # CRUD para ReleaseExecution, ReleaseStepExecution, StepEvent
-│   └── settings.py                      # CRUD para UISettings (PostgreSQL upsert)
+│   └── settings.py                      # CRUD para UISettings (upsert dialect-aware: PostgreSQL/SQLite)
 ├── schemas/
 │   ├── enums.py                         # ExecutionStatus enum
 │   ├── orchestrator.py                  # ReleaseConfigSchema (YAML), DTOs, DryRun responses
@@ -159,7 +159,9 @@ Padrao Repository isolando queries SQL da logica de negocio:
 
 Infraestrutura de persistencia:
 - **models.py**: definicao das 5 tabelas ORM (SQLAlchemy declarative)
-- **session.py**: factory de `AsyncSession` configurada com asyncpg
+- **session.py**: factory de `AsyncSession` com deteccao automatica de backend via prefixo da `DB_URL`
+  - Se `DB_URL` inicia com `sqlite`: usa `aiosqlite`, habilita WAL mode e `check_same_thread=False`
+  - Caso contrario: usa `asyncpg` para PostgreSQL
 
 ### 4.6 Integration (`integration/`)
 
@@ -183,6 +185,26 @@ Templates Jinja2 renderizados server-side:
 ---
 
 ## 5. Banco de Dados
+
+O Maestro suporta dois backends de persistencia, selecionados automaticamente pelo prefixo da variavel `DB_URL`:
+
+| Backend | Driver | Formato da URL | Uso recomendado |
+|---------|--------|----------------|-----------------|
+| PostgreSQL | asyncpg | `postgresql+asyncpg://user:pass@host:port/dbname` | Producao, alta concorrencia |
+| SQLite | aiosqlite | `sqlite+aiosqlite:///./maestro.db` | Desenvolvimento, testes, single-user |
+
+### 5.0 Deteccao de Dialeto
+
+A deteccao ocorre em tres pontos:
+1. **`database/session.py`**: cria o engine com parametros especificos para cada backend (ex: `check_same_thread=False` e WAL mode para SQLite)
+2. **`migrations/env.py`**: aplica `render_as_batch=True` quando o backend e SQLite (necessario para operacoes ALTER TABLE)
+3. **`repositories/settings.py`**: usa a funcao `insert` do dialeto correto para operacoes de upsert (PostgreSQL `ON CONFLICT` vs SQLite `ON CONFLICT`)
+
+### 5.0.1 Consideracoes sobre SQLite
+
+- **WAL mode**: habilitado automaticamente via `PRAGMA journal_mode=WAL` no evento de conexao, permitindo leituras concorrentes com uma escrita
+- **Timezone**: colunas `DateTime(timezone=True)` armazenam timestamps como texto ISO sem offset; a aplicacao deve operar em UTC
+- **Concorrencia**: para multiplos workers uvicorn ou alta carga de escrita, PostgreSQL e fortemente recomendado
 
 ### 5.1 Modelos (5 tabelas)
 
@@ -258,13 +280,19 @@ ReleaseStepExecution   1 ──── N StepEvent (via job_execution_correlation
 
 Gerenciadas pelo Alembic. Executadas automaticamente no startup da aplicacao via subprocess:
 
+- Todas as migrations usam `CURRENT_TIMESTAMP` (compativel com ambos os dialetos) em vez de `now()` (PostgreSQL-only)
+- Para SQLite, o Alembic utiliza `render_as_batch=True` para contornar limitacoes do `ALTER TABLE`
+- O `alembic.ini` obtem a URL de conexao da variavel de ambiente `DB_URL`
+
 ```
 migrations/versions/
 ├── 528447aa8a58_create_orchestrator_descriptor.py
 ├── 5995f0803bff_create_release_execution.py
 ├── 77fa95ecd37b_create_release_step_execution.py
 ├── a1b2c3d4e5f6_create_ui_settings.py
-└── b2c3d4e5f6a7_create_step_event.py
+├── b2c3d4e5f6a7_create_step_event.py
+├── c3d4e5f6a7b8_create_execution_action_log.py
+└── d4e5f6a7b8c9_create_scheduled_release.py
 ```
 
 ---
@@ -528,9 +556,10 @@ spec:
 
 ### 10.3 Gerenciamento de Estado no Banco
 
-- Todo estado e persistido no PostgreSQL (nao ha estado em memoria)
+- Todo estado e persistido no banco de dados (PostgreSQL ou SQLite, conforme `DB_URL`) -- nao ha estado em memoria
 - Background tasks criam suas proprias sessoes de banco (`AsyncSessionLocal()`) para evitar problemas de ciclo de vida
 - Migrations Alembic sao executadas via subprocess no startup para evitar conflito de event loops
+- A camada de repositorio detecta o dialeto em runtime para operacoes dialect-specific (ex: upsert)
 
 ### 10.4 Timeout com Hierarquia
 
@@ -612,12 +641,16 @@ services:
 | Variavel | Default | Descricao |
 |----------|---------|-----------|
 | `ENVIRONMENT` | local | Ambiente de execucao |
-| `DB_URL` | postgresql+asyncpg://maestro_user:maestro_password@localhost:5432/maestro_db | Connection string do banco |
+| `DB_URL` | postgresql+asyncpg://...localhost:5432/maestro_db | Connection string do banco (PostgreSQL ou SQLite) |
 | `JENKINS_URL` | http://localhost:8080 | URL base do Jenkins |
 | `JENKINS_USERNAME` | None | Usuario de autenticacao Jenkins |
 | `JENKINS_TOKEN` | None | Token/senha de autenticacao Jenkins |
 | `GITHUB_ORGANIZATION` | my-org | Organizacao no GitHub |
 | `GITHUB_TOKEN` | None | Personal Access Token do GitHub |
+
+Exemplos de `DB_URL`:
+- PostgreSQL: `postgresql+asyncpg://maestro_user:maestro_password@localhost:5432/maestro_db`
+- SQLite: `sqlite+aiosqlite:///./maestro.db`
 
 ### 11.4 Startup da Aplicacao
 

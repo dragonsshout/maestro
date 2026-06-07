@@ -20,7 +20,7 @@ Orquestrador de releases desenvolvido em Python com FastAPI. Gerencia pipelines 
 src/maestro/
 ├── api/routes/       # Endpoints FastAPI (orchestrator, callback, ui)
 ├── config/           # Configurações de ambiente e logger
-├── database/         # Modelos ORM e session async (SQLAlchemy + asyncpg)
+├── database/         # Modelos ORM e session async (SQLAlchemy + asyncpg/aiosqlite)
 ├── integration/      # Clientes HTTP para Jenkins e GitHub
 ├── repositories/     # Padrão repository para queries ao banco
 ├── schemas/          # Pydantic models (validação, DTOs, enums)
@@ -34,8 +34,8 @@ tests/                # Testes automatizados
 ## Pré-requisitos
 
 - Python >= 3.11
-- PostgreSQL 15+
-- Docker e Docker Compose (para infra local)
+- PostgreSQL 15+ **ou** SQLite 3 (incluso no Python)
+- Docker e Docker Compose (para infra local com PostgreSQL)
 - [uv](https://github.com/astral-sh/uv) (gerenciador de pacotes recomendado)
 
 ## Como executar
@@ -59,8 +59,6 @@ cp .env.example .env
 Edite o `.env` com suas credenciais:
 
 ```env
-DB_URL=postgresql+asyncpg://maestro_user:maestro_password@localhost:5432/maestro_db
-
 JENKINS_URL=http://localhost:8080
 JENKINS_USERNAME=seu_usuario
 JENKINS_TOKEN=seu_token
@@ -68,6 +66,29 @@ JENKINS_TOKEN=seu_token
 GITHUB_ORGANIZATION=sua-org
 GITHUB_TOKEN=seu_token_do_github
 ```
+
+#### Configuracao do Banco de Dados (`DB_URL`)
+
+O Maestro suporta dois backends de banco de dados, configurados pela variavel `DB_URL` no arquivo `.env`:
+
+**PostgreSQL** (recomendado para producao e ambientes com alta concorrencia):
+
+```env
+DB_URL=postgresql+asyncpg://maestro_user:maestro_password@localhost:5432/maestro_db
+```
+
+**SQLite** (ideal para desenvolvimento, testes ou deploys single-user):
+
+```env
+DB_URL=sqlite+aiosqlite:///./maestro.db
+```
+
+> **Notas sobre SQLite:**
+> - O arquivo do banco (`maestro.db`) e criado automaticamente no diretorio informado.
+> - O WAL mode (Write-Ahead Logging) e habilitado automaticamente para melhor concorrencia.
+> - A opcao `check_same_thread=False` e aplicada internamente para compatibilidade com async.
+> - Colunas `DateTime(timezone=True)` armazenam timestamps como texto ISO sem offset -- a aplicacao deve operar em UTC.
+> - Para ambientes com multiplos workers ou alta concorrencia de escrita, prefira PostgreSQL.
 
 ### 3. Instalar dependências
 
@@ -165,13 +186,13 @@ spec:
 
 ## Tecnologias
 
-- **FastAPI** — Framework web assíncrono
-- **SQLAlchemy** (async) + **asyncpg** — ORM e driver PostgreSQL
-- **Alembic** — Migrations de banco de dados
-- **Pydantic** — Validação de dados e configurações
-- **Jinja2** + **HTMX** — Interface web com SSE
-- **httpx** — Cliente HTTP para integrações
-- **uv** — Gerenciador de pacotes e ambiente virtual
+- **FastAPI** -- Framework web assincrono
+- **SQLAlchemy** (async) + **asyncpg** / **aiosqlite** -- ORM com suporte a PostgreSQL e SQLite
+- **Alembic** -- Migrations de banco de dados (compativel com ambos os backends)
+- **Pydantic** -- Validacao de dados e configuracoes
+- **Jinja2** + **HTMX** -- Interface web com SSE
+- **httpx** -- Cliente HTTP para integracoes
+- **uv** -- Gerenciador de pacotes e ambiente virtual
 
 ## Desenvolvimento
 
