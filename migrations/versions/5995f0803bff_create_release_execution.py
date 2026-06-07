@@ -26,8 +26,8 @@ def upgrade() -> None:
     sa.Column('status', sa.String(), nullable=False),
     sa.Column('message', sa.Text(), nullable=True),
     sa.Column('orchestrator_descriptor_id', sa.Integer(), nullable=False),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('CURRENT_TIMESTAMP'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('CURRENT_TIMESTAMP'), nullable=False),
     sa.ForeignKeyConstraint(['orchestrator_descriptor_id'], ['orchestrator_descriptor.id'], ),
     sa.PrimaryKeyConstraint('id')
     )

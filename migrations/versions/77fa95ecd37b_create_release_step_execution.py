@@ -29,7 +29,7 @@ def upgrade() -> None:
     sa.Column('message', sa.Text(), nullable=True),
     sa.Column('job_execution_correlation_id', sa.Integer(), nullable=True),
     sa.Column('job_input_id', sa.String(), nullable=True),
-    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('CURRENT_TIMESTAMP'), nullable=False),
     sa.ForeignKeyConstraint(['release_execution_id'], ['release_execution.id'], ),
     sa.PrimaryKeyConstraint('id')
     )

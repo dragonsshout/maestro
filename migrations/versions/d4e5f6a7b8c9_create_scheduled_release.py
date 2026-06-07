@@ -26,7 +26,7 @@ def upgrade() -> None:
         sa.Column('scheduled_at', sa.DateTime(timezone=True), nullable=False),
         sa.Column('status', sa.String(), nullable=False, server_default='pending'),
         sa.Column('release_execution_id', sa.Integer(), nullable=True),
-        sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+        sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('CURRENT_TIMESTAMP'), nullable=False),
         sa.Column('created_by', sa.String(), nullable=True),
         sa.Column('error_message', sa.Text(), nullable=True),
         sa.ForeignKeyConstraint(['orchestrator_descriptor_id'], ['orchestrator_descriptor.id']),
