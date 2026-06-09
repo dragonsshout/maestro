@@ -64,13 +64,13 @@ class TestJenkinsServiceAbortBuild:
     def service(self):
         svc = JenkinsService.__new__(JenkinsService)
         svc.execution_repo = AsyncMock()
-        svc.jenkins_integration = AsyncMock()
+        svc._jenkins_integration = AsyncMock()
         return svc
 
     async def test_abort_build_delegates(self, service):
-        service.jenkins_integration.abort_build = AsyncMock()
+        service._jenkins_integration.abort_build = AsyncMock()
         await service.abort_build("job/path", 42)
-        service.jenkins_integration.abort_build.assert_awaited_once_with("job/path", 42)
+        service._jenkins_integration.abort_build.assert_awaited_once_with("job/path", 42)
 
 
 # ===========================================================================

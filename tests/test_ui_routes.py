@@ -355,9 +355,9 @@ class TestDryRunUI:
 # ===========================================================================
 
 class TestSettingsUI:
-    @patch("maestro.services.settings.UISettingsService.get_all")
-    async def test_settings_page_get(self, mock_get_all, client):
-        mock_get_all.return_value = {
+    @patch("maestro.services.settings.UISettingsService.get_all_masked")
+    async def test_settings_page_get(self, mock_get_all_masked, client):
+        mock_get_all_masked.return_value = {
             "jenkins_base_url": "http://j:8080",
             "github_base_url": "https://github.com",
             "github_organization": "my-org",

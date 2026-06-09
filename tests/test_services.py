@@ -76,17 +76,23 @@ class TestOrchestratorServiceDryRun:
         svc.jenkins_service = AsyncMock()
         return svc
 
+    @patch("maestro.services.app_settings.get_integration_settings")
     @patch("maestro.services.orchestrator.JenkinsIntegration")
     @patch("maestro.services.orchestrator.GithubIntegration")
-    async def test_dry_run_not_found(self, mock_github_cls, mock_jenkins_cls, service):
+    async def test_dry_run_not_found(self, mock_github_cls, mock_jenkins_cls, mock_get_settings, service):
         service.repository.get_by_name = AsyncMock(return_value=None)
 
         with pytest.raises(ValueError, match="não encontrado"):
             await service.dry_run_release("nonexistent")
 
+    @patch("maestro.services.app_settings.get_integration_settings")
     @patch("maestro.services.orchestrator.JenkinsIntegration")
     @patch("maestro.services.orchestrator.GithubIntegration")
-    async def test_dry_run_all_valid(self, mock_github_cls, mock_jenkins_cls, service):
+    async def test_dry_run_all_valid(self, mock_github_cls, mock_jenkins_cls, mock_get_settings, service):
+        mock_get_settings.return_value = MagicMock(
+            github_organization="org", github_token="t", github_base_url=None, http_trust_env=True,
+            jenkins_url="http://j:8080", jenkins_username="u", jenkins_token="t",
+        )
         descriptor = MagicMock()
         descriptor.yaml = SAMPLE_RELEASE_YAML
         service.repository.get_by_name = AsyncMock(return_value=descriptor)
@@ -114,9 +120,14 @@ class TestOrchestratorServiceDryRun:
         assert step.pr_is_clean is True
         assert step.jenkins_job_exists is True
 
+    @patch("maestro.services.app_settings.get_integration_settings")
     @patch("maestro.services.orchestrator.JenkinsIntegration")
     @patch("maestro.services.orchestrator.GithubIntegration")
-    async def test_dry_run_branch_not_found(self, mock_github_cls, mock_jenkins_cls, service):
+    async def test_dry_run_branch_not_found(self, mock_github_cls, mock_jenkins_cls, mock_get_settings, service):
+        mock_get_settings.return_value = MagicMock(
+            github_organization="org", github_token="t", github_base_url=None, http_trust_env=True,
+            jenkins_url="http://j:8080", jenkins_username="u", jenkins_token="t",
+        )
         descriptor = MagicMock()
         descriptor.yaml = SAMPLE_RELEASE_YAML
         service.repository.get_by_name = AsyncMock(return_value=descriptor)
@@ -134,9 +145,14 @@ class TestOrchestratorServiceDryRun:
         assert result.valid is False
         assert result.stages[0].steps[0].branch_exists is False
 
+    @patch("maestro.services.app_settings.get_integration_settings")
     @patch("maestro.services.orchestrator.JenkinsIntegration")
     @patch("maestro.services.orchestrator.GithubIntegration")
-    async def test_dry_run_jenkins_not_found(self, mock_github_cls, mock_jenkins_cls, service):
+    async def test_dry_run_jenkins_not_found(self, mock_github_cls, mock_jenkins_cls, mock_get_settings, service):
+        mock_get_settings.return_value = MagicMock(
+            github_organization="org", github_token="t", github_base_url=None, http_trust_env=True,
+            jenkins_url="http://j:8080", jenkins_username="u", jenkins_token="t",
+        )
         descriptor = MagicMock()
         descriptor.yaml = SAMPLE_RELEASE_YAML
         service.repository.get_by_name = AsyncMock(return_value=descriptor)
@@ -167,16 +183,18 @@ class TestOrchestratorServiceExecuteRelease:
         svc.jenkins_service = AsyncMock()
         return svc
 
+    @patch("maestro.services.app_settings.get_integration_settings")
     @patch("maestro.services.orchestrator.GithubIntegration")
-    async def test_execute_not_found(self, mock_github_cls, service):
+    async def test_execute_not_found(self, mock_github_cls, mock_get_settings, service):
         service.repository.get_by_name = AsyncMock(return_value=None)
         background_tasks = MagicMock()
 
         with pytest.raises(ValueError, match="não encontrado"):
             await service.execute_release("nonexistent", background_tasks)
 
+    @patch("maestro.services.app_settings.get_integration_settings")
     @patch("maestro.services.orchestrator.GithubIntegration")
-    async def test_execute_duplicate(self, mock_github_cls, service):
+    async def test_execute_duplicate(self, mock_github_cls, mock_get_settings, service):
         service.repository.get_by_name = AsyncMock(return_value=MagicMock())
         active_mock = MagicMock()
         active_mock.id = 99
@@ -187,8 +205,12 @@ class TestOrchestratorServiceExecuteRelease:
         with pytest.raises(ValueError, match="Já existe"):
             await service.execute_release("test-release", background_tasks)
 
+    @patch("maestro.services.app_settings.get_integration_settings")
     @patch("maestro.services.orchestrator.GithubIntegration")
-    async def test_execute_success(self, mock_github_cls, service):
+    async def test_execute_success(self, mock_github_cls, mock_get_settings, service):
+        mock_get_settings.return_value = MagicMock(
+            github_organization="org", github_token="t", github_base_url=None, http_trust_env=True,
+        )
         descriptor = MagicMock()
         descriptor.id = 1
         descriptor.yaml = SAMPLE_RELEASE_YAML
@@ -213,8 +235,12 @@ class TestOrchestratorServiceExecuteRelease:
         assert result == 42
         background_tasks.add_task.assert_called_once()
 
+    @patch("maestro.services.app_settings.get_integration_settings")
     @patch("maestro.services.orchestrator.GithubIntegration")
-    async def test_execute_pr_not_clean_fails(self, mock_github_cls, service):
+    async def test_execute_pr_not_clean_fails(self, mock_github_cls, mock_get_settings, service):
+        mock_get_settings.return_value = MagicMock(
+            github_organization="org", github_token="t", github_base_url=None, http_trust_env=True,
+        )
         descriptor = MagicMock()
         descriptor.id = 1
         descriptor.yaml = SAMPLE_RELEASE_YAML
@@ -456,28 +482,28 @@ class TestJenkinsService:
     def service(self):
         svc = JenkinsService.__new__(JenkinsService)
         svc.execution_repo = AsyncMock()
-        svc.jenkins_integration = AsyncMock()
+        svc._jenkins_integration = AsyncMock()
         return svc
 
     @patch("maestro.services.jenkins.asyncio.create_task")
     async def test_trigger_job(self, mock_create_task, service):
-        service.jenkins_integration.trigger_job_and_get_queue_url = AsyncMock(
+        service._jenkins_integration.trigger_job_and_get_queue_url = AsyncMock(
             return_value="http://jenkins/queue/item/1"
         )
 
         await service.trigger_job("job/path", step_execution_id=5, release_branch="feature/x")
 
-        service.jenkins_integration.trigger_job_and_get_queue_url.assert_awaited_once_with(
+        service._jenkins_integration.trigger_job_and_get_queue_url.assert_awaited_once_with(
             "job/path", parameters={"BRANCH": "feature/x"}
         )
         mock_create_task.assert_called_once()
 
     async def test_approve_job(self, service):
-        service.jenkins_integration.approve_pipeline = AsyncMock()
+        service._jenkins_integration.approve_pipeline = AsyncMock()
 
         await service.approve_job("job/deploy", build_number=42, input_id="input-1", status="Sucesso")
 
-        service.jenkins_integration.approve_pipeline.assert_awaited_once_with(
+        service._jenkins_integration.approve_pipeline.assert_awaited_once_with(
             "job/deploy", 42, "input-1", status="Sucesso"
         )
 
@@ -487,11 +513,17 @@ class TestJenkinsService:
 # ===========================================================================
 
 class TestReleaseValidationService:
+    @patch("maestro.services.validation.get_integration_settings", new_callable=AsyncMock)
     @patch("maestro.services.validation.JenkinsIntegration")
     @patch("maestro.services.validation.GithubIntegration")
-    async def test_validate_all_pass(self, mock_github_cls, mock_jenkins_cls):
+    async def test_validate_all_pass(self, mock_github_cls, mock_jenkins_cls, mock_get_settings):
+        mock_get_settings.return_value = MagicMock(
+            github_organization="org", github_token="t", github_base_url=None, http_trust_env=True,
+            jenkins_url="http://j:8080", jenkins_username="u", jenkins_token="t",
+        )
+
         mock_github = AsyncMock()
-        mock_github.branch_exists.return_value = True
+        mock_github.repository_exists.return_value = True
         mock_github_cls.return_value = mock_github
 
         mock_jenkins = AsyncMock()
@@ -503,11 +535,18 @@ class TestReleaseValidationService:
         # Should not raise
         await svc.validate(config)
 
+    @patch("maestro.services.validation.get_integration_settings", new_callable=AsyncMock)
     @patch("maestro.services.validation.JenkinsIntegration")
     @patch("maestro.services.validation.GithubIntegration")
-    async def test_validate_branch_not_found(self, mock_github_cls, mock_jenkins_cls):
+    async def test_validate_branch_not_found(self, mock_github_cls, mock_jenkins_cls, mock_get_settings):
+        """Repository not found raises error (branch validation removed)."""
+        mock_get_settings.return_value = MagicMock(
+            github_organization="org", github_token="t", github_base_url=None, http_trust_env=True,
+            jenkins_url="http://j:8080", jenkins_username="u", jenkins_token="t",
+        )
+
         mock_github = AsyncMock()
-        mock_github.branch_exists.return_value = False
+        mock_github.repository_exists.return_value = False
         mock_github_cls.return_value = mock_github
 
         mock_jenkins = AsyncMock()
@@ -517,14 +556,20 @@ class TestReleaseValidationService:
         config = ReleaseConfigSchema(**yaml.safe_load(SAMPLE_RELEASE_YAML))
         svc = ReleaseValidationService()
 
-        with pytest.raises(ValueError, match="Branch.*não encontrada"):
+        with pytest.raises(ValueError, match="Repositório.*não encontrado"):
             await svc.validate(config)
 
+    @patch("maestro.services.validation.get_integration_settings", new_callable=AsyncMock)
     @patch("maestro.services.validation.JenkinsIntegration")
     @patch("maestro.services.validation.GithubIntegration")
-    async def test_validate_jenkins_job_not_found(self, mock_github_cls, mock_jenkins_cls):
+    async def test_validate_jenkins_job_not_found(self, mock_github_cls, mock_jenkins_cls, mock_get_settings):
+        mock_get_settings.return_value = MagicMock(
+            github_organization="org", github_token="t", github_base_url=None, http_trust_env=True,
+            jenkins_url="http://j:8080", jenkins_username="u", jenkins_token="t",
+        )
+
         mock_github = AsyncMock()
-        mock_github.branch_exists.return_value = True
+        mock_github.repository_exists.return_value = True
         mock_github_cls.return_value = mock_github
 
         mock_jenkins = AsyncMock()
@@ -537,11 +582,17 @@ class TestReleaseValidationService:
         with pytest.raises(ValueError, match="Job.*não encontrado"):
             await svc.validate(config)
 
+    @patch("maestro.services.validation.get_integration_settings", new_callable=AsyncMock)
     @patch("maestro.services.validation.JenkinsIntegration")
     @patch("maestro.services.validation.GithubIntegration")
-    async def test_validate_multiple_errors(self, mock_github_cls, mock_jenkins_cls):
+    async def test_validate_multiple_errors(self, mock_github_cls, mock_jenkins_cls, mock_get_settings):
+        mock_get_settings.return_value = MagicMock(
+            github_organization="org", github_token="t", github_base_url=None, http_trust_env=True,
+            jenkins_url="http://j:8080", jenkins_username="u", jenkins_token="t",
+        )
+
         mock_github = AsyncMock()
-        mock_github.branch_exists.return_value = False
+        mock_github.repository_exists.return_value = False
         mock_github_cls.return_value = mock_github
 
         mock_jenkins = AsyncMock()
@@ -555,14 +606,20 @@ class TestReleaseValidationService:
             await svc.validate(config)
 
         error_msg = str(exc_info.value)
-        assert "Branch" in error_msg
+        assert "Repositório" in error_msg
         assert "Job" in error_msg
 
+    @patch("maestro.services.validation.get_integration_settings", new_callable=AsyncMock)
     @patch("maestro.services.validation.JenkinsIntegration")
     @patch("maestro.services.validation.GithubIntegration")
-    async def test_validate_github_exception_treated_as_not_found(self, mock_github_cls, mock_jenkins_cls):
+    async def test_validate_github_exception_treated_as_not_found(self, mock_github_cls, mock_jenkins_cls, mock_get_settings):
+        mock_get_settings.return_value = MagicMock(
+            github_organization="org", github_token="t", github_base_url=None, http_trust_env=True,
+            jenkins_url="http://j:8080", jenkins_username="u", jenkins_token="t",
+        )
+
         mock_github = AsyncMock()
-        mock_github.branch_exists.side_effect = Exception("connection error")
+        mock_github.repository_exists.side_effect = Exception("connection error")
         mock_github_cls.return_value = mock_github
 
         mock_jenkins = AsyncMock()
@@ -572,7 +629,7 @@ class TestReleaseValidationService:
         config = ReleaseConfigSchema(**yaml.safe_load(SAMPLE_RELEASE_YAML))
         svc = ReleaseValidationService()
 
-        with pytest.raises(ValueError, match="Branch.*não encontrada"):
+        with pytest.raises(ValueError, match="Repositório.*não encontrado"):
             await svc.validate(config)
 
 
