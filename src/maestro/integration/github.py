@@ -24,6 +24,18 @@ class GithubIntegration:
             
         return httpx.AsyncClient(base_url=self.base_url, headers=headers)
 
+    async def repository_exists(self, repo_name: str) -> bool:
+        """
+        Verifica se um repositório existe na organização.
+
+        :param repo_name: Nome do repositório (ex: 'Hello-World').
+        :return: True se o repositório existir, False caso contrário.
+        """
+        async with self._get_client() as client:
+            endpoint = f"/repos/{self.organization}/{repo_name}"
+            response = await client.get(endpoint)
+            return response.status_code == 200
+
     async def branch_exists(self, repo_name: str, branch_name: str) -> bool:
         """
         Verifica se uma branch existe no repositório.

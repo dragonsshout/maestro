@@ -420,7 +420,7 @@ async def approve_step_ui(
 
 @router.get("/settings", response_class=HTMLResponse)
 async def settings_page(request: Request, service: UISettingsService = Depends()):
-    current = await service.get_all()
+    current = await service.get_all_masked()
     return templates.TemplateResponse(
         request,
         "settings.html",

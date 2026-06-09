@@ -60,11 +60,16 @@ class OrchestratorService:
 
         config = ReleaseConfigSchema(**yaml.safe_load(descriptor.yaml))
 
-        github = GithubIntegration(organization=settings.github_organization, token=settings.github_token)
+        from maestro.services.app_settings import get_integration_settings
+        cfg = await get_integration_settings()
+        github = GithubIntegration(
+            organization=cfg["github_organization"] or settings.github_organization,
+            token=cfg["github_token"] or settings.github_token,
+        )
         jenkins = JenkinsIntegration(
-            base_url=settings.jenkins_url,
-            username=settings.jenkins_username,
-            token=settings.jenkins_token,
+            base_url=cfg["jenkins_url"] or settings.jenkins_url,
+            username=cfg["jenkins_username"] or settings.jenkins_username,
+            token=cfg["jenkins_token"] or settings.jenkins_token,
         )
 
         all_valid = True
@@ -156,7 +161,12 @@ class OrchestratorService:
         )
         release_execution = await self.execution_repo.add_release_execution(release_execution)
 
-        github = GithubIntegration(organization=settings.github_organization, token=settings.github_token)
+        from maestro.services.app_settings import get_integration_settings as _get_cfg
+        _cfg = await _get_cfg()
+        github = GithubIntegration(
+            organization=_cfg["github_organization"] or settings.github_organization,
+            token=_cfg["github_token"] or settings.github_token,
+        )
         try:
             for stage in config.spec.stages:
                 for step in stage.steps:
