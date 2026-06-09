@@ -5,21 +5,23 @@ from typing import Optional, Dict, Any
 from maestro.schemas.jenkins import JenkinsQueueItemSchema, JenkinsPendingInputSchema
 
 class JenkinsIntegration:
-    def __init__(self, base_url: str, username: Optional[str] = None, token: Optional[str] = None):
+    def __init__(self, base_url: str, username: Optional[str] = None, token: Optional[str] = None, trust_env: bool = True):
         """
         Inicializa a integração com o Jenkins.
 
         :param base_url: URL base do Jenkins (ex: 'http://jenkins.local:8080')
         :param username: Usuário para autenticação (opcional)
         :param token: Token de API ou senha para autenticação (opcional)
+        :param trust_env: Se True, httpx respeita variáveis de ambiente (HTTP_PROXY, SSL_CERT_FILE, etc).
         """
         self.base_url = base_url.rstrip('/')
         self.username = username
         self.token = token
+        self.trust_env = trust_env
 
     def _get_client(self) -> httpx.AsyncClient:
         auth = (self.username, self.token) if self.username and self.token else None
-        return httpx.AsyncClient(base_url=self.base_url, auth=auth)
+        return httpx.AsyncClient(base_url=self.base_url, auth=auth, trust_env=self.trust_env)
 
     async def trigger_job_and_get_queue_url(self, job_name: str, parameters: Optional[Dict[str, str]] = None) -> str:
         """

@@ -26,10 +26,77 @@
 
                 <h2 class="card-title text-base flex items-center">
                     <svg class="w-5 h-5 mr-1 text-base-content/70" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 4a2 2 0 114 0v1a1 1 0 001 1h3a1 1 0 011 1v3a1 1 0 01-1 1h-1a2 2 0 100 4h1a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-1a2 2 0 10-4 0v1a1 1 0 01-1 1H7a1 1 0 01-1-1v-3a1 1 0 00-1-1H4a2 2 0 110-4h1a1 1 0 001-1V7a1 1 0 011-1h3a1 1 0 001-1V4z" /></svg>
-                    Integrações
+                    Jenkins
                 </h2>
 
-                {% for key, meta in known_settings.items() %}
+                {% for key in ['jenkins_base_url', 'jenkins_username', 'jenkins_token'] %}
+                {% set meta = known_settings[key] %}
+                <div class="form-control">
+                    <label class="label pb-1" for="{{ key }}">
+                        <span class="label-text font-medium">{{ meta.label }}</span>
+                        {% if meta.sensitive %}
+                        <span class="badge badge-warning badge-xs ml-2">criptografado</span>
+                        {% endif %}
+                    </label>
+                    <input
+                        type="{{ 'password' if meta.sensitive else 'text' }}"
+                        id="{{ key }}"
+                        name="{{ key }}"
+                        value="{{ settings.get(key) or '' }}"
+                        placeholder="{{ meta.placeholder }}"
+                        class="input input-bordered input-sm w-full font-mono"
+                        {% if meta.sensitive %}autocomplete="off"{% endif %}
+                    />
+                    {% if meta.help %}
+                    <label class="label pt-1">
+                        <span class="label-text-alt text-base-content/50">{{ meta.help }}</span>
+                    </label>
+                    {% endif %}
+                </div>
+                {% endfor %}
+
+                <div class="divider my-2"></div>
+
+                <h2 class="card-title text-base flex items-center">
+                    <svg class="w-5 h-5 mr-1 text-base-content/70" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" /></svg>
+                    GitHub
+                </h2>
+
+                {% for key in ['github_base_url', 'github_organization', 'github_token'] %}
+                {% set meta = known_settings[key] %}
+                <div class="form-control">
+                    <label class="label pb-1" for="{{ key }}">
+                        <span class="label-text font-medium">{{ meta.label }}</span>
+                        {% if meta.sensitive %}
+                        <span class="badge badge-warning badge-xs ml-2">criptografado</span>
+                        {% endif %}
+                    </label>
+                    <input
+                        type="{{ 'password' if meta.sensitive else 'text' }}"
+                        id="{{ key }}"
+                        name="{{ key }}"
+                        value="{{ settings.get(key) or '' }}"
+                        placeholder="{{ meta.placeholder }}"
+                        class="input input-bordered input-sm w-full font-mono"
+                        {% if meta.sensitive %}autocomplete="off"{% endif %}
+                    />
+                    {% if meta.help %}
+                    <label class="label pt-1">
+                        <span class="label-text-alt text-base-content/50">{{ meta.help }}</span>
+                    </label>
+                    {% endif %}
+                </div>
+                {% endfor %}
+
+                <div class="divider my-2"></div>
+
+                <h2 class="card-title text-base flex items-center">
+                    <svg class="w-5 h-5 mr-1 text-base-content/70" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    Geral
+                </h2>
+
+                {% for key in ['step_timeout_minutes'] %}
+                {% set meta = known_settings[key] %}
                 <div class="form-control">
                     <label class="label pb-1" for="{{ key }}">
                         <span class="label-text font-medium">{{ meta.label }}</span>
@@ -49,6 +116,37 @@
                     {% endif %}
                 </div>
                 {% endfor %}
+
+                <div class="divider my-2"></div>
+
+                <h2 class="card-title text-base flex items-center">
+                    <svg class="w-5 h-5 mr-1 text-base-content/70" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" /></svg>
+                    HTTP / Rede
+                </h2>
+
+                {% set trust_env_value = settings.get('http_trust_env') %}
+                {% set trust_env_checked = trust_env_value in (None, '', 'true', 'True', '1', 'yes') %}
+                <div class="form-control">
+                    <label class="label cursor-pointer justify-start gap-3" for="http_trust_env">
+                        <input
+                            type="hidden"
+                            name="http_trust_env"
+                            value="false"
+                        />
+                        <input
+                            type="checkbox"
+                            id="http_trust_env"
+                            name="http_trust_env"
+                            value="true"
+                            class="toggle toggle-primary toggle-sm"
+                            {{ 'checked' if trust_env_checked else '' }}
+                        />
+                        <span class="label-text font-medium">{{ known_settings['http_trust_env'].label }}</span>
+                    </label>
+                    <label class="label pt-0">
+                        <span class="label-text-alt text-base-content/50">{{ known_settings['http_trust_env'].help }}</span>
+                    </label>
+                </div>
 
             </div>
         </div>
