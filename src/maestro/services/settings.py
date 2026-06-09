@@ -10,6 +10,7 @@ SETTING_GITHUB_BASE_URL = "github_base_url"
 SETTING_GITHUB_ORGANIZATION = "github_organization"
 SETTING_GITHUB_TOKEN = "github_token"
 SETTING_STEP_TIMEOUT_MINUTES = "step_timeout_minutes"
+SETTING_HTTP_TRUST_ENV = "http_trust_env"
 
 # Chaves que contêm dados sensíveis (serão criptografadas no banco e mascaradas na UI)
 SENSITIVE_SETTINGS = {SETTING_JENKINS_TOKEN, SETTING_GITHUB_TOKEN}
@@ -56,6 +57,13 @@ KNOWN_SETTINGS = {
         "placeholder": "60",
         "help": "Tempo máximo (em minutos) que um step pode ficar em execução antes de ser marcado como timeout. Pode ser sobrescrito por step no YAML.",
         "sensitive": False,
+    },
+    SETTING_HTTP_TRUST_ENV: {
+        "label": "HTTP Trust Env (proxy/certs do sistema)",
+        "placeholder": "true",
+        "help": "Quando habilitado (true), o httpx respeita variáveis de ambiente como HTTP_PROXY, HTTPS_PROXY, NO_PROXY e SSL_CERT_FILE. Valores aceitos: true ou false.",
+        "sensitive": False,
+        "type": "toggle",
     },
 }
 

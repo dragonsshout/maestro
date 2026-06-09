@@ -22,6 +22,7 @@ class JenkinsService:
                 base_url=cfg.jenkins_url,
                 username=cfg.jenkins_username,
                 token=cfg.jenkins_token,
+                trust_env=cfg.http_trust_env,
             )
         return self._jenkins_integration
 

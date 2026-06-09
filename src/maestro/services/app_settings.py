@@ -22,6 +22,7 @@ class IntegrationSettings(BaseModel):
     github_organization: Optional[str] = None
     github_token: Optional[str] = None
     step_timeout_minutes: Optional[str] = None
+    http_trust_env: bool = True
 
 
 async def get_integration_settings(session=None) -> IntegrationSettings:
@@ -61,6 +62,7 @@ async def get_integration_settings(session=None) -> IntegrationSettings:
             github_organization=_get("github_organization", env_settings.github_organization),
             github_token=_get("github_token", env_settings.github_token),
             step_timeout_minutes=_get("step_timeout_minutes", None),
+            http_trust_env=_get("http_trust_env", "true") in ("true", "1", "True", "yes"),
         )
     finally:
         if close_session:

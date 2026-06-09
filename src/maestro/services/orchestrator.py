@@ -65,11 +65,13 @@ class OrchestratorService:
             organization=cfg.github_organization,
             token=cfg.github_token,
             base_url=cfg.github_base_url,
+            trust_env=cfg.http_trust_env,
         )
         jenkins = JenkinsIntegration(
             base_url=cfg.jenkins_url,
             username=cfg.jenkins_username,
             token=cfg.jenkins_token,
+            trust_env=cfg.http_trust_env,
         )
 
         all_valid = True
@@ -167,6 +169,7 @@ class OrchestratorService:
             organization=_cfg.github_organization,
             token=_cfg.github_token,
             base_url=_cfg.github_base_url,
+            trust_env=_cfg.http_trust_env,
         )
         try:
             for stage in config.spec.stages:

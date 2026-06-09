@@ -23,11 +23,13 @@ class ReleaseValidationService:
             organization=cfg.github_organization,
             token=cfg.github_token,
             base_url=cfg.github_base_url,
+            trust_env=cfg.http_trust_env,
         )
         self.jenkins = JenkinsIntegration(
             base_url=cfg.jenkins_url,
             username=cfg.jenkins_username,
             token=cfg.jenkins_token,
+            trust_env=cfg.http_trust_env,
         )
 
     async def validate(self, config: ReleaseConfigSchema) -> None:

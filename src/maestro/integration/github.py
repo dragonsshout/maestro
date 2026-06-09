@@ -4,7 +4,7 @@ from maestro.schemas.github import PullRequestSchema, PullRequestDetailSchema
 
 
 class GithubIntegration:
-    def __init__(self, organization: str, token: Optional[str] = None, base_url: Optional[str] = None):
+    def __init__(self, organization: str, token: Optional[str] = None, base_url: Optional[str] = None, trust_env: bool = True):
         """
         Inicializa a integração com o GitHub.
         
@@ -12,10 +12,12 @@ class GithubIntegration:
         :param token: Token de acesso pessoal (PAT) do GitHub (opcional, mas recomendado).
         :param base_url: URL base da instância GitHub. Para GitHub.com usa a API pública.
                          Para GitHub Enterprise, converte automaticamente para o endpoint /api/v3.
+        :param trust_env: Se True, httpx respeita variáveis de ambiente (HTTP_PROXY, SSL_CERT_FILE, etc).
         """
         self.base_url = self._resolve_api_url(base_url)
         self.organization = organization
         self.token = token
+        self.trust_env = trust_env
 
     @staticmethod
     def _resolve_api_url(base_url: Optional[str]) -> str:
@@ -48,7 +50,7 @@ class GithubIntegration:
         if self.token:
             headers["Authorization"] = f"Bearer {self.token}"
             
-        return httpx.AsyncClient(base_url=self.base_url, headers=headers)
+        return httpx.AsyncClient(base_url=self.base_url, headers=headers, trust_env=self.trust_env)
 
     async def repository_exists(self, repo_name: str) -> bool:
         """
