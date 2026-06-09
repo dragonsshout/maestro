@@ -22,6 +22,7 @@ class ReleaseValidationService:
         self.github = GithubIntegration(
             organization=cfg.github_organization,
             token=cfg.github_token,
+            base_url=cfg.github_base_url,
         )
         self.jenkins = JenkinsIntegration(
             base_url=cfg.jenkins_url,

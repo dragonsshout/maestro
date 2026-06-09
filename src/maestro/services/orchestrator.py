@@ -64,6 +64,7 @@ class OrchestratorService:
         github = GithubIntegration(
             organization=cfg.github_organization,
             token=cfg.github_token,
+            base_url=cfg.github_base_url,
         )
         jenkins = JenkinsIntegration(
             base_url=cfg.jenkins_url,
@@ -165,6 +166,7 @@ class OrchestratorService:
         github = GithubIntegration(
             organization=_cfg.github_organization,
             token=_cfg.github_token,
+            base_url=_cfg.github_base_url,
         )
         try:
             for stage in config.spec.stages:
