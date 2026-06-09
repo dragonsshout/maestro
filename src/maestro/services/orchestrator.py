@@ -63,13 +63,13 @@ class OrchestratorService:
         from maestro.services.app_settings import get_integration_settings
         cfg = await get_integration_settings()
         github = GithubIntegration(
-            organization=cfg["github_organization"] or settings.github_organization,
-            token=cfg["github_token"] or settings.github_token,
+            organization=cfg.github_organization or settings.github_organization,
+            token=cfg.github_token or settings.github_token,
         )
         jenkins = JenkinsIntegration(
-            base_url=cfg["jenkins_url"] or settings.jenkins_url,
-            username=cfg["jenkins_username"] or settings.jenkins_username,
-            token=cfg["jenkins_token"] or settings.jenkins_token,
+            base_url=cfg.jenkins_url or settings.jenkins_url,
+            username=cfg.jenkins_username or settings.jenkins_username,
+            token=cfg.jenkins_token or settings.jenkins_token,
         )
 
         all_valid = True
@@ -164,8 +164,8 @@ class OrchestratorService:
         from maestro.services.app_settings import get_integration_settings as _get_cfg
         _cfg = await _get_cfg()
         github = GithubIntegration(
-            organization=_cfg["github_organization"] or settings.github_organization,
-            token=_cfg["github_token"] or settings.github_token,
+            organization=_cfg.github_organization or settings.github_organization,
+            token=_cfg.github_token or settings.github_token,
         )
         try:
             for stage in config.spec.stages:

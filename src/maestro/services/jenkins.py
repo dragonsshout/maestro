@@ -19,9 +19,9 @@ class JenkinsService:
         if self._jenkins_integration is None:
             cfg = await get_integration_settings()
             self._jenkins_integration = JenkinsIntegration(
-                base_url=cfg["jenkins_url"] or env_settings.jenkins_url,
-                username=cfg["jenkins_username"] or env_settings.jenkins_username,
-                token=cfg["jenkins_token"] or env_settings.jenkins_token,
+                base_url=cfg.jenkins_url or env_settings.jenkins_url,
+                username=cfg.jenkins_username or env_settings.jenkins_username,
+                token=cfg.jenkins_token or env_settings.jenkins_token,
             )
         return self._jenkins_integration
 
