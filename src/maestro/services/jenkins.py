@@ -4,10 +4,10 @@ from fastapi import Depends
 from maestro.integration.jenkins import JenkinsIntegration
 from maestro.repositories.execution import ExecutionRepository
 from maestro.services.app_settings import get_integration_settings
-from maestro.config.settings import settings as env_settings
 from maestro.config.logger import get_logger
 
 logger = get_logger(__name__)
+
 
 class JenkinsService:
     def __init__(self, execution_repo: ExecutionRepository = Depends()):
@@ -15,13 +15,13 @@ class JenkinsService:
         self._jenkins_integration: Optional[JenkinsIntegration] = None
 
     async def _get_jenkins(self) -> JenkinsIntegration:
-        """Obtém integração Jenkins com credenciais do banco (fallback .env)."""
+        """Obtém integração Jenkins com credenciais do banco (fallback .env já resolvido)."""
         if self._jenkins_integration is None:
             cfg = await get_integration_settings()
             self._jenkins_integration = JenkinsIntegration(
-                base_url=cfg.jenkins_url or env_settings.jenkins_url,
-                username=cfg.jenkins_username or env_settings.jenkins_username,
-                token=cfg.jenkins_token or env_settings.jenkins_token,
+                base_url=cfg.jenkins_url,
+                username=cfg.jenkins_username,
+                token=cfg.jenkins_token,
             )
         return self._jenkins_integration
 

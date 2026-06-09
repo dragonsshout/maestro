@@ -3,7 +3,6 @@ from maestro.integration.github import GithubIntegration
 from maestro.integration.jenkins import JenkinsIntegration
 from maestro.schemas.orchestrator import ReleaseConfigSchema
 from maestro.services.app_settings import get_integration_settings
-from maestro.config.settings import settings as env_settings
 from maestro.config.logger import get_logger
 
 logger = get_logger(__name__)
@@ -18,16 +17,16 @@ class ReleaseValidationService:
     """
 
     async def _init_integrations(self):
-        """Inicializa integrações com credenciais do banco (fallback .env)."""
+        """Inicializa integrações com credenciais do banco (fallback .env já resolvido)."""
         cfg = await get_integration_settings()
         self.github = GithubIntegration(
-            organization=cfg.github_organization or env_settings.github_organization,
-            token=cfg.github_token or env_settings.github_token,
+            organization=cfg.github_organization,
+            token=cfg.github_token,
         )
         self.jenkins = JenkinsIntegration(
-            base_url=cfg.jenkins_url or env_settings.jenkins_url,
-            username=cfg.jenkins_username or env_settings.jenkins_username,
-            token=cfg.jenkins_token or env_settings.jenkins_token,
+            base_url=cfg.jenkins_url,
+            username=cfg.jenkins_username,
+            token=cfg.jenkins_token,
         )
 
     async def validate(self, config: ReleaseConfigSchema) -> None:
