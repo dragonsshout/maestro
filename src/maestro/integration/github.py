@@ -1,13 +1,21 @@
-import httpx
 from typing import Optional
-from maestro.schemas.github import PullRequestSchema, PullRequestDetailSchema
+
+import httpx
+
+from maestro.schemas.github import PullRequestDetailSchema, PullRequestSchema
 
 
 class GithubIntegration:
-    def __init__(self, organization: str, token: Optional[str] = None, base_url: Optional[str] = None, trust_env: bool = True):
+    def __init__(
+        self,
+        organization: str,
+        token: Optional[str] = None,
+        base_url: Optional[str] = None,
+        trust_env: bool = True,
+    ):
         """
         Inicializa a integração com o GitHub.
-        
+
         :param organization: Nome da organização ou usuário no GitHub.
         :param token: Token de acesso pessoal (PAT) do GitHub (opcional, mas recomendado).
         :param base_url: URL base da instância GitHub. Para GitHub.com usa a API pública.
@@ -43,13 +51,10 @@ class GithubIntegration:
         return f"{url}/api/v3"
 
     def _get_client(self) -> httpx.AsyncClient:
-        headers = {
-            "Accept": "application/vnd.github.v3+json",
-            "X-GitHub-Api-Version": "2022-11-28"
-        }
+        headers = {"Accept": "application/vnd.github.v3+json", "X-GitHub-Api-Version": "2022-11-28"}
         if self.token:
             headers["Authorization"] = f"Bearer {self.token}"
-            
+
         return httpx.AsyncClient(base_url=self.base_url, headers=headers, trust_env=self.trust_env)
 
     async def repository_exists(self, repo_name: str) -> bool:
@@ -101,16 +106,13 @@ class GithubIntegration:
         """
         async with self._get_client() as client:
             endpoint = f"/repos/{self.organization}/{repo_name}/pulls"
-            params = {
-                "head": f"{self.organization}:{branch_name}",
-                "state": "open"
-            }
-            
+            params = {"head": f"{self.organization}:{branch_name}", "state": "open"}
+
             response = await client.get(endpoint, params=params)
             response.raise_for_status()
-            
+
             prs = response.json()
             if prs and len(prs) > 0:
                 return PullRequestSchema(**prs[0])
-            
+
             return None

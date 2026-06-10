@@ -1,10 +1,13 @@
+from typing import List
+
 from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
+
+from maestro.database.models import ExecutionActionLog, ReleaseExecution, ReleaseStepExecution, StepEvent
 from maestro.database.session import get_db
-from maestro.database.models import ReleaseExecution, ReleaseStepExecution, StepEvent, ExecutionActionLog
 from maestro.schemas.enums import ExecutionStatus
-from typing import List, Optional
+
 
 class ExecutionRepository:
     def __init__(self, db: AsyncSession = Depends(get_db)):
@@ -23,9 +26,7 @@ class ExecutionRepository:
         return execution
 
     async def get_execution_by_id(self, execution_id: int) -> ReleaseExecution | None:
-        result = await self.db.execute(
-            select(ReleaseExecution).where(ReleaseExecution.id == execution_id)
-        )
+        result = await self.db.execute(select(ReleaseExecution).where(ReleaseExecution.id == execution_id))
         return result.scalars().first()
 
     async def add_step_execution(self, execution: ReleaseStepExecution) -> ReleaseStepExecution:
@@ -46,12 +47,17 @@ class ExecutionRepository:
         )
         return list(result.scalars().all())
 
-    async def get_specific_step(self, release_execution_id: int, stage_id: str, step_id: str) -> ReleaseStepExecution | None:
+    async def get_specific_step(
+        self,
+        release_execution_id: int,
+        stage_id: str,
+        step_id: str,
+    ) -> ReleaseStepExecution | None:
         result = await self.db.execute(
             select(ReleaseStepExecution).where(
                 ReleaseStepExecution.release_execution_id == release_execution_id,
                 ReleaseStepExecution.stage_id == stage_id,
-                ReleaseStepExecution.step_id == step_id
+                ReleaseStepExecution.step_id == step_id,
             )
         )
         return result.scalars().first()
@@ -93,25 +99,16 @@ class ExecutionRepository:
         return result.scalars().first()
 
     async def get_step_by_id(self, step_execution_id: int) -> ReleaseStepExecution | None:
-        result = await self.db.execute(
-            select(ReleaseStepExecution).where(
-                ReleaseStepExecution.id == step_execution_id
-            )
-        )
+        result = await self.db.execute(select(ReleaseStepExecution).where(ReleaseStepExecution.id == step_execution_id))
         return result.scalars().first()
 
     async def exists_by_name(self, name: str) -> bool:
-        result = await self.db.execute(
-            select(ReleaseExecution).where(ReleaseExecution.name == name).limit(1)
-        )
+        result = await self.db.execute(select(ReleaseExecution).where(ReleaseExecution.name == name).limit(1))
         return result.scalars().first() is not None
 
     async def get_latest_execution_by_name(self, name: str) -> ReleaseExecution | None:
         result = await self.db.execute(
-            select(ReleaseExecution)
-            .where(ReleaseExecution.name == name)
-            .order_by(ReleaseExecution.id.desc())
-            .limit(1)
+            select(ReleaseExecution).where(ReleaseExecution.name == name).order_by(ReleaseExecution.id.desc()).limit(1)
         )
         return result.scalars().first()
 
@@ -135,15 +132,13 @@ class ExecutionRepository:
 
     async def get_all_executions(self, skip: int = 0, limit: int = 50) -> List[ReleaseExecution]:
         result = await self.db.execute(
-            select(ReleaseExecution)
-            .order_by(ReleaseExecution.id.desc())
-            .offset(skip)
-            .limit(limit)
+            select(ReleaseExecution).order_by(ReleaseExecution.id.desc()).offset(skip).limit(limit)
         )
         return list(result.scalars().all())
 
     async def get_executions_count(self) -> int:
         from sqlalchemy import func
+
         result = await self.db.execute(select(func.count(ReleaseExecution.id)))
         return result.scalar()
 

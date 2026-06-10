@@ -8,8 +8,8 @@ from typing import Optional
 
 from pydantic import BaseModel
 
-from maestro.config.settings import settings as env_settings
 from maestro.config.crypto import decrypt_value
+from maestro.config.settings import settings as env_settings
 
 
 class IntegrationSettings(BaseModel):

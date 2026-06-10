@@ -5,17 +5,18 @@ Permite agendar a execucao de uma release para uma data/hora futura.
 O background task (start_scheduler_checker) verifica periodicamente se
 ha agendamentos pendentes prontos para execucao.
 """
+
 import asyncio
 from datetime import datetime, timezone
 from typing import List, Optional
 
-from fastapi import Depends, BackgroundTasks
+from fastapi import BackgroundTasks, Depends
 
 from maestro.config.logger import get_logger
 from maestro.database.models import ScheduledRelease
-from maestro.repositories.schedule import ScheduleRepository
-from maestro.repositories.orchestrator import OrchestratorDescriptorRepository
 from maestro.repositories.execution import ExecutionRepository
+from maestro.repositories.orchestrator import OrchestratorDescriptorRepository
+from maestro.repositories.schedule import ScheduleRepository
 from maestro.schemas.enums import ScheduledReleaseStatus
 
 logger = get_logger(__name__)
@@ -97,11 +98,11 @@ async def start_scheduler_checker():
 async def _process_due_schedules():
     """Single pass: find due schedules and trigger their executions."""
     from maestro.database.session import AsyncSessionLocal
-    from maestro.repositories.schedule import ScheduleRepository
     from maestro.repositories.execution import ExecutionRepository
     from maestro.repositories.orchestrator import OrchestratorDescriptorRepository
-    from maestro.services.orchestrator import OrchestratorService
+    from maestro.repositories.schedule import ScheduleRepository
     from maestro.services.jenkins import JenkinsService
+    from maestro.services.orchestrator import OrchestratorService
 
     async with AsyncSessionLocal() as session:
         schedule_repo = ScheduleRepository(db=session)
@@ -123,7 +124,7 @@ async def _process_due_schedules():
                     await schedule_repo.mark_failed(
                         schedule.id,
                         f"Execucao ativa #{active.id} encontrada para a release '{schedule.name}'. "
-                        "Agendamento nao pode ser executado."
+                        "Agendamento nao pode ser executado.",
                     )
                     continue
 

@@ -1,11 +1,15 @@
-from typing import List, Literal, Optional
-from pydantic import BaseModel
-from maestro.schemas.enums import ExecutionStatus
 from datetime import datetime
+from typing import List, Literal, Optional
+
+from pydantic import BaseModel
+
+from maestro.schemas.enums import ExecutionStatus
+
 
 class JobSchema(BaseModel):
     type: str
     path: str
+
 
 class StepSchema(BaseModel):
     id: str
@@ -16,21 +20,26 @@ class StepSchema(BaseModel):
     timeout_minutes: Optional[int] = None
     job: JobSchema
 
+
 class StageSchema(BaseModel):
     id: str
     steps: List[StepSchema]
 
+
 class StrategySchema(BaseModel):
     type: Literal["all-or-nothing", "fire-and-forget"]
+
 
 class ReleaseSpecSchema(BaseModel):
     strategy: Optional[StrategySchema] = None
     stages: List[StageSchema]
 
+
 class MetadataSchema(BaseModel):
     name: str
     author: str
     description: Optional[str] = None
+
 
 class ReleaseConfigSchema(BaseModel):
     apiVersion: str
@@ -38,15 +47,19 @@ class ReleaseConfigSchema(BaseModel):
     metadata: MetadataSchema
     spec: ReleaseSpecSchema
 
+
 class ExecuteReleaseRequest(BaseModel):
     name: str
+
 
 class ApproveReleaseRequest(BaseModel):
     status: str = "Sucesso"
 
+
 class StageStatusResponse(BaseModel):
     stage_id: str
     status: ExecutionStatus
+
 
 class ReleaseStatusResponse(BaseModel):
     model_config = {"from_attributes": True}
@@ -57,6 +70,7 @@ class ReleaseStatusResponse(BaseModel):
     message: Optional[str] = None
     created_at: datetime
     stages: List[StageStatusResponse]
+
 
 class ReleaseStepResponse(BaseModel):
     model_config = {"from_attributes": True}
@@ -69,6 +83,7 @@ class ReleaseStepResponse(BaseModel):
     job_execution_correlation_id: Optional[int] = None
     job_input_id: Optional[str] = None
     updated_at: datetime
+
 
 class ReleaseDetailsResponse(ReleaseStatusResponse):
     steps: List[ReleaseStepResponse]

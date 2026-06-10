@@ -1,11 +1,19 @@
 import json
-import httpx
-from typing import Optional, Dict, Any
+from typing import Dict, Optional
 
-from maestro.schemas.jenkins import JenkinsQueueItemSchema, JenkinsPendingInputSchema
+import httpx
+
+from maestro.schemas.jenkins import JenkinsQueueItemSchema
+
 
 class JenkinsIntegration:
-    def __init__(self, base_url: str, username: Optional[str] = None, token: Optional[str] = None, trust_env: bool = True):
+    def __init__(
+        self,
+        base_url: str,
+        username: Optional[str] = None,
+        token: Optional[str] = None,
+        trust_env: bool = True,
+    ):
         """
         Inicializa a integração com o Jenkins.
 
@@ -14,7 +22,7 @@ class JenkinsIntegration:
         :param token: Token de API ou senha para autenticação (opcional)
         :param trust_env: Se True, httpx respeita variáveis de ambiente (HTTP_PROXY, SSL_CERT_FILE, etc).
         """
-        self.base_url = base_url.rstrip('/')
+        self.base_url = base_url.rstrip("/")
         self.username = username
         self.token = token
         self.trust_env = trust_env
@@ -34,10 +42,10 @@ class JenkinsIntegration:
             else:
                 endpoint = f"/{job_name.strip('/')}/build"
                 response = await client.post(endpoint)
-            
+
             if response.status_code not in (200, 201, 202, 302, 303):
                 response.raise_for_status()
-            
+
             # Jenkins returns 201 Created (ou 303 See Other) with Location header pointing to the queue item
             location = response.headers.get("Location")
             if not location:
@@ -51,22 +59,26 @@ class JenkinsIntegration:
         async with self._get_client() as client:
             # Ensure the URL is just the path if it includes the domain
             if queue_url.startswith(self.base_url):
-                queue_url = queue_url[len(self.base_url):]
-            
+                queue_url = queue_url[len(self.base_url) :]
+
             endpoint = f"{queue_url.rstrip('/')}/api/json"
             response = await client.get(endpoint)
             response.raise_for_status()
             return JenkinsQueueItemSchema(**response.json())
 
-    async def approve_pipeline(self, job_name: str, build_number: int, input_id: Optional[str] = None, status: str = "Sucesso") -> None:
+    async def approve_pipeline(
+        self,
+        job_name: str,
+        build_number: int,
+        input_id: Optional[str] = None,
+        status: str = "Sucesso",
+    ) -> None:
 
         async with self._get_client() as client:
             proceed_url = f"/{job_name.strip('/')}/{build_number}/input/{input_id}/proceed"
-            
-            form_data = {
-                "json": json.dumps({"parameter": [{"name": "STATUS", "value": status}]})
-            }
-            
+
+            form_data = {"json": json.dumps({"parameter": [{"name": "STATUS", "value": status}]})}
+
             response = await client.post(proceed_url, data=form_data)
             if response.status_code not in (200, 302):
                 response.raise_for_status()

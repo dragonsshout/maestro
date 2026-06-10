@@ -1,27 +1,28 @@
-import asyncio
-from fastapi import Depends, BackgroundTasks
+import yaml
+from fastapi import BackgroundTasks, Depends
+from pydantic import ValidationError
+from sqlalchemy.exc import IntegrityError
+
+from maestro.config.logger import get_logger
 from maestro.database.models import OrchestratorDescriptor, ReleaseExecution, ReleaseStepExecution
-from maestro.repositories.orchestrator import OrchestratorDescriptorRepository
-from maestro.repositories.execution import ExecutionRepository
-from maestro.schemas.orchestrator import ReleaseConfigSchema, DryRunResponse, DryRunStageResult, DryRunStepResult
 from maestro.integration.github import GithubIntegration
 from maestro.integration.jenkins import JenkinsIntegration
-from pydantic import ValidationError
-import yaml
-from sqlalchemy.exc import IntegrityError
-from maestro.config.logger import get_logger
+from maestro.repositories.execution import ExecutionRepository
+from maestro.repositories.orchestrator import OrchestratorDescriptorRepository
+from maestro.schemas.enums import ExecutionStatus
+from maestro.schemas.orchestrator import DryRunResponse, DryRunStageResult, DryRunStepResult, ReleaseConfigSchema
 from maestro.services.jenkins import JenkinsService
 from maestro.services.validation import ReleaseValidationService
-from maestro.schemas.enums import ExecutionStatus
 
 logger = get_logger(__name__)
 
+
 class OrchestratorService:
     def __init__(
-        self, 
+        self,
         repository: OrchestratorDescriptorRepository = Depends(),
         execution_repo: ExecutionRepository = Depends(),
-        jenkins_service: JenkinsService = Depends()
+        jenkins_service: JenkinsService = Depends(),
     ):
         self.repository = repository
         self.execution_repo = execution_repo
@@ -42,10 +43,7 @@ class OrchestratorService:
         validation_service = ReleaseValidationService()
         await validation_service.validate(release_config)
 
-        descriptor = OrchestratorDescriptor(
-            name=release_config.metadata.name,
-            yaml=yaml_content
-        )
+        descriptor = OrchestratorDescriptor(name=release_config.metadata.name, yaml=yaml_content)
 
         try:
             return await self.repository.add(descriptor)
@@ -60,6 +58,7 @@ class OrchestratorService:
         config = ReleaseConfigSchema(**yaml.safe_load(descriptor.yaml))
 
         from maestro.services.app_settings import get_integration_settings
+
         cfg = await get_integration_settings()
         github = GithubIntegration(
             organization=cfg.github_organization,
@@ -117,24 +116,28 @@ class OrchestratorService:
                 if not step_valid:
                     all_valid = False
 
-                steps_results.append(DryRunStepResult(
-                    step_id=step.id,
-                    stage_id=stage.id,
-                    repository=step.repository,
-                    branch=step.release,
-                    branch_exists=branch_exists,
-                    pr_found=pr_found,
-                    pr_number=pr_number,
-                    pr_mergeable_state=pr_mergeable_state,
-                    pr_is_clean=pr_is_clean,
-                    jenkins_job_path=step.job.path,
-                    jenkins_job_exists=jenkins_job_exists,
-                ))
+                steps_results.append(
+                    DryRunStepResult(
+                        step_id=step.id,
+                        stage_id=stage.id,
+                        repository=step.repository,
+                        branch=step.release,
+                        branch_exists=branch_exists,
+                        pr_found=pr_found,
+                        pr_number=pr_number,
+                        pr_mergeable_state=pr_mergeable_state,
+                        pr_is_clean=pr_is_clean,
+                        jenkins_job_path=step.job.path,
+                        jenkins_job_exists=jenkins_job_exists,
+                    )
+                )
 
-            stages_results.append(DryRunStageResult(
-                stage_id=stage.id,
-                steps=steps_results,
-            ))
+            stages_results.append(
+                DryRunStageResult(
+                    stage_id=stage.id,
+                    steps=steps_results,
+                )
+            )
 
         return DryRunResponse(
             name=name,
@@ -157,13 +160,12 @@ class OrchestratorService:
         config = ReleaseConfigSchema(**yaml.safe_load(descriptor.yaml))
 
         release_execution = ReleaseExecution(
-            name=name,
-            status=ExecutionStatus.PENDING,
-            orchestrator_descriptor_id=descriptor.id
+            name=name, status=ExecutionStatus.PENDING, orchestrator_descriptor_id=descriptor.id
         )
         release_execution = await self.execution_repo.add_release_execution(release_execution)
 
         from maestro.services.app_settings import get_integration_settings as _get_cfg
+
         _cfg = await _get_cfg()
         github = GithubIntegration(
             organization=_cfg.github_organization,
@@ -176,11 +178,18 @@ class OrchestratorService:
                 for step in stage.steps:
                     pr = await github.get_pull_request_by_branch(step.repository, step.release)
                     if not pr:
-                        raise ValueError(f"Pull Request não encontrado para a branch '{step.release}' no repositório '{step.repository}'.")
-                    
+                        raise ValueError(
+                            f"Pull Request não encontrado para a branch '{step.release}' "
+                            f"no repositório '{step.repository}'."
+                        )
+
                     pr_detail = await github.get_pull_request_details(step.repository, pr.number)
                     if pr_detail.mergeable_state != "clean":
-                        raise ValueError(f"O Pull Request para a branch '{step.release}' no repositório '{step.repository}' não está no estado 'clean' (estado atual: '{pr_detail.mergeable_state}').")
+                        raise ValueError(
+                            f"O Pull Request para a branch '{step.release}' no repositório "
+                            f"'{step.repository}' não está no estado 'clean' "
+                            f"(estado atual: '{pr_detail.mergeable_state}')."
+                        )
 
         except Exception as e:
             release_execution.status = ExecutionStatus.FAILURE
@@ -198,7 +207,7 @@ class OrchestratorService:
                     release_execution_id=release_execution.id,
                     stage_id=stage.id,
                     step_id=step.id,
-                    status=ExecutionStatus.PENDING
+                    status=ExecutionStatus.PENDING,
                 )
                 await self.execution_repo.add_step_execution(step_execution)
 
@@ -215,29 +224,29 @@ class OrchestratorService:
 
         descriptor = await self.repository.get_by_id(execution.orchestrator_descriptor_id)
         config = ReleaseConfigSchema(**yaml.safe_load(descriptor.yaml))
-        
+
         steps_exec = await self.execution_repo.get_steps_by_execution_id(execution.id)
-        
+
         step_exec_map = {(se.stage_id, se.step_id): se for se in steps_exec}
-        
+
         approved_steps = []
         for stage in config.spec.stages:
             for step in stage.steps:
                 se = step_exec_map.get((stage.id, step.id))
-                
+
                 if se and se.status == ExecutionStatus.WAITING_APPROVAL:
                     if step.job.type == "jenkins":
                         if not se.job_execution_correlation_id:
                             logger.warning(f"Step {se.id} aguardando aprovação mas sem correlation_id (build_number)")
                             continue
-                            
+
                         # Chama o Jenkins para aprovar
                         try:
                             await self.jenkins_service.approve_job(
-                                job_path=step.job.path, 
-                                build_number=se.job_execution_correlation_id, 
+                                job_path=step.job.path,
+                                build_number=se.job_execution_correlation_id,
                                 input_id=se.job_input_id,
-                                status=status
+                                status=status,
                             )
                             # Atualiza status para in_progress
                             se.status = ExecutionStatus.IN_PROGRESS
@@ -265,7 +274,9 @@ class OrchestratorService:
             raise ValueError(f"Step de execução #{step_execution_id} não encontrado.")
 
         if step.status not in (ExecutionStatus.FAILURE, ExecutionStatus.TIMEOUT):
-            raise ValueError(f"Só é possível reexecutar steps com status 'failure' ou 'timeout' (status atual: '{step.status}').")
+            raise ValueError(
+                f"Só é possível reexecutar steps com status 'failure' ou 'timeout' (status atual: '{step.status}')."
+            )
 
         # Reseta o step
         step.status = ExecutionStatus.PENDING
@@ -276,13 +287,20 @@ class OrchestratorService:
 
         # Reseta a execução para IN_PROGRESS para que o workflow continue
         execution = await self.execution_repo.get_execution_by_id(step.release_execution_id)
-        if execution and execution.status in (ExecutionStatus.FAILURE, ExecutionStatus.TIMEOUT, ExecutionStatus.SUCCESS):
+        if execution and execution.status in (
+            ExecutionStatus.FAILURE,
+            ExecutionStatus.TIMEOUT,
+            ExecutionStatus.SUCCESS,
+        ):
             execution.status = ExecutionStatus.IN_PROGRESS
             execution.message = None
             await self.execution_repo.update_release_execution(execution)
 
         # Re-dispara o workflow
-        logger.info(f"Retry step {step_execution_id}: step resetado para PENDING, re-disparando workflow {step.release_execution_id}")
+        logger.info(
+            f"Retry step {step_execution_id}: step resetado para PENDING, "
+            f"re-disparando workflow {step.release_execution_id}"
+        )
         background_tasks.add_task(self.process_workflow, step.release_execution_id)
         return step
 
@@ -448,7 +466,6 @@ class OrchestratorService:
             step_exec_map = {(se.stage_id, se.step_id): se for se in steps_exec}
 
             execution_in_progress = False
-            execution_failed = False
             execution_waiting_approval = False
 
             for stage in config.spec.stages:
@@ -524,9 +541,7 @@ class OrchestratorService:
             logger.info(f"Starting job of type {step.job.type} at path {step.job.path} for step {step.id}")
             try:
                 await self.jenkins_service.trigger_job(
-                    job_path=step.job.path,
-                    step_execution_id=se.id,
-                    release_branch=step.release
+                    job_path=step.job.path, step_execution_id=se.id, release_branch=step.release
                 )
                 return ExecutionStatus.IN_PROGRESS
 

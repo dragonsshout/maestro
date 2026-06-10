@@ -1,6 +1,7 @@
 from fastapi import Depends
+
+from maestro.config.crypto import decrypt_value, encrypt_value
 from maestro.repositories.settings import UISettingsRepository
-from maestro.config.crypto import encrypt_value, decrypt_value
 
 # Chaves conhecidas de configuração
 SETTING_JENKINS_BASE_URL = "jenkins_base_url"
@@ -55,13 +56,19 @@ KNOWN_SETTINGS = {
     SETTING_STEP_TIMEOUT_MINUTES: {
         "label": "Timeout global de steps (minutos)",
         "placeholder": "60",
-        "help": "Tempo máximo (em minutos) que um step pode ficar em execução antes de ser marcado como timeout. Pode ser sobrescrito por step no YAML.",
+        "help": (
+            "Tempo máximo (em minutos) que um step pode ficar em execução antes de ser "
+            "marcado como timeout. Pode ser sobrescrito por step no YAML."
+        ),
         "sensitive": False,
     },
     SETTING_HTTP_TRUST_ENV: {
         "label": "HTTP Trust Env (proxy/certs do sistema)",
         "placeholder": "true",
-        "help": "Quando habilitado (true), o httpx respeita variáveis de ambiente como HTTP_PROXY, HTTPS_PROXY, NO_PROXY e SSL_CERT_FILE. Valores aceitos: true ou false.",
+        "help": (
+            "Quando habilitado (true), o httpx respeita variáveis de ambiente como "
+            "HTTP_PROXY, HTTPS_PROXY, NO_PROXY e SSL_CERT_FILE. Valores aceitos: true ou false."
+        ),
         "sensitive": False,
         "type": "toggle",
     },

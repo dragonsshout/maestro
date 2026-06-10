@@ -1,6 +1,8 @@
 from typing import Optional
-from pydantic_settings import BaseSettings, SettingsConfigDict
+
 from pydantic import Field
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
@@ -9,7 +11,7 @@ class Settings(BaseSettings):
 
     database_url: str = Field(
         default="postgresql+asyncpg://maestro_user:maestro_password@localhost:5432/maestro_db",
-        validation_alias="DB_URL"
+        validation_alias="DB_URL",
     )
 
     jenkins_url: str = Field(default="http://localhost:8080")
@@ -18,5 +20,6 @@ class Settings(BaseSettings):
 
     github_organization: str = Field(default="my-org")
     github_token: Optional[str] = Field(default=None)
+
 
 settings = Settings()

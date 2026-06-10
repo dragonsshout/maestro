@@ -9,20 +9,20 @@ Timeout resolution order:
 2. Global step_timeout_minutes (from UI settings)
 3. No timeout (if neither is configured, step runs indefinitely)
 """
+
 import asyncio
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 
 import yaml
-
-from maestro.config.logger import get_logger
-from maestro.database.models import ReleaseStepExecution, ReleaseExecution, OrchestratorDescriptor
-from maestro.schemas.enums import ExecutionStatus
-from maestro.schemas.orchestrator import ReleaseConfigSchema
-from maestro.database.session import AsyncSessionLocal
-from maestro.repositories.settings import UISettingsRepository
-from maestro.services.settings import SETTING_STEP_TIMEOUT_MINUTES
 from sqlalchemy.future import select
 
+from maestro.config.logger import get_logger
+from maestro.database.models import OrchestratorDescriptor, ReleaseExecution, ReleaseStepExecution
+from maestro.database.session import AsyncSessionLocal
+from maestro.repositories.settings import UISettingsRepository
+from maestro.schemas.enums import ExecutionStatus
+from maestro.schemas.orchestrator import ReleaseConfigSchema
+from maestro.services.settings import SETTING_STEP_TIMEOUT_MINUTES
 
 logger = get_logger(__name__)
 
@@ -52,9 +52,7 @@ async def _check_timeouts():
 
         # Find all steps currently in_progress
         result = await session.execute(
-            select(ReleaseStepExecution).where(
-                ReleaseStepExecution.status == ExecutionStatus.IN_PROGRESS
-            )
+            select(ReleaseStepExecution).where(ReleaseStepExecution.status == ExecutionStatus.IN_PROGRESS)
         )
         in_progress_steps = list(result.scalars().all())
 
@@ -65,9 +63,7 @@ async def _check_timeouts():
 
         # Group steps by execution to load their YAML configs
         execution_ids = set(s.release_execution_id for s in in_progress_steps)
-        exec_result = await session.execute(
-            select(ReleaseExecution).where(ReleaseExecution.id.in_(execution_ids))
-        )
+        exec_result = await session.execute(select(ReleaseExecution).where(ReleaseExecution.id.in_(execution_ids)))
         executions = {e.id: e for e in exec_result.scalars().all()}
 
         # Load descriptors for timeout_minutes per step
