@@ -1,18 +1,20 @@
-from fastapi import APIRouter, Depends, BackgroundTasks, HTTPException
-from maestro.schemas.callback import ReleaseCallbackSchema, StepEventSchema
-from maestro.repositories.execution import ExecutionRepository
-from maestro.services.orchestrator import OrchestratorService
-from maestro.schemas.enums import ExecutionStatus
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
+
 from maestro.database.models import StepEvent
+from maestro.repositories.execution import ExecutionRepository
+from maestro.schemas.callback import ReleaseCallbackSchema, StepEventSchema
+from maestro.schemas.enums import ExecutionStatus
+from maestro.services.orchestrator import OrchestratorService
 
 router = APIRouter(prefix="/callback", tags=["Callback"])
+
 
 @router.post("/release")
 async def release_callback(
     payload: ReleaseCallbackSchema,
     background_tasks: BackgroundTasks,
     execution_repo: ExecutionRepository = Depends(),
-    orchestrator_service: OrchestratorService = Depends()
+    orchestrator_service: OrchestratorService = Depends(),
 ):
     correlation_id = payload.job_execution_correlation_id
 
@@ -25,11 +27,11 @@ async def release_callback(
 
     if payload.message:
         step.message = payload.message
-    
+
     if status == ExecutionStatus.WAITING_APPROVAL:
         if not payload.input_id:
             raise HTTPException(status_code=400, detail="Input_id é obrigatório para status WAITING_APPROVAL.")
-        
+
         step.job_input_id = payload.input_id
 
     await execution_repo.update_step_execution(step)
@@ -42,7 +44,7 @@ async def release_callback(
         "release_process_id": step.release_execution_id,
         "stage": step.stage_id,
         "step": step.step_id,
-        "status": payload.status
+        "status": payload.status,
     }
 
 

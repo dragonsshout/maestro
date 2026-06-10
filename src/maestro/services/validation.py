@@ -1,9 +1,10 @@
 from typing import List
+
+from maestro.config.logger import get_logger
 from maestro.integration.github import GithubIntegration
 from maestro.integration.jenkins import JenkinsIntegration
 from maestro.schemas.orchestrator import ReleaseConfigSchema
 from maestro.services.app_settings import get_integration_settings
-from maestro.config.logger import get_logger
 
 logger = get_logger(__name__)
 
@@ -12,7 +13,7 @@ class ReleaseValidationService:
     """
     Serviço responsável por validar a existência de repositórios no GitHub
     e jobs no Jenkins antes de salvar um descritor de release.
-    
+
     NÃO valida branches — apenas path do Jenkins e se o repositório existe no GitHub.
     """
 
@@ -65,8 +66,7 @@ class ReleaseValidationService:
                     job_exists = await self._check_jenkins_job(step.job.path)
                     if not job_exists:
                         errors.append(
-                            f"Job '{step.job.path}' não encontrado no Jenkins "
-                            f"(stage: '{stage.id}', step: '{step.id}')"
+                            f"Job '{step.job.path}' não encontrado no Jenkins (stage: '{stage.id}', step: '{step.id}')"
                         )
 
         if errors:

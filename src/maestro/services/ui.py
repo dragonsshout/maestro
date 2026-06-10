@@ -1,16 +1,18 @@
 import asyncio
 import json
 from pathlib import Path
+from typing import AsyncGenerator
+
+import yaml
 from fastapi import Depends
 from jinja2 import Environment, FileSystemLoader
+
+from maestro.config.logger import get_logger
+from maestro.database.models import ReleaseExecution, ReleaseStepExecution
 from maestro.repositories.execution import ExecutionRepository
 from maestro.repositories.orchestrator import OrchestratorDescriptorRepository
-from maestro.schemas.orchestrator import ReleaseConfigSchema
 from maestro.schemas.enums import ExecutionStatus
-from maestro.database.models import ReleaseExecution, ReleaseStepExecution
-from maestro.config.logger import get_logger
-import yaml
-from typing import AsyncGenerator
+from maestro.schemas.orchestrator import ReleaseConfigSchema
 
 logger = get_logger(__name__)
 
@@ -66,7 +68,11 @@ class UIService:
             try:
                 from maestro.database.session import AsyncSessionLocal
                 from maestro.repositories.settings import UISettingsRepository
-                from maestro.services.settings import SETTING_JENKINS_BASE_URL, SETTING_GITHUB_BASE_URL, SETTING_GITHUB_ORGANIZATION
+                from maestro.services.settings import (
+                    SETTING_GITHUB_BASE_URL,
+                    SETTING_GITHUB_ORGANIZATION,
+                    SETTING_JENKINS_BASE_URL,
+                )
 
                 async with AsyncSessionLocal() as session:
                     exec_repo = ExecutionRepository(db=session)
@@ -87,7 +93,7 @@ class UIService:
 
                 if snapshot != last_snapshot:
                     last_snapshot = snapshot
-                    
+
                     stages_html = _render_partial(
                         "partials/stages.html",
                         stages=stages,
@@ -95,18 +101,18 @@ class UIService:
                         github_base_url=github_base_url,
                         github_organization=github_organization,
                     )
-                    
+
                     oob_html = _render_partial(
                         "partials/execution_oob.html",
                         execution=execution,
-                        waiting_approval=(execution.status == ExecutionStatus.WAITING_APPROVAL)
+                        waiting_approval=(execution.status == ExecutionStatus.WAITING_APPROVAL),
                     )
 
                     log_html = _render_partial(
                         "partials/action_log.html",
                         action_logs=action_logs,
                     )
-                    
+
                     html = stages_html + "\n" + oob_html + "\n" + log_html
                     yield {"event": "stage-update", "data": html}
 
@@ -132,15 +138,10 @@ class UIService:
 
 # --- Funções puras auxiliares (sem estado, sem dependências) ---
 
+
 def _assemble_stages(config: ReleaseConfigSchema, steps: list[ReleaseStepExecution]) -> list:
     """Combina a definição do YAML com os dados de execução do banco."""
     step_map = {(se.stage_id, se.step_id): se for se in steps}
-    # índice da definição do YAML para enriquecer com metadados
-    step_def_map = {
-        (stage.id, step.id): step
-        for stage in config.spec.stages
-        for step in stage.steps
-    }
 
     result = []
     for stage in config.spec.stages:
@@ -150,13 +151,15 @@ def _assemble_stages(config: ReleaseConfigSchema, steps: list[ReleaseStepExecuti
             if key not in step_map:
                 continue
             execution_step = step_map[key]
-            enriched_steps.append({
-                "execution": execution_step,
-                "repository": step_def.repository,
-                "release": step_def.release,
-                "job_type": step_def.job.type,
-                "job_path": step_def.job.path,
-            })
+            enriched_steps.append(
+                {
+                    "execution": execution_step,
+                    "repository": step_def.repository,
+                    "release": step_def.release,
+                    "job_type": step_def.job.type,
+                    "job_path": step_def.job.path,
+                }
+            )
         result.append({"id": stage.id, "steps": enriched_steps})
     return result
 
@@ -168,15 +171,13 @@ def _build_snapshot(stages: list, execution_status: str, log_count: int = 0) -> 
             "status": str(execution_status),
             "log_count": log_count,
             "stages": [
-            {
-                "stage": s["id"],
-                "steps": [
-                    {"id": st["execution"].step_id, "status": st["execution"].status}
-                    for st in s["steps"]
-                ],
-            }
-            for s in stages
-        ]},
+                {
+                    "stage": s["id"],
+                    "steps": [{"id": st["execution"].step_id, "status": st["execution"].status} for st in s["steps"]],
+                }
+                for s in stages
+            ],
+        },
         default=str,
     )
 

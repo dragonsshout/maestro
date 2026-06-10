@@ -2,8 +2,9 @@ from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.sql import func
-from maestro.database.session import get_db
+
 from maestro.database.models import UISettings
+from maestro.database.session import get_db
 
 
 class UISettingsRepository:
@@ -16,9 +17,7 @@ class UISettingsRepository:
         return {row.key: row.value for row in rows}
 
     async def get(self, key: str) -> str | None:
-        result = await self.db.execute(
-            select(UISettings).where(UISettings.key == key)
-        )
+        result = await self.db.execute(select(UISettings).where(UISettings.key == key))
         row = result.scalars().first()
         return row.value if row else None
 

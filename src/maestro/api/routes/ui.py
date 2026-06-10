@@ -1,17 +1,25 @@
 from pathlib import Path
-from fastapi import APIRouter, Depends, HTTPException, Request, BackgroundTasks, UploadFile, File, Form
+
+from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
+from pydantic import BaseModel
 from sse_starlette.sse import EventSourceResponse
-from maestro.services.ui import UIService
-from maestro.services.orchestrator import OrchestratorService
-from maestro.services.scheduler import SchedulerService
-from maestro.services.settings import UISettingsService, KNOWN_SETTINGS, SETTING_JENKINS_BASE_URL, SETTING_GITHUB_BASE_URL, SETTING_GITHUB_ORGANIZATION
+
+from maestro.database.models import ExecutionActionLog
 from maestro.repositories.execution import ExecutionRepository
 from maestro.repositories.orchestrator import OrchestratorDescriptorRepository
-from maestro.repositories.schedule import ScheduleRepository
 from maestro.schemas.enums import ExecutionStatus
-from maestro.database.models import ExecutionActionLog
+from maestro.services.orchestrator import OrchestratorService
+from maestro.services.scheduler import SchedulerService
+from maestro.services.settings import (
+    KNOWN_SETTINGS,
+    SETTING_GITHUB_BASE_URL,
+    SETTING_GITHUB_ORGANIZATION,
+    SETTING_JENKINS_BASE_URL,
+    UISettingsService,
+)
+from maestro.services.ui import UIService
 
 TEMPLATES_DIR = Path(__file__).parent.parent.parent / "ui" / "templates"
 templates = Jinja2Templates(directory=TEMPLATES_DIR)
@@ -34,7 +42,7 @@ async def partials_executions(request: Request, page: int = 1, service: UIServic
             "executions": executions,
             "current_page": page,
             "total_pages": total_pages,
-        }
+        },
     )
 
 
@@ -65,10 +73,9 @@ async def execution_detail(
             "jenkins_base_url": (jenkins_base_url or "").rstrip("/"),
             "github_base_url": (github_base_url or "").rstrip("/"),
             "github_organization": github_organization or "",
-        }
+        },
     )
 
-from pydantic import BaseModel
 
 class ApproveRequest(BaseModel):
     status: str
@@ -102,11 +109,13 @@ async def approve_execution(
 
     # Grava no histórico de ações
     action = "approve" if payload.status == "Sucesso" else "deny"
-    await execution_repo.add_action_log(ExecutionActionLog(
-        release_execution_id=execution_id,
-        action=action,
-        detail=f"Status enviado: {payload.status}",
-    ))
+    await execution_repo.add_action_log(
+        ExecutionActionLog(
+            release_execution_id=execution_id,
+            action=action,
+            detail=f"Status enviado: {payload.status}",
+        )
+    )
 
     return templates.TemplateResponse(
         request,
@@ -166,13 +175,15 @@ async def retry_step_ui(
     try:
         step = await orchestrator_service.retry_step(step_execution_id, background_tasks)
         # Grava no histórico de ações
-        await execution_repo.add_action_log(ExecutionActionLog(
-            release_execution_id=step.release_execution_id,
-            action="retry_step",
-            step_execution_id=step.id,
-            stage_id=step.stage_id,
-            step_id=step.step_id,
-        ))
+        await execution_repo.add_action_log(
+            ExecutionActionLog(
+                release_execution_id=step.release_execution_id,
+                action="retry_step",
+                step_execution_id=step.id,
+                stage_id=step.stage_id,
+                step_id=step.step_id,
+            )
+        )
         return templates.TemplateResponse(
             request,
             "partials/retry_result.html",
@@ -199,13 +210,15 @@ async def resolve_timeout_ui(
     step = await execution_repo.get_step_by_id(step_execution_id)
     if not step:
         return templates.TemplateResponse(
-            request, "partials/resolve_timeout_result.html",
+            request,
+            "partials/resolve_timeout_result.html",
             {"error": "Step não encontrado.", "step": None, "action": action},
         )
 
     if step.status != ExecutionStatus.TIMEOUT:
         return templates.TemplateResponse(
-            request, "partials/resolve_timeout_result.html",
+            request,
+            "partials/resolve_timeout_result.html",
             {"error": f"Step não está em timeout (status: {step.status}).", "step": None, "action": action},
         )
 
@@ -219,27 +232,31 @@ async def resolve_timeout_ui(
         log_action = "resolve_timeout_failure"
     else:
         return templates.TemplateResponse(
-            request, "partials/resolve_timeout_result.html",
+            request,
+            "partials/resolve_timeout_result.html",
             {"error": f"Ação inválida: '{action}'.", "step": None, "action": action},
         )
 
     await execution_repo.update_step_execution(step)
 
     # Grava no histórico de ações
-    await execution_repo.add_action_log(ExecutionActionLog(
-        release_execution_id=step.release_execution_id,
-        action=log_action,
-        step_execution_id=step.id,
-        stage_id=step.stage_id,
-        step_id=step.step_id,
-        detail=step.message,
-    ))
+    await execution_repo.add_action_log(
+        ExecutionActionLog(
+            release_execution_id=step.release_execution_id,
+            action=log_action,
+            step_execution_id=step.id,
+            stage_id=step.stage_id,
+            step_id=step.step_id,
+            detail=step.message,
+        )
+    )
 
     # Re-dispara o workflow para que ele continue processando
     background_tasks.add_task(orchestrator_service.process_workflow, step.release_execution_id)
 
     return templates.TemplateResponse(
-        request, "partials/resolve_timeout_result.html",
+        request,
+        "partials/resolve_timeout_result.html",
         {"error": None, "step": step, "action": action},
     )
 
@@ -267,11 +284,13 @@ async def cancel_execution_ui(
     else:
         detail += " Jobs externos não foram interrompidos."
 
-    await execution_repo.add_action_log(ExecutionActionLog(
-        release_execution_id=execution_id,
-        action="cancel_execution" if not abort_jobs else "cancel_execution_with_abort",
-        detail=detail,
-    ))
+    await execution_repo.add_action_log(
+        ExecutionActionLog(
+            release_execution_id=execution_id,
+            action="cancel_execution" if not abort_jobs else "cancel_execution_with_abort",
+            detail=detail,
+        )
+    )
 
     # Retorna o OOB do header atualizado (status badge + área de aprovação)
     return templates.TemplateResponse(
@@ -304,7 +323,10 @@ async def override_step_ui(
     Se marcado como sucesso, re-dispara o workflow para continuar o fluxo.
     """
     if action not in ("success", "failure", "waiting_approval"):
-        raise HTTPException(status_code=400, detail=f"Ação inválida: '{action}'. Use 'success', 'failure' ou 'waiting_approval'.")
+        raise HTTPException(
+            status_code=400,
+            detail=f"Ação inválida: '{action}'. Use 'success', 'failure' ou 'waiting_approval'.",
+        )
 
     step = await execution_repo.get_step_by_id(step_execution_id)
     if not step:
@@ -329,22 +351,24 @@ async def override_step_ui(
 
     await execution_repo.update_step_execution(step)
 
-    await execution_repo.add_action_log(ExecutionActionLog(
-        release_execution_id=step.release_execution_id,
-        action=log_action,
-        step_execution_id=step.id,
-        stage_id=step.stage_id,
-        step_id=step.step_id,
-        detail=step.message,
-    ))
+    await execution_repo.add_action_log(
+        ExecutionActionLog(
+            release_execution_id=step.release_execution_id,
+            action=log_action,
+            step_execution_id=step.id,
+            stage_id=step.stage_id,
+            step_id=step.step_id,
+            detail=step.message,
+        )
+    )
 
     # Re-dispara o workflow apenas se for success, pois falha ou waiting approval pausam o fluxo
     if action == "success":
         background_tasks.add_task(orchestrator_service.process_workflow, step.release_execution_id)
 
-
     return templates.TemplateResponse(
-        request, "partials/override_result.html",
+        request,
+        "partials/override_result.html",
         {"error": None, "step": step, "action": action},
     )
 
@@ -359,26 +383,31 @@ async def abort_step_ui(
     """Envia cancelamento forçado ao Jenkins e marca o step como ABORTED."""
     try:
         step = await orchestrator_service.abort_step(step_execution_id)
-        await execution_repo.add_action_log(ExecutionActionLog(
-            release_execution_id=step.release_execution_id,
-            action="abort_step",
-            step_execution_id=step.id,
-            stage_id=step.stage_id,
-            step_id=step.step_id,
-            detail=step.message,
-        ))
+        await execution_repo.add_action_log(
+            ExecutionActionLog(
+                release_execution_id=step.release_execution_id,
+                action="abort_step",
+                step_execution_id=step.id,
+                stage_id=step.stage_id,
+                step_id=step.step_id,
+                detail=step.message,
+            )
+        )
         return templates.TemplateResponse(
-            request, "partials/abort_step_result.html",
+            request,
+            "partials/abort_step_result.html",
             {"error": None, "step": step},
         )
     except ValueError as e:
         return templates.TemplateResponse(
-            request, "partials/abort_step_result.html",
+            request,
+            "partials/abort_step_result.html",
             {"error": str(e), "step": None},
         )
     except Exception as e:
         return templates.TemplateResponse(
-            request, "partials/abort_step_result.html",
+            request,
+            "partials/abort_step_result.html",
             {"error": f"Erro ao enviar abort ao Jenkins: {str(e)}", "step": None},
         )
 
@@ -394,26 +423,31 @@ async def approve_step_ui(
     """Aprova individualmente um step que está aguardando aprovação no Jenkins."""
     try:
         step = await orchestrator_service.approve_step(step_execution_id, background_tasks)
-        await execution_repo.add_action_log(ExecutionActionLog(
-            release_execution_id=step.release_execution_id,
-            action="approve_step",
-            step_execution_id=step.id,
-            stage_id=step.stage_id,
-            step_id=step.step_id,
-            detail=step.message,
-        ))
+        await execution_repo.add_action_log(
+            ExecutionActionLog(
+                release_execution_id=step.release_execution_id,
+                action="approve_step",
+                step_execution_id=step.id,
+                stage_id=step.stage_id,
+                step_id=step.step_id,
+                detail=step.message,
+            )
+        )
         return templates.TemplateResponse(
-            request, "partials/approve_step_result.html",
+            request,
+            "partials/approve_step_result.html",
             {"error": None, "step": step},
         )
     except ValueError as e:
         return templates.TemplateResponse(
-            request, "partials/approve_step_result.html",
+            request,
+            "partials/approve_step_result.html",
             {"error": str(e), "step": None},
         )
     except Exception as e:
         return templates.TemplateResponse(
-            request, "partials/approve_step_result.html",
+            request,
+            "partials/approve_step_result.html",
             {"error": f"Erro ao enviar aprovação ao Jenkins: {str(e)}", "step": None},
         )
 
@@ -442,7 +476,7 @@ async def execute_release_ui(
             request,
             "partials/execute_result.html",
             {"error": None, "execution_id": execution_id, "name": name},
-            headers={"HX-Trigger": "refreshReleases"}
+            headers={"HX-Trigger": "refreshReleases"},
         )
     except ValueError as e:
         return templates.TemplateResponse(
@@ -484,7 +518,7 @@ async def partials_releases(
     descriptors = await orchestrator_repo.get_all(skip=skip, limit=per_page, search=search)
     total_count = await orchestrator_repo.get_count(search=search)
     total_pages = max(1, (total_count + per_page - 1) // per_page)
-    
+
     active_executions: dict = {}
     for desc in descriptors:
         active = await execution_repo.get_active_execution_by_name(desc.name)
@@ -500,7 +534,7 @@ async def partials_releases(
             "current_page": page,
             "total_pages": total_pages,
             "search_term": search or "",
-        }
+        },
     )
 
 
@@ -546,7 +580,12 @@ async def releases_upload(
     return templates.TemplateResponse(
         request,
         "releases.html",
-        {"descriptors": descriptors, "active_executions": active_executions, "upload_error": error, "upload_success": error is None},
+        {
+            "descriptors": descriptors,
+            "active_executions": active_executions,
+            "upload_error": error,
+            "upload_success": error is None,
+        },
     )
 
 
@@ -602,7 +641,9 @@ async def schedule_release_ui(
     scheduler_service: SchedulerService = Depends(),
 ):
     """Agenda a execucao de uma release pela UI."""
-    from datetime import datetime as dt, timezone as tz
+    from datetime import datetime as dt
+    from datetime import timezone as tz
+
     try:
         # Substitui 'Z' por '+00:00' para compatibilidade com fromisoformat no Python < 3.11
         parsed_dt = dt.fromisoformat(scheduled_at.replace("Z", "+00:00"))
@@ -613,7 +654,7 @@ async def schedule_release_ui(
             request,
             "partials/schedule_result.html",
             {"error": None, "schedule": schedule, "name": name},
-            headers={"HX-Trigger": "refreshSchedules"}
+            headers={"HX-Trigger": "refreshSchedules"},
         )
     except ValueError as e:
         return templates.TemplateResponse(
@@ -632,6 +673,7 @@ async def schedule_release_ui(
 @router.get("/schedules", response_class=HTMLResponse)
 async def schedules_page(request: Request):
     return templates.TemplateResponse(request, "schedules.html")
+
 
 @router.delete("/schedule/{schedule_id}", response_class=HTMLResponse)
 async def cancel_schedule_ui(
@@ -653,7 +695,7 @@ async def cancel_schedule_ui(
     schedules = await scheduler_service.get_all_schedules(skip=skip, limit=per_page, search=search)
     total_count = await scheduler_service.get_schedules_count(search=search)
     total_pages = max(1, (total_count + per_page - 1) // per_page)
-    
+
     return templates.TemplateResponse(
         request,
         "partials/schedules_list.html",
@@ -680,7 +722,7 @@ async def partials_schedules(
     schedules = await scheduler_service.get_all_schedules(skip=skip, limit=per_page, search=search)
     total_count = await scheduler_service.get_schedules_count(search=search)
     total_pages = max(1, (total_count + per_page - 1) // per_page)
-    
+
     return templates.TemplateResponse(
         request,
         "partials/schedules_list.html",

@@ -1,8 +1,9 @@
-from sqlalchemy import Column, Integer, Text, DateTime, String, Index, ForeignKey
-from sqlalchemy.sql import func
+from sqlalchemy import Column, DateTime, ForeignKey, Index, Integer, String, Text
 from sqlalchemy.orm import declarative_base
+from sqlalchemy.sql import func
 
 Base = declarative_base()
+
 
 class OrchestratorDescriptor(Base):
     __tablename__ = "orchestrator_descriptor"
@@ -12,6 +13,7 @@ class OrchestratorDescriptor(Base):
     yaml = Column(Text, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
+
 class ReleaseExecution(Base):
     __tablename__ = "release_execution"
 
@@ -19,15 +21,16 @@ class ReleaseExecution(Base):
     name = Column(String, nullable=False)
     status = Column(String, nullable=False)
     message = Column(Text, nullable=True)
-    orchestrator_descriptor_id = Column(Integer, ForeignKey('orchestrator_descriptor.id'), nullable=False)
+    orchestrator_descriptor_id = Column(Integer, ForeignKey("orchestrator_descriptor.id"), nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+
 
 class ReleaseStepExecution(Base):
     __tablename__ = "release_step_execution"
 
     id = Column(Integer, primary_key=True, autoincrement=True, nullable=False)
-    release_execution_id = Column(Integer, ForeignKey('release_execution.id'), nullable=False)
+    release_execution_id = Column(Integer, ForeignKey("release_execution.id"), nullable=False)
     stage_id = Column(String, nullable=False)
     step_id = Column(String, nullable=False)
     status = Column(String, nullable=False)
@@ -37,8 +40,15 @@ class ReleaseStepExecution(Base):
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
 
     __table_args__ = (
-        Index('ix_release_step_execution_execution_stage_step', 'release_execution_id', 'stage_id', 'step_id', unique=True),
+        Index(
+            "ix_release_step_execution_execution_stage_step",
+            "release_execution_id",
+            "stage_id",
+            "step_id",
+            unique=True,
+        ),
     )
+
 
 class UISettings(Base):
     __tablename__ = "ui_settings"
@@ -62,28 +72,28 @@ class ScheduledRelease(Base):
     __tablename__ = "scheduled_release"
 
     id = Column(Integer, primary_key=True, autoincrement=True, nullable=False)
-    orchestrator_descriptor_id = Column(Integer, ForeignKey('orchestrator_descriptor.id'), nullable=False)
+    orchestrator_descriptor_id = Column(Integer, ForeignKey("orchestrator_descriptor.id"), nullable=False)
     name = Column(String, nullable=False)
     scheduled_at = Column(DateTime(timezone=True), nullable=False)
-    status = Column(String, nullable=False, default='pending')
-    release_execution_id = Column(Integer, ForeignKey('release_execution.id'), nullable=True)
+    status = Column(String, nullable=False, default="pending")
+    release_execution_id = Column(Integer, ForeignKey("release_execution.id"), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     created_by = Column(String, nullable=True)
     error_message = Column(Text, nullable=True)
 
-    __table_args__ = (
-        Index('ix_scheduled_release_name_status', 'name', 'status'),
-    )
+    __table_args__ = (Index("ix_scheduled_release_name_status", "name", "status"),)
 
 
 class ExecutionActionLog(Base):
     """Histórico de ações manuais tomadas sobre uma execução de release."""
+
     __tablename__ = "execution_action_log"
 
     id = Column(Integer, primary_key=True, autoincrement=True, nullable=False)
-    release_execution_id = Column(Integer, ForeignKey('release_execution.id'), nullable=False, index=True)
-    action = Column(String, nullable=False)  # approve | deny | retry_step | resolve_timeout_success | resolve_timeout_failure
-    step_execution_id = Column(Integer, ForeignKey('release_step_execution.id'), nullable=True)
+    release_execution_id = Column(Integer, ForeignKey("release_execution.id"), nullable=False, index=True)
+    # approve | deny | retry_step | resolve_timeout_success | resolve_timeout_failure
+    action = Column(String, nullable=False)
+    step_execution_id = Column(Integer, ForeignKey("release_step_execution.id"), nullable=True)
     stage_id = Column(String, nullable=True)
     step_id = Column(String, nullable=True)
     detail = Column(Text, nullable=True)
