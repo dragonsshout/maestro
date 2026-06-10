@@ -5,6 +5,7 @@ from maestro.integration.github import GithubIntegration
 from maestro.integration.jenkins import JenkinsIntegration
 from maestro.schemas.orchestrator import ReleaseConfigSchema
 from maestro.services.app_settings import get_integration_settings
+from maestro.services.job_path_resolver import resolve_job_path
 
 logger = get_logger(__name__)
 
@@ -62,11 +63,13 @@ class ReleaseValidationService:
                     )
 
                 # Validação do job no Jenkins
-                if step.job.type == "jenkins":
-                    job_exists = await self._check_jenkins_job(step.job.path)
+                job_type = step.job.type if step.job else "jenkins"
+                if job_type == "jenkins":
+                    job_path = resolve_job_path(step, config.spec)
+                    job_exists = await self._check_jenkins_job(job_path)
                     if not job_exists:
                         errors.append(
-                            f"Job '{step.job.path}' não encontrado no Jenkins (stage: '{stage.id}', step: '{step.id}')"
+                            f"Job '{job_path}' não encontrado no Jenkins (stage: '{stage.id}', step: '{step.id}')"
                         )
 
         if errors:

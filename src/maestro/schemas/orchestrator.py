@@ -7,8 +7,8 @@ from maestro.schemas.enums import ExecutionStatus
 
 
 class JobSchema(BaseModel):
-    type: str
-    path: str
+    type: str = "jenkins"
+    path: Optional[str] = None
 
 
 class StepSchema(BaseModel):
@@ -18,7 +18,7 @@ class StepSchema(BaseModel):
     critical: Optional[bool] = False
     requires_approval: Optional[bool] = False
     timeout_minutes: Optional[int] = None
-    job: JobSchema
+    job: Optional[JobSchema] = None
 
 
 class StageSchema(BaseModel):
@@ -32,6 +32,7 @@ class StrategySchema(BaseModel):
 
 class ReleaseSpecSchema(BaseModel):
     strategy: Optional[StrategySchema] = None
+    environment: Optional[str] = "PRD"
     stages: List[StageSchema]
 
 

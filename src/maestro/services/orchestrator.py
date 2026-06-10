@@ -12,6 +12,7 @@ from maestro.repositories.orchestrator import OrchestratorDescriptorRepository
 from maestro.schemas.enums import ExecutionStatus
 from maestro.schemas.orchestrator import DryRunResponse, DryRunStageResult, DryRunStepResult, ReleaseConfigSchema
 from maestro.services.jenkins import JenkinsService
+from maestro.services.job_path_resolver import resolve_job_path
 from maestro.services.validation import ReleaseValidationService
 
 logger = get_logger(__name__)
@@ -108,7 +109,8 @@ class OrchestratorService:
                         pr_found = False
 
                 try:
-                    jenkins_job_exists = await jenkins.job_exists(step.job.path)
+                    job_path = resolve_job_path(step, config.spec)
+                    jenkins_job_exists = await jenkins.job_exists(job_path)
                 except Exception:
                     jenkins_job_exists = False
 
@@ -127,7 +129,7 @@ class OrchestratorService:
                         pr_number=pr_number,
                         pr_mergeable_state=pr_mergeable_state,
                         pr_is_clean=pr_is_clean,
-                        jenkins_job_path=step.job.path,
+                        jenkins_job_path=resolve_job_path(step, config.spec),
                         jenkins_job_exists=jenkins_job_exists,
                     )
                 )
@@ -235,15 +237,18 @@ class OrchestratorService:
                 se = step_exec_map.get((stage.id, step.id))
 
                 if se and se.status == ExecutionStatus.WAITING_APPROVAL:
-                    if step.job.type == "jenkins":
+                    job_type = step.job.type if step.job else "jenkins"
+                    if job_type == "jenkins":
                         if not se.job_execution_correlation_id:
                             logger.warning(f"Step {se.id} aguardando aprovação mas sem correlation_id (build_number)")
                             continue
 
+                        job_path = resolve_job_path(step, config.spec)
+
                         # Chama o Jenkins para aprovar
                         try:
                             await self.jenkins_service.approve_job(
-                                job_path=step.job.path,
+                                job_path=job_path,
                                 build_number=se.job_execution_correlation_id,
                                 input_id=se.job_input_id,
                                 status=status,
@@ -254,10 +259,10 @@ class OrchestratorService:
                             approved_steps.append(se.id)
 
                         except Exception as e:
-                            logger.error(f"Erro ao aprovar job {step.job.path}: {e}")
-                            raise ValueError(f"Erro ao aprovar job {step.job.path}: {e}")
+                            logger.error(f"Erro ao aprovar job {job_path}: {e}")
+                            raise ValueError(f"Erro ao aprovar job {job_path}: {e}")
                     else:
-                        logger.warning(f"Aprovação manual para job_type {step.job.type} não suportada")
+                        logger.warning(f"Aprovação manual para job_type {job_type} não suportada")
 
         if approved_steps:
             execution.status = ExecutionStatus.IN_PROGRESS
@@ -425,12 +430,12 @@ class OrchestratorService:
         for stage in config.spec.stages:
             for step_def in stage.steps:
                 if stage.id == step.stage_id and step_def.id == step.step_id:
-                    return step_def.job.path
+                    return resolve_job_path(step_def, config.spec)
         return None
 
-    async def _trigger_step(self, step, se) -> ExecutionStatus:
+    async def _trigger_step(self, step, se, spec=None) -> ExecutionStatus:
         """Dispara um único step e retorna o status resultante (usa repo do request)."""
-        return await self._trigger_step_standalone(step, se, self.execution_repo)
+        return await self._trigger_step_standalone(step, se, self.execution_repo, spec)
 
     async def process_workflow(self, execution_id: int):
         """
@@ -505,7 +510,7 @@ class OrchestratorService:
                 # Dispara todos os steps PENDING do stage sequencialmente
                 if pending_to_trigger:
                     for step, se in pending_to_trigger:
-                        result = await self._trigger_step_standalone(step, se, exec_repo)
+                        result = await self._trigger_step_standalone(step, se, exec_repo, config.spec)
                         if result == ExecutionStatus.FAILURE:
                             execution.status = ExecutionStatus.FAILURE
                             await exec_repo.update_release_execution(execution)
@@ -532,27 +537,30 @@ class OrchestratorService:
                 execution.status = ExecutionStatus.SUCCESS
             await exec_repo.update_release_execution(execution)
 
-    async def _trigger_step_standalone(self, step, se, exec_repo) -> ExecutionStatus:
+    async def _trigger_step_standalone(self, step, se, exec_repo, spec=None) -> ExecutionStatus:
         """Dispara um único step usando o repo fornecido (para background tasks)."""
         se.status = ExecutionStatus.IN_PROGRESS
         await exec_repo.update_step_execution(se)
 
-        if step.job.type == "jenkins":
-            logger.info(f"Starting job of type {step.job.type} at path {step.job.path} for step {step.id}")
+        job_type = step.job.type if step.job else "jenkins"
+
+        if job_type == "jenkins":
+            job_path = resolve_job_path(step, spec) if spec else (step.job.path if step.job and step.job.path else None)
+            logger.info(f"Starting job of type {job_type} at path {job_path} for step {step.id}")
             try:
                 await self.jenkins_service.trigger_job(
-                    job_path=step.job.path, step_execution_id=se.id, release_branch=step.release
+                    job_path=job_path, step_execution_id=se.id, release_branch=step.release
                 )
                 return ExecutionStatus.IN_PROGRESS
 
             except Exception as e:
-                logger.error(f"Error starting jenkins job {step.job.path}: {e}")
+                logger.error(f"Error starting jenkins job {job_path}: {e}")
                 se.status = ExecutionStatus.FAILURE
                 se.message = str(e)
                 await exec_repo.update_step_execution(se)
                 return ExecutionStatus.FAILURE
         else:
-            logger.warning(f"Job type not supported yet: {step.job.type}")
+            logger.warning(f"Job type not supported yet: {job_type}")
             se.status = ExecutionStatus.SUCCESS
             await exec_repo.update_step_execution(se)
             return ExecutionStatus.SUCCESS

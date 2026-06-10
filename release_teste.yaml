@@ -9,18 +9,21 @@ spec:
     # "all-or-nothing": "Se um job critico falhar, todos os outros jobs que dependem dele não serão executados"
     # "fire-and-forget": "Se um job critico falhar, todos os outros jobs que dependem dele serão executados"
     type: "all-or-nothing"
+  # environment: se não informado, o padrão é "PRD"
+  # O job path será gerado como: job/<environment>/job/<repository>/job/<repository>
+  environment: DEV
   stages:
     - id: "deploy"
       steps:
+        # Step SEM job.path - será gerado automaticamente:
+        # job/DEV/job/api-teste/job/api-teste
         - id: deploy-testeA
           repository: api-teste
           release: "release/teste"
           critical: true
           requires_approval: true
-          job: 
-            type: jenkins
-            path: job/teste/job/testeA
 
+        # Step COM job.path explícito - usa o valor informado
         - id: deploy-testeB
           repository: api-teste
           release: "release/teste"
@@ -28,16 +31,14 @@ spec:
           requires_approval: true
           job: 
             type: jenkins
-            path: job/teste/job/testeB
+            path: job/custom/job/meu-path-customizado
 
-    - id: "deploy"
+    - id: "deploy-prd"
       steps:
+        # Step sem job e sem environment no spec usaria PRD por padrão,
+        # mas como environment: DEV está no spec, gera: job/DEV/job/api-teste/job/api-teste
         - id: deploy-testeC
           repository: api-teste
           release: "release/teste"
           critical: true
           requires_approval: true
-          job: 
-            type: jenkins
-            path: job/teste/job/testeC
-        
