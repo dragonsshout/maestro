@@ -84,6 +84,7 @@ class TestOrchestratorServiceAbortStep:
         svc.repository = AsyncMock()
         svc.execution_repo = AsyncMock()
         svc.jenkins_service = AsyncMock()
+        svc.job_path_registry_repo = AsyncMock()
         return svc
 
     async def test_abort_step_not_found(self, service):
@@ -228,6 +229,7 @@ class TestOrchestratorServiceApproveStep:
         svc.repository = AsyncMock()
         svc.execution_repo = AsyncMock()
         svc.jenkins_service = AsyncMock()
+        svc.job_path_registry_repo = AsyncMock()
         return svc
 
     async def test_approve_step_not_found(self, service):
@@ -340,6 +342,7 @@ class TestResolveJobPath:
         svc.repository = AsyncMock()
         svc.execution_repo = AsyncMock()
         svc.jenkins_service = AsyncMock()
+        svc.job_path_registry_repo = AsyncMock()
         return svc
 
     async def test_resolve_job_path_found(self, service):

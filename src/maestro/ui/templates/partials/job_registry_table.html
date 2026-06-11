@@ -1,0 +1,86 @@
+<div id="job-registry-container"
+     hx-get="/ui/job-registry/partials/list?page={{ current_page|default(1) }}&search={{ search_term|urlencode }}"
+     hx-trigger="refreshRegistry from:body"
+     hx-swap="outerHTML">
+
+    {% if discovery_success is defined and discovery_success %}
+    <div class="alert alert-success text-sm mb-4">
+        <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+        <span>{{ discovery_success }}</span>
+    </div>
+    {% endif %}
+
+    {% if discovery_error is defined and discovery_error %}
+    <div class="alert alert-error text-sm mb-4">
+        <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"/></svg>
+        <span>{{ discovery_error }}</span>
+    </div>
+    {% endif %}
+
+    {% if entries %}
+    <div class="overflow-x-auto">
+        <table class="table table-sm w-full text-sm">
+            <thead class="text-xs uppercase text-base-content/60">
+                <tr>
+                    <th>#</th>
+                    <th>Repositório</th>
+                    <th>Environment</th>
+                    <th>Domain</th>
+                    <th>Type</th>
+                    <th>Path</th>
+                    <th>Atualizado em</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for entry in entries %}
+                <tr class="hover:bg-base-200/70 transition-colors duration-200">
+                    <td class="font-mono text-base-content/50">{{ entry.id }}</td>
+                    <td class="font-semibold font-mono">{{ entry.repository }}</td>
+                    <td>
+                        <span class="badge badge-sm badge-outline">{{ entry.environment }}</span>
+                    </td>
+                    <td class="text-base-content/70">{{ entry.domain or '—' }}</td>
+                    <td>
+                        <span class="badge badge-sm badge-ghost">{{ entry.type }}</span>
+                    </td>
+                    <td class="font-mono text-xs text-base-content/60 max-w-xs truncate" title="{{ entry.path }}">{{ entry.path }}</td>
+                    <td class="text-base-content/60 text-xs">{{ entry.updated_at.strftime('%d/%m/%Y %H:%M') }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Paginação -->
+    {% if total_pages and total_pages > 1 %}
+    <div class="flex justify-center mt-6">
+        <div class="join">
+            <button class="join-item btn btn-sm"
+                    hx-get="/ui/job-registry/partials/list?page={{ current_page - 1 }}&search={{ search_term|urlencode }}"
+                    hx-target="#job-registry-container"
+                    hx-swap="outerHTML"
+                    {% if current_page <= 1 %}disabled{% endif %}>
+                «
+            </button>
+            <button class="join-item btn btn-sm cursor-default text-base font-medium">
+                Página {{ current_page }} de {{ total_pages }}
+            </button>
+            <button class="join-item btn btn-sm"
+                    hx-get="/ui/job-registry/partials/list?page={{ current_page + 1 }}&search={{ search_term|urlencode }}"
+                    hx-target="#job-registry-container"
+                    hx-swap="outerHTML"
+                    {% if current_page >= total_pages %}disabled{% endif %}>
+                »
+            </button>
+        </div>
+    </div>
+    {% endif %}
+
+    {% else %}
+    <div class="text-center py-10 text-base-content/50">
+        <svg class="w-12 h-12 mx-auto mb-3 text-base-content/30" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
+        <p class="text-sm">Nenhum job registrado.</p>
+        <p class="text-xs text-base-content/40 mt-1">Clique em <strong>Discovery</strong> para importar os jobs do Jenkins.</p>
+    </div>
+    {% endif %}
+</div>

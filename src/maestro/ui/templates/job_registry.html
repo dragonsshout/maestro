@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block title %}Job Registry — Maestro{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl">
+
+    <div class="flex items-center justify-between mb-8">
+        <h1 class="text-3xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary flex items-center">
+            <svg class="w-8 h-8 mr-2 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
+            Job Registry
+        </h1>
+    </div>
+
+    <!-- Discovery + Filtro -->
+    <div class="card bg-base-100/50 backdrop-blur-sm border border-base-300/50 shadow-lg shadow-base-300/10 mb-6 rounded-2xl">
+        <div class="card-body">
+            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div>
+                    <h2 class="card-title text-base flex items-center m-0">
+                        <svg class="w-5 h-5 mr-1 text-base-content/70" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4" /></svg>
+                        Cadastro de Job Paths
+                    </h2>
+                    <p class="text-sm text-base-content/60 mt-1">Repositórios mapeados para seus respectivos job paths no Jenkins.</p>
+                </div>
+                <div class="flex items-center gap-3">
+                    <!-- Search -->
+                    <div class="form-control">
+                        <div class="relative">
+                            <input type="text"
+                                   id="registry-search"
+                                   name="search"
+                                   placeholder="Filtrar por repositório..."
+                                   class="input input-sm input-bordered bg-base-200/50 pl-8"
+                                   hx-get="/ui/job-registry/partials/list"
+                                   hx-trigger="keyup changed delay:300ms, search"
+                                   hx-target="#job-registry-container"
+                                   hx-swap="outerHTML">
+                            <svg class="w-4 h-4 absolute left-2.5 top-2.5 text-base-content/40" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                        </div>
+                    </div>
+                    <!-- Discovery Button -->
+                    <button class="btn btn-primary btn-sm shadow-sm hover:scale-105 active:scale-95 transition-transform flex items-center gap-1"
+                            hx-post="/ui/job-registry/discover"
+                            hx-target="#job-registry-container"
+                            hx-swap="outerHTML"
+                            hx-confirm="Executar discovery de jobs no Jenkins? Isso irá sincronizar os registros com a estrutura atual do Jenkins."
+                            hx-indicator="#discovery-spinner">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                        Discovery
+                        <span id="discovery-spinner" class="htmx-indicator loading loading-spinner loading-xs"></span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabela de registros -->
+    <div class="card bg-base-100/50 backdrop-blur-sm border border-base-300/50 shadow-lg shadow-base-300/10 rounded-2xl">
+        <div class="card-body">
+            <div hx-get="/ui/job-registry/partials/list" hx-trigger="load" hx-swap="outerHTML">
+                <div class="flex justify-center py-12">
+                    <span class="loading loading-spinner loading-lg text-primary"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

@@ -1,4 +1,4 @@
-from sqlalchemy import Column, DateTime, ForeignKey, Index, Integer, String, Text
+from sqlalchemy import Column, DateTime, ForeignKey, Index, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import declarative_base
 from sqlalchemy.sql import func
 
@@ -98,3 +98,24 @@ class ExecutionActionLog(Base):
     step_id = Column(String, nullable=True)
     detail = Column(Text, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+
+
+
+class JobPathRegistry(Base):
+    """Cadastro de job paths por repositório e environment."""
+
+    __tablename__ = "job_path_registry"
+
+    id = Column(Integer, primary_key=True, autoincrement=True, nullable=False)
+    repository = Column(String, nullable=False)
+    environment = Column(String, nullable=False)
+    domain = Column(String, nullable=True)
+    type = Column(String, nullable=False, default="jenkins")
+    path = Column(String, nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+
+    __table_args__ = (
+        UniqueConstraint("repository", "environment", name="uq_job_path_registry_repository_environment"),
+    )

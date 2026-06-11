@@ -8,11 +8,12 @@ from maestro.database.models import OrchestratorDescriptor, ReleaseExecution, Re
 from maestro.integration.github import GithubIntegration
 from maestro.integration.jenkins import JenkinsIntegration
 from maestro.repositories.execution import ExecutionRepository
+from maestro.repositories.job_path_registry import JobPathRegistryRepository
 from maestro.repositories.orchestrator import OrchestratorDescriptorRepository
 from maestro.schemas.enums import ExecutionStatus
 from maestro.schemas.orchestrator import DryRunResponse, DryRunStageResult, DryRunStepResult, ReleaseConfigSchema
 from maestro.services.jenkins import JenkinsService
-from maestro.services.job_path_resolver import resolve_job_path
+from maestro.services.job_path_resolver import resolve_job_path_async
 from maestro.services.validation import ReleaseValidationService
 
 logger = get_logger(__name__)
@@ -24,10 +25,12 @@ class OrchestratorService:
         repository: OrchestratorDescriptorRepository = Depends(),
         execution_repo: ExecutionRepository = Depends(),
         jenkins_service: JenkinsService = Depends(),
+        job_path_registry_repo: JobPathRegistryRepository = Depends(),
     ):
         self.repository = repository
         self.execution_repo = execution_repo
         self.jenkins_service = jenkins_service
+        self.job_path_registry_repo = job_path_registry_repo
 
     async def save_descriptor(self, yaml_content: str) -> OrchestratorDescriptor:
         # Validação do formato YAML
@@ -109,7 +112,7 @@ class OrchestratorService:
                         pr_found = False
 
                 try:
-                    job_path = resolve_job_path(step, config.spec)
+                    job_path = await resolve_job_path_async(step, config.spec, self.job_path_registry_repo)
                     jenkins_job_exists = await jenkins.job_exists(job_path)
                 except Exception:
                     jenkins_job_exists = False
@@ -129,7 +132,7 @@ class OrchestratorService:
                         pr_number=pr_number,
                         pr_mergeable_state=pr_mergeable_state,
                         pr_is_clean=pr_is_clean,
-                        jenkins_job_path=resolve_job_path(step, config.spec),
+                        jenkins_job_path=await resolve_job_path_async(step, config.spec, self.job_path_registry_repo),
                         jenkins_job_exists=jenkins_job_exists,
                     )
                 )
@@ -243,7 +246,7 @@ class OrchestratorService:
                             logger.warning(f"Step {se.id} aguardando aprovação mas sem correlation_id (build_number)")
                             continue
 
-                        job_path = resolve_job_path(step, config.spec)
+                        job_path = await resolve_job_path_async(step, config.spec, self.job_path_registry_repo)
 
                         # Chama o Jenkins para aprovar
                         try:
@@ -430,7 +433,7 @@ class OrchestratorService:
         for stage in config.spec.stages:
             for step_def in stage.steps:
                 if stage.id == step.stage_id and step_def.id == step.step_id:
-                    return resolve_job_path(step_def, config.spec)
+                    return await resolve_job_path_async(step_def, config.spec, self.job_path_registry_repo)
         return None
 
     async def _trigger_step(self, step, se, spec=None) -> ExecutionStatus:
@@ -545,7 +548,11 @@ class OrchestratorService:
         job_type = step.job.type if step.job else "jenkins"
 
         if job_type == "jenkins":
-            job_path = resolve_job_path(step, spec) if spec else (step.job.path if step.job and step.job.path else None)
+            if spec:
+                registry_repo = JobPathRegistryRepository(db=exec_repo.db)
+                job_path = await resolve_job_path_async(step, spec, registry_repo)
+            else:
+                job_path = step.job.path if step.job and step.job.path else None
             logger.info(f"Starting job of type {job_type} at path {job_path} for step {step.id}")
             try:
                 await self.jenkins_service.trigger_job(

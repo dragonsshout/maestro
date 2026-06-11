@@ -11,6 +11,8 @@ Orquestrador de releases desenvolvido em Python com FastAPI. Gerencia pipelines 
 - Callbacks assíncronos para atualização de status (event-driven)
 - Suporte a aprovações manuais (waiting_approval)
 - Retry de steps com falha
+- **Job Path Registry** — cadastro centralizado de job paths com discovery automático do Jenkins
+- Agendamento de releases
 - Interface web com atualizações em tempo real (SSE + HTMX)
 - Registro de eventos por step (logs do Jenkins)
 
@@ -148,6 +150,14 @@ A API estará disponível em `http://localhost:8000`.
 | GET | `/ui/releases` | Listagem de releases cadastradas |
 | POST | `/ui/releases/upload` | Upload de YAML de release |
 
+### Job Path Registry
+
+| Método | Rota | Descrição |
+|--------|------|-----------|
+| GET | `/ui/job-registry/` | Página do Job Path Registry |
+| GET | `/ui/job-registry/partials/list` | Lista paginada com filtro por repositório |
+| POST | `/ui/job-registry/discover` | Discovery automático de jobs via Jenkins API |
+
 ## Descritor de Release (YAML)
 
 Exemplo de arquivo de configuração:
@@ -184,6 +194,38 @@ spec:
             path: /job/deploy-api
 ```
 
+## Job Path Registry
+
+O Maestro mantém um cadastro centralizado de job paths, eliminando a necessidade de definir `job.path` explicitamente no YAML de cada release.
+
+### Como funciona
+
+1. **Discovery automático**: Clique no botão "Discovery" na UI (`/ui/job-registry/`). O Maestro consulta a API do Jenkins e importa todos os jobs encontrados.
+2. **Resolução de path**: Ao executar uma release, o Maestro resolve o path do job com a seguinte prioridade:
+   - `job.path` explícito no YAML (sempre prevalece)
+   - Busca na tabela `job_path_registry` por (repository + environment)
+   - Fallback: padrão `job/<ENV>/job/<repo>/job/<repo>`
+
+### Tabela `job_path_registry`
+
+| Coluna | Descrição |
+|--------|-----------|
+| repository | Nome do repositório (ex: `api-gateway`) |
+| environment | Ambiente (ex: `PRD`, `UAT`) |
+| domain | Agrupamento lógico (ex: `risk-energy`) |
+| type | Tipo de job (default: `jenkins`) |
+| path | Caminho completo do job |
+
+**Chave única**: `(repository, environment)` — o discovery sempre opera como upsert.
+
+### Estrutura esperada no Jenkins
+
+O discovery extrai dados da árvore de folders do Jenkins:
+
+```
+<JENKINS_BASE_URL>/job/<ENVIRONMENT>/job/<DOMAIN>/job/<REPOSITORY>/
+```
+
 ## Tecnologias
 
 - **FastAPI** -- Framework web assincrono
@@ -206,9 +248,9 @@ uv run ruff check src/
 
 ## Testes
 
-O projeto conta com uma suíte de **194 testes** organizada em duas camadas:
+O projeto conta com uma suíte de **288 testes** organizada em duas camadas:
 
-### Testes Unitários (160 testes)
+### Testes Unitários (254 testes)
 
 Testam cada camada isoladamente com mocks, sem dependências externas.
 
@@ -226,6 +268,7 @@ uv run pytest tests/ -m "not integration"
 | `tests/test_integrations.py` | 29 | Clientes HTTP do GitHub e Jenkins |
 | `tests/test_dry_run.py` | 6 | Cenários de dry-run end-to-end |
 | `tests/test_main.py` | 1 | Health check |
+| `tests/test_job_path_registry.py` | 36 | Repository, service, resolver, e rotas do Job Registry |
 
 ### Testes de Integração (34 testes)
 
