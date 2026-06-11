@@ -272,9 +272,21 @@ class TestLoginLogoutFlow:
         self, client_unauthenticated: AsyncClient
     ):
         """Accessing /ui/ without auth redirects to /ui/login."""
-        response = await client_unauthenticated.get("/ui/", follow_redirects=False)
+        response = await client_unauthenticated.get(
+            "/ui/", follow_redirects=False, headers={"Accept": "text/html"}
+        )
         assert response.status_code == 302
         assert "/ui/login" in response.headers.get("location", "")
+
+    async def test_unauthenticated_api_request_returns_401_json(
+        self, client_unauthenticated: AsyncClient
+    ):
+        """API requests without auth return 401 JSON instead of redirect."""
+        response = await client_unauthenticated.get(
+            "/ui/", follow_redirects=False, headers={"Accept": "application/json"}
+        )
+        assert response.status_code == 401
+        assert response.json() == {"detail": "Not authenticated"}
 
 
 # ===========================================================================
@@ -393,7 +405,9 @@ class TestAuthorizationEnforcement:
             "/ui/change-password",
         ]
         for route in routes_to_check:
-            response = await client_unauthenticated.get(route, follow_redirects=False)
+            response = await client_unauthenticated.get(
+                route, follow_redirects=False, headers={"Accept": "text/html"}
+            )
             assert response.status_code == 302, f"Expected 302 for {route}, got {response.status_code}"
             assert "/ui/login" in response.headers.get("location", ""), (
                 f"Expected redirect to /ui/login for {route}"
@@ -642,7 +656,7 @@ class TestUserManagementRoutes:
     ):
         """Unauthenticated access to change-password redirects to login."""
         response = await client_unauthenticated.get(
-            "/ui/change-password", follow_redirects=False
+            "/ui/change-password", follow_redirects=False, headers={"Accept": "text/html"}
         )
         assert response.status_code == 302
         assert "/ui/login" in response.headers.get("location", "")

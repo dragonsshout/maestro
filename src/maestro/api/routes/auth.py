@@ -5,6 +5,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
 from maestro.auth.dependencies import can_admin, get_current_user
+from maestro.config.settings import settings
 from maestro.database.models import User
 from maestro.repositories.auth import GroupRepository, UserRepository
 from maestro.services.auth import AuthService
@@ -44,6 +45,7 @@ async def login_submit(
         key="maestro_session",
         value=token,
         httponly=True,
+        secure=settings.environment != "local",
         samesite="lax",
         max_age=86400,  # 24 hours
     )
@@ -114,6 +116,8 @@ async def create_user(
     error = None
     if not username or not password:
         error = "Usuario e senha sao obrigatorios."
+    elif len(password) < 4:
+        error = "A senha deve ter pelo menos 4 caracteres."
     else:
         existing = await user_repo.get_user_by_username(username)
         if existing:
@@ -194,6 +198,35 @@ async def toggle_user_active(
     user = await user_repo.get_user_by_id(user_id)
     if not user:
         raise HTTPException(status_code=404, detail="Usuario nao encontrado.")
+
+    # Prevent deactivating the last active Administrator
+    if user.is_active:
+        user_groups = await user_repo.get_user_groups(user_id)
+        is_admin = any(g.name == "Administrators" for g in user_groups)
+        if is_admin:
+            all_users = await user_repo.get_all_users()
+            active_admin_count = 0
+            for u in all_users:
+                if u.is_active and u.id != user_id:
+                    u_groups = await user_repo.get_user_groups(u.id)
+                    if any(g.name == "Administrators" for g in u_groups):
+                        active_admin_count += 1
+            if active_admin_count == 0:
+                users = await user_repo.get_all_users()
+                all_groups = await group_repo.get_all_groups()
+                users_with_groups = []
+                for u in users:
+                    ug = await user_repo.get_user_groups(u.id)
+                    users_with_groups.append({"user": u, "groups": ug})
+                return templates.TemplateResponse(
+                    request,
+                    "partials/users_table.html",
+                    {
+                        "users_with_groups": users_with_groups,
+                        "all_groups": all_groups,
+                        "error": "Nao e possivel desativar o ultimo Administrador ativo.",
+                    },
+                )
 
     user.is_active = not user.is_active
     await user_repo.update_user(user)

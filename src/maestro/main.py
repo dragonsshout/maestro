@@ -5,7 +5,7 @@ from contextlib import asynccontextmanager
 
 import uvicorn
 from fastapi import FastAPI, Request
-from fastapi.responses import RedirectResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 
 from maestro.api.routes.auth import router as auth_router
 from maestro.api.routes.callback import router as callback_router
@@ -72,7 +72,7 @@ async def not_authenticated_handler(request: Request, exc: NotAuthenticatedExcep
     accept = request.headers.get("accept", "")
     if "text/html" in accept:
         return RedirectResponse(url="/ui/login", status_code=302)
-    return RedirectResponse(url="/ui/login", status_code=302)
+    return JSONResponse(status_code=401, content={"detail": "Not authenticated"})
 
 
 app.include_router(auth_router)
