@@ -21,5 +21,7 @@ class Settings(BaseSettings):
     github_organization: str = Field(default="my-org")
     github_token: Optional[str] = Field(default=None)
 
+    secret_key: str = Field(default="change-me-in-production", validation_alias="SECRET_KEY")
+
 
 settings = Settings()

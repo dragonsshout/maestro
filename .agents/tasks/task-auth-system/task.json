@@ -1,0 +1,7 @@
+{
+  "task_id": "task-auth-system",
+  "task_description": "Implement authentication and authorization system for Maestro with username/password login, group-based permissions (Administrators, Viewers, Approver, Operators, Developers), user management UI, and route protection.",
+  "status": "in_progress",
+  "feature_order": ["FEAT-001", "FEAT-002", "FEAT-003"],
+  "blocked_reason": null
+}

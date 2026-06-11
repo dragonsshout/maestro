@@ -1,0 +1,24 @@
+{
+  "id": "FEAT-003",
+  "type": "feat",
+  "description": "Add unit tests for the authentication and authorization system covering: auth service (login, password hashing, session management), auth dependencies (permission checks, cookie parsing), auth routes (login/logout, user CRUD, change password), and authorization enforcement (group-based access control).",
+  "status": "pending",
+  "steps": [
+    "Create tests/test_auth.py with tests for: 1) AuthService.authenticate with valid/invalid credentials, 2) password hashing and verification, 3) user creation with group assignment, 4) password change, 5) get_current_user dependency behavior (valid cookie, invalid cookie, no cookie).",
+    "Add tests for authorization: 1) Administrators can access all routes, 2) Viewers cannot POST to action endpoints (execute, approve, retry, etc.), 3) Operators can execute/approve releases but cannot access settings or user management, 4) Approver can approve/deny but not execute, 5) unauthenticated requests to protected routes get redirected to login.",
+    "Add tests for user management routes: 1) GET /ui/users returns user list (admin only), 2) POST /ui/users creates a new user, 3) POST /ui/users/{id}/groups updates groups, 4) POST /ui/users/{id}/toggle-active toggles user active status, 5) POST /ui/change-password changes logged-in user's password.",
+    "Update tests/conftest.py to add fixtures for auth: mock_auth_user (returns a logged-in user mock), authenticated_client (async_client with a valid session cookie set), make_user factory, make_group factory."
+  ],
+  "acceptance_criteria": [
+    "All new tests pass with pytest tests/ -x --ignore=tests/integration",
+    "Tests cover happy path and error cases for auth service",
+    "Tests verify authorization enforcement (forbidden actions return appropriate responses)",
+    "No ruff lint errors in test files"
+  ],
+  "verification": [
+    "pytest tests/ -x --ignore=tests/integration",
+    "ruff check src/ tests/"
+  ],
+  "blocked_reason": null,
+  "findings": ""
+}

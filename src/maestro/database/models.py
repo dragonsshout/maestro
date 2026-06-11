@@ -1,4 +1,4 @@
-from sqlalchemy import Column, DateTime, ForeignKey, Index, Integer, String, Text, UniqueConstraint
+from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Index, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import declarative_base
 from sqlalchemy.sql import func
 
@@ -118,4 +118,36 @@ class JobPathRegistry(Base):
 
     __table_args__ = (
         UniqueConstraint("repository", "environment", name="uq_job_path_registry_repository_environment"),
+    )
+
+
+class User(Base):
+    __tablename__ = "user"
+
+    id = Column(Integer, primary_key=True, autoincrement=True, nullable=False)
+    username = Column(String, nullable=False, unique=True)
+    password_hash = Column(String, nullable=False)
+    full_name = Column(String, nullable=True)
+    is_active = Column(Boolean, nullable=False, server_default="1")
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+
+
+class Group(Base):
+    __tablename__ = "group"
+
+    id = Column(Integer, primary_key=True, autoincrement=True, nullable=False)
+    name = Column(String, nullable=False, unique=True)
+    description = Column(String, nullable=True)
+
+
+class UserGroupAssociation(Base):
+    __tablename__ = "user_group_association"
+
+    id = Column(Integer, primary_key=True, autoincrement=True, nullable=False)
+    user_id = Column(Integer, ForeignKey("user.id"), nullable=False)
+    group_id = Column(Integer, ForeignKey("group.id"), nullable=False)
+
+    __table_args__ = (
+        UniqueConstraint("user_id", "group_id", name="uq_user_group_association_user_group"),
     )

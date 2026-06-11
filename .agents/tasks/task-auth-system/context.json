@@ -1,0 +1,31 @@
+{
+  "project_type": "Python FastAPI web app with server-rendered UI (Jinja2 + HTMX + DaisyUI)",
+  "language": "Python 3.11+",
+  "build_system": "hatchling (pyproject.toml), pip install -e . for dev",
+  "test_framework": "pytest with pytest-asyncio, mock-based unit tests in tests/, fixtures in tests/conftest.py",
+  "build_command": "pip install -e '.[dev]'",
+  "test_command": "pytest tests/ -x --ignore=tests/integration",
+  "verification_instructions": "1. pip install -e '.[dev]' 2. DB_URL=sqlite+aiosqlite:///./test_auth.db pytest tests/ -x --ignore=tests/integration 3. ruff check src/",
+  "snapshot_or_generated_files": null,
+  "setup_instructions": "pip install -e '.[dev]' && export DB_URL=sqlite+aiosqlite:///./test_auth.db",
+  "environment_constraints": "Network available for pip installs. No Docker daemon needed. Use SQLite for testing.",
+  "contribution_requirements": "Follow existing patterns: repository layer for DB access, service layer for business logic, routes for HTTP. Migrations use CURRENT_TIMESTAMP (not now()). Alembic with render_as_batch for SQLite compat.",
+  "key_patterns": "1. FastAPI Depends() injection: routes -> services -> repositories -> AsyncSession. 2. SQLAlchemy declarative models in database/models.py. 3. Alembic migrations in migrations/versions/ with manual revision IDs. 4. UI routes return Jinja2 HTML via templates.TemplateResponse. 5. Settings use pydantic-settings. 6. Passwords can use existing cryptography dependency (bcrypt-like or passlib). 7. DaisyUI night theme with sidebar navigation in base.html.",
+  "relevant_files": [
+    "src/maestro/database/models.py",
+    "src/maestro/database/session.py",
+    "src/maestro/main.py",
+    "src/maestro/config/settings.py",
+    "src/maestro/config/crypto.py",
+    "src/maestro/api/routes/ui.py",
+    "src/maestro/api/routes/job_path_registry.py",
+    "src/maestro/repositories/settings.py",
+    "src/maestro/services/settings.py",
+    "src/maestro/ui/templates/base.html",
+    "migrations/env.py",
+    "migrations/versions/e5f6a7b8c9d0_create_job_path_registry.py",
+    "tests/conftest.py",
+    "pyproject.toml"
+  ],
+  "directory_structure": "src/maestro/ contains: main.py (app entrypoint), api/routes/ (HTTP endpoints), config/ (settings, crypto, logger), database/ (models, session), repositories/ (DB access), services/ (business logic), schemas/ (pydantic DTOs), ui/templates/ (Jinja2). migrations/versions/ has Alembic migrations. tests/ has pytest unit tests."
+}

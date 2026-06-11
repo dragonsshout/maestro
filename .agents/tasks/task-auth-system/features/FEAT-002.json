@@ -1,0 +1,39 @@
+{
+  "id": "FEAT-002",
+  "type": "feat",
+  "description": "Add login page UI, auth routes (login/logout), protect all existing routes with authentication, and add user management page with sidebar menu entry. Implement the full end-to-end auth flow: login form, session cookie creation, middleware/dependency protection on all existing UI and API routes, user management CRUD page (create users, assign groups, change own password), and sidebar entry.",
+  "status": "pending",
+  "steps": [
+    "Create src/maestro/ui/templates/login.html - a standalone login page (no sidebar, centered card) using DaisyUI night theme with username/password fields, submit button, and error message display. Use a POST form to /ui/login.",
+    "Create src/maestro/api/routes/auth.py with routes: GET /ui/login (render login page), POST /ui/login (authenticate and set session cookie, redirect to /ui/), POST /ui/logout (clear cookie, redirect to login). Register this router in main.py.",
+    "Protect all existing UI routes (ui.py, job_path_registry.py) by adding the get_current_user dependency. Routes that require auth should redirect to /ui/login if not authenticated. The /health endpoint and /callback/* endpoints should remain unprotected (callbacks come from Jenkins).",
+    "Add authorization checks based on group permissions: Viewers can only view (GET requests on UI). Approver gets Viewers + approve actions. Operators can do everything on releases page but are Viewers elsewhere. Administrators can do everything. Developers are Viewers for now. Implement this via dependencies that check group membership before allowing actions.",
+    "Create src/maestro/ui/templates/users.html - user management page with: table of users (username, full_name, groups, active status), create user form (modal or inline), edit user form (change groups, toggle active). Follow the DaisyUI table pattern from other templates.",
+    "Create src/maestro/ui/templates/partials/users_table.html - HTMX partial for the users list table.",
+    "Create src/maestro/ui/templates/change_password.html - page/modal for logged-in user to change their own password (current password + new password + confirm).",
+    "Add user management routes to src/maestro/api/routes/auth.py: GET /ui/users (list users page), GET /ui/users/partials/list (HTMX partial), POST /ui/users (create user), POST /ui/users/{id}/groups (update groups), POST /ui/users/{id}/toggle-active (toggle active), POST /ui/change-password (change own password).",
+    "Add 'Usuarios' menu entry in src/maestro/ui/templates/base.html sidebar (after Settings, before the closing </ul>), with a users/people icon SVG. Make it active when request.url.path starts with '/ui/users'.",
+    "Pass 'current_user' to all template contexts so templates can show the logged-in username in the navbar and conditionally show/hide action buttons based on permissions.",
+    "Add a logout button/link in the navbar area (top right) showing the current user's username with a dropdown or button to logout."
+  ],
+  "acceptance_criteria": [
+    "Visiting /ui/ without a session cookie redirects to /ui/login",
+    "Submitting valid admin/chang3m3 credentials on login page sets a cookie and redirects to /ui/",
+    "All existing UI pages are protected and require authentication",
+    "/callback/* and /health remain accessible without auth",
+    "Users page at /ui/users shows list of users with CRUD functionality",
+    "Logged-in user can change their password via /ui/change-password",
+    "Sidebar shows 'Usuarios' menu entry",
+    "Navbar shows current username with logout option",
+    "Authorization: Viewers cannot trigger actions (execute, approve, etc.)",
+    "Authorization: Operators can do release operations but not settings/user management",
+    "Authorization: Administrators can access everything including user management"
+  ],
+  "verification": [
+    "pytest tests/ -x --ignore=tests/integration",
+    "ruff check src/",
+    "DB_URL=sqlite+aiosqlite:///./test_auth.db python -m alembic upgrade head"
+  ],
+  "blocked_reason": null,
+  "findings": ""
+}

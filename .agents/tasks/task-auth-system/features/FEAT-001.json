@@ -1,0 +1,30 @@
+{
+  "id": "FEAT-001",
+  "type": "feat",
+  "description": "Add authentication and authorization models, migration, repository, service, and password hashing. Create User, Group, and UserGroupAssociation SQLAlchemy models. Create Alembic migration that creates the tables and seeds default groups (Administrators, Viewers, Approver, Operators, Developers) plus an admin user with password 'chang3m3' in the Administrators group. Implement password hashing using hashlib (sha256 or pbkdf2_hmac since the project already has stdlib available) or passlib with bcrypt. Add a new dependency 'passlib[bcrypt]' to pyproject.toml. Create auth repository and service layers for user/group CRUD.",
+  "status": "in_progress",
+  "steps": [
+    "Add 'passlib[bcrypt]' and 'python-jose[cryptography]' to the dependencies list in pyproject.toml",
+    "Add User, Group, and UserGroupAssociation models to src/maestro/database/models.py. User has: id (PK), username (unique, not null), password_hash (not null), full_name (nullable), is_active (bool, default true), created_at, updated_at. Group has: id (PK), name (unique, not null), description (nullable). UserGroupAssociation has: id (PK), user_id (FK user.id), group_id (FK group.id) with unique constraint on (user_id, group_id).",
+    "Create Alembic migration file migrations/versions/f6a7b8c9d0e1_create_auth_tables.py that: creates the 3 tables, seeds 5 groups (Administrators, Viewers, Approver, Operators, Developers), and creates admin user with hashed password 'chang3m3' in Administrators group. Use CURRENT_TIMESTAMP for datetime defaults. The migration depends on revision 'e5f6a7b8c9d0'.",
+    "Create src/maestro/repositories/auth.py with UserRepository and GroupRepository classes following the Depends(get_db) pattern from repositories/settings.py. Include methods: get_user_by_username, get_user_by_id, create_user, update_user, get_all_users, get_user_groups, set_user_groups, get_all_groups.",
+    "Create src/maestro/services/auth.py with AuthService class that handles: authenticate(username, password) -> User or None, create_user(username, password, full_name, group_ids), update_password(user_id, new_password), get_current_user_from_session, login/logout session management using signed cookies (itsdangerous or python-jose JWT stored in cookie). Include a SECRET_KEY setting in config/settings.py.",
+    "Add SECRET_KEY field to src/maestro/config/settings.py (default 'change-me-in-production', env var SECRET_KEY)",
+    "Create src/maestro/auth/__init__.py (empty) and src/maestro/auth/dependencies.py with FastAPI dependencies: get_current_user (extracts user from session cookie, redirects to /ui/login if not authenticated), require_group(group_name) (returns a dependency that checks if user is in group), permission checker functions for each permission level."
+  ],
+  "acceptance_criteria": [
+    "User, Group, UserGroupAssociation models exist in database/models.py",
+    "Alembic migration creates tables and seeds admin user + 5 groups",
+    "Running 'alembic upgrade head' with SQLite succeeds and creates the tables with seed data",
+    "AuthService can authenticate admin/chang3m3 and return user object",
+    "get_current_user dependency extracts user from cookie or redirects to login",
+    "Permission dependencies enforce group membership"
+  ],
+  "verification": [
+    "DB_URL=sqlite+aiosqlite:///./test_auth.db python -m alembic upgrade head",
+    "pytest tests/ -x --ignore=tests/integration -k 'auth'",
+    "ruff check src/"
+  ],
+  "blocked_reason": null,
+  "findings": ""
+}
