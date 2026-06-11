@@ -2,7 +2,7 @@
   "id": "FEAT-003",
   "type": "feat",
   "description": "Add unit tests for the authentication and authorization system covering: auth service (login, password hashing, session management), auth dependencies (permission checks, cookie parsing), auth routes (login/logout, user CRUD, change password), and authorization enforcement (group-based access control).",
-  "status": "pending",
+  "status": "in_progress",
   "steps": [
     "Create tests/test_auth.py with tests for: 1) AuthService.authenticate with valid/invalid credentials, 2) password hashing and verification, 3) user creation with group assignment, 4) password change, 5) get_current_user dependency behavior (valid cookie, invalid cookie, no cookie).",
     "Add tests for authorization: 1) Administrators can access all routes, 2) Viewers cannot POST to action endpoints (execute, approve, retry, etc.), 3) Operators can execute/approve releases but cannot access settings or user management, 4) Approver can approve/deny but not execute, 5) unauthenticated requests to protected routes get redirected to login.",
