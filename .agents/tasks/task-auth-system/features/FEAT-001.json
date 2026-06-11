@@ -2,7 +2,7 @@
   "id": "FEAT-001",
   "type": "feat",
   "description": "Add authentication and authorization models, migration, repository, service, and password hashing. Create User, Group, and UserGroupAssociation SQLAlchemy models. Create Alembic migration that creates the tables and seeds default groups (Administrators, Viewers, Approver, Operators, Developers) plus an admin user with password 'chang3m3' in the Administrators group. Implement password hashing using hashlib (sha256 or pbkdf2_hmac since the project already has stdlib available) or passlib with bcrypt. Add a new dependency 'passlib[bcrypt]' to pyproject.toml. Create auth repository and service layers for user/group CRUD.",
-  "status": "in_progress",
+  "status": "completed",
   "steps": [
     "Add 'passlib[bcrypt]' and 'python-jose[cryptography]' to the dependencies list in pyproject.toml",
     "Add User, Group, and UserGroupAssociation models to src/maestro/database/models.py. User has: id (PK), username (unique, not null), password_hash (not null), full_name (nullable), is_active (bool, default true), created_at, updated_at. Group has: id (PK), name (unique, not null), description (nullable). UserGroupAssociation has: id (PK), user_id (FK user.id), group_id (FK group.id) with unique constraint on (user_id, group_id).",
@@ -26,5 +26,5 @@
     "ruff check src/"
   ],
   "blocked_reason": null,
-  "findings": ""
+  "findings": "bcrypt 5.x is incompatible with passlib - pinned bcrypt<5.0.0 in pyproject.toml. pytest-asyncio needed to be installed separately (not auto-resolved from dev dependencies on first pip install). All 308 tests pass (288 existing + 20 new auth tests)."
 }
