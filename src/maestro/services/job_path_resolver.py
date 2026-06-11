@@ -4,17 +4,12 @@ Utilitário para resolver o job path do Jenkins.
 Regra de prioridade:
 1. Se o step define `job.path` explicitamente, usa o valor informado.
 2. Senão, busca na tabela job_path_registry pelo (repository + environment).
-3. Se não encontrar na tabela, retorna None (não gera mais path automático).
+3. Se não encontrar na tabela, fallback para o padrão job/<ENV>/job/<repo>/job/<repo>.
 
 ENVIRONMENT vem de `spec.environment` (default: "PRD").
 """
 
-from typing import Optional
-
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.future import select
-
-from maestro.database.models import JobPathRegistry
+from maestro.repositories.job_path_registry import JobPathRegistryRepository
 from maestro.schemas.orchestrator import ReleaseSpecSchema, StepSchema
 
 
@@ -42,10 +37,10 @@ def resolve_job_path(step: StepSchema, spec: ReleaseSpecSchema) -> str:
 
 
 async def resolve_job_path_async(
-    step: StepSchema, spec: ReleaseSpecSchema, session: AsyncSession
+    step: StepSchema, spec: ReleaseSpecSchema, registry_repo: JobPathRegistryRepository
 ) -> str:
     """
-    Resolve o job path efetivo para um step com consulta ao registry.
+    Resolve o job path efetivo para um step com consulta ao registry via repository.
 
     Prioridade:
     1. job.path explícito no YAML → usa diretamente.
@@ -54,7 +49,7 @@ async def resolve_job_path_async(
 
     :param step: Definição do step no YAML.
     :param spec: Spec da release (contém environment).
-    :param session: AsyncSession do SQLAlchemy para consulta ao banco.
+    :param registry_repo: Instância do JobPathRegistryRepository para consulta ao banco.
     :return: O path do job no Jenkins.
     """
     # 1. Path explícito no YAML sempre prevalece
@@ -64,14 +59,8 @@ async def resolve_job_path_async(
     environment = spec.environment or "PRD"
     repository = step.repository
 
-    # 2. Busca na tabela job_path_registry
-    result = await session.execute(
-        select(JobPathRegistry).where(
-            JobPathRegistry.repository == repository,
-            JobPathRegistry.environment == environment,
-        )
-    )
-    registry_entry = result.scalars().first()
+    # 2. Busca no registry via repository
+    registry_entry = await registry_repo.get_by_repository_and_environment(repository, environment)
 
     if registry_entry:
         return registry_entry.path
