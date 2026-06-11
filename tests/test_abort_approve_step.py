@@ -418,11 +418,23 @@ def mock_session():
 def app_override(mock_session):
     with patch("subprocess.run"):
         from maestro.main import app
+        from maestro.auth.dependencies import can_admin, can_approve, can_operate, can_view, get_current_user
+
+        mock_user = MagicMock()
+        mock_user.id = 1
+        mock_user.username = "admin"
+        mock_user.full_name = "Admin"
+        mock_user.is_active = True
 
         async def _get_db_override():
             yield mock_session
 
         app.dependency_overrides[get_db] = _get_db_override
+        app.dependency_overrides[get_current_user] = lambda: mock_user
+        app.dependency_overrides[can_view] = lambda: mock_user
+        app.dependency_overrides[can_approve] = lambda: mock_user
+        app.dependency_overrides[can_operate] = lambda: mock_user
+        app.dependency_overrides[can_admin] = lambda: mock_user
         yield app
         app.dependency_overrides.clear()
 

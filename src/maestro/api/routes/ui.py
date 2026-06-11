@@ -6,7 +6,8 @@ from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 from sse_starlette.sse import EventSourceResponse
 
-from maestro.database.models import ExecutionActionLog
+from maestro.auth.dependencies import can_admin, can_approve, can_operate, can_view
+from maestro.database.models import ExecutionActionLog, User
 from maestro.repositories.execution import ExecutionRepository
 from maestro.repositories.orchestrator import OrchestratorDescriptorRepository
 from maestro.schemas.enums import ExecutionStatus
@@ -28,12 +29,17 @@ router = APIRouter(prefix="/ui", tags=["UI"])
 
 
 @router.get("/", response_class=HTMLResponse)
-async def index(request: Request):
-    return templates.TemplateResponse(request, "index.html")
+async def index(request: Request, current_user: User = Depends(can_view)):
+    return templates.TemplateResponse(request, "index.html", {"current_user": current_user})
 
 
 @router.get("/partials/executions", response_class=HTMLResponse)
-async def partials_executions(request: Request, page: int = 1, service: UIService = Depends()):
+async def partials_executions(
+    request: Request,
+    page: int = 1,
+    service: UIService = Depends(),
+    current_user: User = Depends(can_view),
+):
     executions, total_pages = await service.get_executions_paginated(page=page, per_page=15)
     return templates.TemplateResponse(
         request,
@@ -42,6 +48,7 @@ async def partials_executions(request: Request, page: int = 1, service: UIServic
             "executions": executions,
             "current_page": page,
             "total_pages": total_pages,
+            "current_user": current_user,
         },
     )
 
@@ -52,6 +59,7 @@ async def execution_detail(
     execution_id: int,
     service: UIService = Depends(),
     settings_service: UISettingsService = Depends(),
+    current_user: User = Depends(can_view),
 ):
     result = await service.get_execution_with_stages(execution_id)
     if not result:
@@ -73,6 +81,7 @@ async def execution_detail(
             "jenkins_base_url": (jenkins_base_url or "").rstrip("/"),
             "github_base_url": (github_base_url or "").rstrip("/"),
             "github_organization": github_organization or "",
+            "current_user": current_user,
         },
     )
 
@@ -90,6 +99,7 @@ async def approve_execution(
     ui_service: UIService = Depends(),
     orchestrator_service: OrchestratorService = Depends(),
     execution_repo: ExecutionRepository = Depends(),
+    current_user: User = Depends(can_approve),
 ):
     result = await ui_service.get_execution_with_stages(execution_id)
     if not result:
@@ -129,6 +139,7 @@ async def execution_release_yaml(
     request: Request,
     execution_id: int,
     ui_service: UIService = Depends(),
+    current_user: User = Depends(can_view),
 ):
     result = await ui_service.get_execution_with_stages(execution_id)
     if not result:
@@ -144,7 +155,11 @@ async def execution_release_yaml(
 
 
 @router.get("/sse/execution/{execution_id}")
-async def sse_execution(execution_id: int, service: UIService = Depends()):
+async def sse_execution(
+    execution_id: int,
+    service: UIService = Depends(),
+    current_user: User = Depends(can_view),
+):
     return EventSourceResponse(service.execution_sse_stream(execution_id))
 
 
@@ -153,6 +168,7 @@ async def step_events(
     request: Request,
     correlation_id: int,
     execution_repo: ExecutionRepository = Depends(),
+    current_user: User = Depends(can_view),
 ):
     """Retorna modal com histórico de eventos de um step."""
     events = await execution_repo.get_events_by_correlation_id(correlation_id)
@@ -170,6 +186,7 @@ async def retry_step_ui(
     background_tasks: BackgroundTasks,
     orchestrator_service: OrchestratorService = Depends(),
     execution_repo: ExecutionRepository = Depends(),
+    current_user: User = Depends(can_operate),
 ):
     """Reexecuta um step que falhou via UI."""
     try:
@@ -205,6 +222,7 @@ async def resolve_timeout_ui(
     background_tasks: BackgroundTasks,
     execution_repo: ExecutionRepository = Depends(),
     orchestrator_service: OrchestratorService = Depends(),
+    current_user: User = Depends(can_operate),
 ):
     """Resolve um step em timeout marcando como sucesso ou falha."""
     step = await execution_repo.get_step_by_id(step_execution_id)
@@ -268,6 +286,7 @@ async def cancel_execution_ui(
     abort_jobs: bool = False,
     orchestrator_service: OrchestratorService = Depends(),
     execution_repo: ExecutionRepository = Depends(),
+    current_user: User = Depends(can_operate),
 ):
     """
     Cancela uma execução em andamento.
@@ -316,6 +335,7 @@ async def override_step_ui(
     background_tasks: BackgroundTasks,
     execution_repo: ExecutionRepository = Depends(),
     orchestrator_service: OrchestratorService = Depends(),
+    current_user: User = Depends(can_operate),
 ):
     """
     Permite ao operador forçar um step para sucesso, falha ou aguardando aprovação,
@@ -379,6 +399,7 @@ async def abort_step_ui(
     step_execution_id: int,
     orchestrator_service: OrchestratorService = Depends(),
     execution_repo: ExecutionRepository = Depends(),
+    current_user: User = Depends(can_operate),
 ):
     """Envia cancelamento forçado ao Jenkins e marca o step como ABORTED."""
     try:
@@ -419,6 +440,7 @@ async def approve_step_ui(
     background_tasks: BackgroundTasks,
     orchestrator_service: OrchestratorService = Depends(),
     execution_repo: ExecutionRepository = Depends(),
+    current_user: User = Depends(can_approve),
 ):
     """Aprova individualmente um step que está aguardando aprovação no Jenkins."""
     try:
@@ -453,12 +475,16 @@ async def approve_step_ui(
 
 
 @router.get("/settings", response_class=HTMLResponse)
-async def settings_page(request: Request, service: UISettingsService = Depends()):
+async def settings_page(
+    request: Request,
+    service: UISettingsService = Depends(),
+    current_user: User = Depends(can_admin),
+):
     current = await service.get_all_masked()
     return templates.TemplateResponse(
         request,
         "settings.html",
-        {"settings": current, "known_settings": KNOWN_SETTINGS},
+        {"settings": current, "known_settings": KNOWN_SETTINGS, "current_user": current_user},
     )
 
 
@@ -468,6 +494,7 @@ async def execute_release_ui(
     name: str,
     background_tasks: BackgroundTasks,
     orchestrator_service: OrchestratorService = Depends(),
+    current_user: User = Depends(can_operate),
 ):
     """Dispara execução de uma release pela UI."""
     try:
@@ -493,7 +520,11 @@ async def execute_release_ui(
 
 
 @router.post("/settings", response_class=HTMLResponse)
-async def settings_save(request: Request, service: UISettingsService = Depends()):
+async def settings_save(
+    request: Request,
+    service: UISettingsService = Depends(),
+    current_user: User = Depends(can_admin),
+):
     form = await request.form()
     data = {key: (form.get(key) or "").strip() or None for key in KNOWN_SETTINGS}
     await service.save(data)
@@ -501,7 +532,7 @@ async def settings_save(request: Request, service: UISettingsService = Depends()
     return templates.TemplateResponse(
         request,
         "settings.html",
-        {"settings": current, "known_settings": KNOWN_SETTINGS, "saved": True},
+        {"settings": current, "known_settings": KNOWN_SETTINGS, "saved": True, "current_user": current_user},
     )
 
 
@@ -512,6 +543,7 @@ async def partials_releases(
     search: str | None = None,
     orchestrator_repo: OrchestratorDescriptorRepository = Depends(),
     execution_repo: ExecutionRepository = Depends(),
+    current_user: User = Depends(can_view),
 ):
     per_page = 15
     skip = (page - 1) * per_page
@@ -534,6 +566,7 @@ async def partials_releases(
             "current_page": page,
             "total_pages": total_pages,
             "search_term": search or "",
+            "current_user": current_user,
         },
     )
 
@@ -541,10 +574,12 @@ async def partials_releases(
 @router.get("/releases", response_class=HTMLResponse)
 async def releases_page(
     request: Request,
+    current_user: User = Depends(can_view),
 ):
     return templates.TemplateResponse(
         request,
         "releases.html",
+        {"current_user": current_user},
     )
 
 
@@ -555,6 +590,7 @@ async def releases_upload(
     orchestrator_service: OrchestratorService = Depends(),
     orchestrator_repo: OrchestratorDescriptorRepository = Depends(),
     execution_repo: ExecutionRepository = Depends(),
+    current_user: User = Depends(can_operate),
 ):
     error = None
     if not file.filename.endswith((".yaml", ".yml")):
@@ -585,6 +621,7 @@ async def releases_upload(
             "active_executions": active_executions,
             "upload_error": error,
             "upload_success": error is None,
+            "current_user": current_user,
         },
     )
 
@@ -594,6 +631,7 @@ async def dry_run_release_ui(
     request: Request,
     name: str,
     orchestrator_service: OrchestratorService = Depends(),
+    current_user: User = Depends(can_operate),
 ):
     """Executa dry-run de uma release pela UI."""
     try:
@@ -622,6 +660,7 @@ async def release_descriptor_yaml(
     request: Request,
     descriptor_id: int,
     orchestrator_repo: OrchestratorDescriptorRepository = Depends(),
+    current_user: User = Depends(can_view),
 ):
     descriptor = await orchestrator_repo.get_by_id(descriptor_id)
     if not descriptor:
@@ -639,6 +678,7 @@ async def schedule_release_ui(
     name: str,
     scheduled_at: str = Form(...),
     scheduler_service: SchedulerService = Depends(),
+    current_user: User = Depends(can_operate),
 ):
     """Agenda a execucao de uma release pela UI."""
     from datetime import datetime as dt
@@ -671,8 +711,11 @@ async def schedule_release_ui(
 
 
 @router.get("/schedules", response_class=HTMLResponse)
-async def schedules_page(request: Request):
-    return templates.TemplateResponse(request, "schedules.html")
+async def schedules_page(
+    request: Request,
+    current_user: User = Depends(can_view),
+):
+    return templates.TemplateResponse(request, "schedules.html", {"current_user": current_user})
 
 
 @router.delete("/schedule/{schedule_id}", response_class=HTMLResponse)
@@ -682,6 +725,7 @@ async def cancel_schedule_ui(
     page: int = 1,
     search: str | None = None,
     scheduler_service: SchedulerService = Depends(),
+    current_user: User = Depends(can_operate),
 ):
     """Cancela um agendamento pela UI e retorna a lista atualizada."""
     cancel_error = None
@@ -715,6 +759,7 @@ async def partials_schedules(
     page: int = 1,
     search: str | None = None,
     scheduler_service: SchedulerService = Depends(),
+    current_user: User = Depends(can_view),
 ):
     """Retorna a lista de agendamentos (partial para HTMX)."""
     per_page = 15

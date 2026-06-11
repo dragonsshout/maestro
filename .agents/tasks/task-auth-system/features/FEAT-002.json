@@ -2,7 +2,7 @@
   "id": "FEAT-002",
   "type": "feat",
   "description": "Add login page UI, auth routes (login/logout), protect all existing routes with authentication, and add user management page with sidebar menu entry. Implement the full end-to-end auth flow: login form, session cookie creation, middleware/dependency protection on all existing UI and API routes, user management CRUD page (create users, assign groups, change own password), and sidebar entry.",
-  "status": "pending",
+  "status": "in_progress",
   "steps": [
     "Create src/maestro/ui/templates/login.html - a standalone login page (no sidebar, centered card) using DaisyUI night theme with username/password fields, submit button, and error message display. Use a POST form to /ui/login.",
     "Create src/maestro/api/routes/auth.py with routes: GET /ui/login (render login page), POST /ui/login (authenticate and set session cookie, redirect to /ui/), POST /ui/logout (clear cookie, redirect to login). Register this router in main.py.",

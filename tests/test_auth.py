@@ -183,36 +183,31 @@ class TestAuthService:
 
 
 class TestAuthDependencies:
-    async def test_get_current_user_no_cookie_api(self, seeded_session):
-        """API request without cookie should get 401."""
-        from unittest.mock import AsyncMock, MagicMock
+    async def test_get_current_user_no_cookie_raises(self, seeded_session):
+        """Request without cookie should raise NotAuthenticatedException."""
+        from unittest.mock import MagicMock
 
-        from fastapi import HTTPException
-
-        from maestro.auth.dependencies import get_current_user
+        from maestro.auth.dependencies import NotAuthenticatedException, get_current_user
 
         request = MagicMock()
         request.cookies = {}
         request.headers = {"accept": "application/json"}
 
-        with pytest.raises(HTTPException) as exc_info:
+        with pytest.raises(NotAuthenticatedException):
             await get_current_user(request, seeded_session)
-        assert exc_info.value.status_code == 401
 
-    async def test_get_current_user_no_cookie_ui(self, seeded_session):
-        """UI request without cookie should redirect to login."""
+    async def test_get_current_user_no_cookie_ui_raises(self, seeded_session):
+        """UI request without cookie should also raise NotAuthenticatedException."""
         from unittest.mock import MagicMock
 
-        from fastapi.responses import RedirectResponse
-
-        from maestro.auth.dependencies import get_current_user
+        from maestro.auth.dependencies import NotAuthenticatedException, get_current_user
 
         request = MagicMock()
         request.cookies = {}
         request.headers = {"accept": "text/html"}
 
-        result = await get_current_user(request, seeded_session)
-        assert isinstance(result, RedirectResponse)
+        with pytest.raises(NotAuthenticatedException):
+            await get_current_user(request, seeded_session)
 
     async def test_get_current_user_valid_cookie(self, seeded_session):
         """Valid JWT cookie should return user."""

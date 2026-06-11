@@ -10,6 +10,7 @@ import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 from httpx import AsyncClient, ASGITransport
 
+from maestro.auth.dependencies import can_admin, can_approve, can_operate, can_view, get_current_user
 from maestro.database.session import get_db
 from maestro.database.models import (
     OrchestratorDescriptor,
@@ -17,6 +18,7 @@ from maestro.database.models import (
     ReleaseStepExecution,
     UISettings,
     StepEvent,
+    User,
 )
 from maestro.schemas.enums import ExecutionStatus
 
@@ -108,15 +110,36 @@ def override_get_db(mock_db_session):
 
 
 # ---------------------------------------------------------------------------
+# Mock admin user for auth bypass in tests
+# ---------------------------------------------------------------------------
+
+@pytest.fixture
+def mock_admin_user():
+    """Returns a mock admin User to bypass auth in tests."""
+    user = MagicMock(spec=User)
+    user.id = 1
+    user.username = "admin"
+    user.full_name = "Admin User"
+    user.is_active = True
+    user.password_hash = "hashed"
+    return user
+
+
+# ---------------------------------------------------------------------------
 # FastAPI app with overrides
 # ---------------------------------------------------------------------------
 
 @pytest.fixture
-def app_with_db_override(override_get_db):
-    """Returns the FastAPI app with the DB dependency overridden."""
+def app_with_db_override(override_get_db, mock_admin_user):
+    """Returns the FastAPI app with the DB and auth dependencies overridden."""
     with patch("subprocess.run"):  # Prevent alembic migrations in lifespan
         from maestro.main import app
         app.dependency_overrides[get_db] = override_get_db
+        app.dependency_overrides[get_current_user] = lambda: mock_admin_user
+        app.dependency_overrides[can_view] = lambda: mock_admin_user
+        app.dependency_overrides[can_approve] = lambda: mock_admin_user
+        app.dependency_overrides[can_operate] = lambda: mock_admin_user
+        app.dependency_overrides[can_admin] = lambda: mock_admin_user
         yield app
         app.dependency_overrides.clear()
 

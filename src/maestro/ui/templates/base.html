@@ -323,6 +323,20 @@
         <div class="flex-1">
             <a href="/ui" class="text-xl font-bold tracking-wide text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary">🎼 Maestro</a>
         </div>
+        {% if current_user %}
+        <div class="flex items-center gap-3">
+            <a href="/ui/change-password" class="text-sm text-base-content/70 hover:text-base-content transition-colors">
+                <span class="font-medium">{{ current_user.username }}</span>
+            </a>
+            <form method="POST" action="/ui/logout" class="inline">
+                <button type="submit" class="btn btn-ghost btn-sm btn-square hover:bg-base-200/50" title="Sair">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                    </svg>
+                </button>
+            </form>
+        </div>
+        {% endif %}
     </div>
 
     <!-- Layout: sidebar + content -->
@@ -380,6 +394,16 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                         </svg>
                         <span class="nav-label">Configurações</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="/ui/users"
+                       class="nav-item flex items-center gap-3 transition-colors duration-200 hover:bg-base-200/70 {% if request.url.path.startswith('/ui/users') %}active shadow-sm{% endif %}"
+                       title="Usuarios">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                        </svg>
+                        <span class="nav-label">Usuarios</span>
                     </a>
                 </li>
             </ul>        </aside>

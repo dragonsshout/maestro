@@ -4,6 +4,8 @@ from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
+from maestro.auth.dependencies import can_admin, can_view
+from maestro.database.models import User
 from maestro.services.job_path_registry import JobPathRegistryService
 
 TEMPLATES_DIR = Path(__file__).parent.parent.parent / "ui" / "templates"
@@ -13,9 +15,12 @@ router = APIRouter(prefix="/ui/job-registry", tags=["Job Path Registry"])
 
 
 @router.get("/", response_class=HTMLResponse)
-async def job_registry_page(request: Request):
+async def job_registry_page(
+    request: Request,
+    current_user: User = Depends(can_view),
+):
     """Página principal do Job Path Registry."""
-    return templates.TemplateResponse(request, "job_registry.html")
+    return templates.TemplateResponse(request, "job_registry.html", {"current_user": current_user})
 
 
 @router.get("/partials/list", response_class=HTMLResponse)
@@ -24,6 +29,7 @@ async def job_registry_list(
     page: int = 1,
     search: str | None = None,
     service: JobPathRegistryService = Depends(),
+    current_user: User = Depends(can_view),
 ):
     """Retorna a lista paginada de registros (partial para HTMX)."""
     per_page = 15
@@ -45,6 +51,7 @@ async def job_registry_list(
 async def job_registry_discover(
     request: Request,
     service: JobPathRegistryService = Depends(),
+    current_user: User = Depends(can_admin),
 ):
     """Executa o discovery de jobs no Jenkins e retorna o resultado."""
     try:
