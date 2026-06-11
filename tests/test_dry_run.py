@@ -1,7 +1,9 @@
-from unittest.mock import AsyncMock, patch, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
+
 from fastapi.testclient import TestClient
+
 from maestro.main import app
-from maestro.schemas.github import PullRequestSchema, PullRequestDetailSchema
+from maestro.schemas.github import PullRequestDetailSchema, PullRequestSchema
 
 client = TestClient(app)
 

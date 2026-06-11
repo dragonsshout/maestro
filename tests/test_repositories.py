@@ -3,12 +3,10 @@ Tests for repository layer.
 Covers: OrchestratorDescriptorRepository, ExecutionRepository, UISettingsRepository.
 All DB interactions are mocked at the AsyncSession level.
 """
-import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock
 
-from maestro.repositories.orchestrator import OrchestratorDescriptorRepository
-from maestro.repositories.execution import ExecutionRepository
-from maestro.repositories.settings import UISettingsRepository
+import pytest
+
 from maestro.database.models import (
     OrchestratorDescriptor,
     ReleaseExecution,
@@ -16,8 +14,10 @@ from maestro.database.models import (
     StepEvent,
     UISettings,
 )
+from maestro.repositories.execution import ExecutionRepository
+from maestro.repositories.orchestrator import OrchestratorDescriptorRepository
+from maestro.repositories.settings import UISettingsRepository
 from maestro.schemas.enums import ExecutionStatus
-
 
 # ===========================================================================
 # OrchestratorDescriptorRepository

@@ -3,14 +3,15 @@ Tests for UI API routes.
 Covers: cancel execution, override step, resolve timeout, retry step via UI,
 execute release via UI, dry-run via UI, releases page, settings page.
 """
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
-from httpx import AsyncClient, ASGITransport
+
+import pytest
+from httpx import ASGITransport, AsyncClient
 
 from maestro.auth.dependencies import can_admin, can_approve, can_operate, can_view, get_current_user
+from maestro.database.models import ReleaseExecution, ReleaseStepExecution
 from maestro.database.session import get_db
 from maestro.schemas.enums import ExecutionStatus
-from maestro.database.models import ReleaseExecution, ReleaseStepExecution, ExecutionActionLog
 
 
 @pytest.fixture

@@ -10,8 +10,6 @@ Tests the settings CRUD flow with a real database:
 import pytest
 
 from maestro.database.models import UISettings
-from maestro.services.settings import KNOWN_SETTINGS
-
 
 pytestmark = pytest.mark.integration
 
@@ -38,8 +36,8 @@ class TestSettingsAPI:
         assert response.status_code == 200
 
         # Verify persisted in DB
-        from sqlalchemy.future import select
         from sqlalchemy.ext.asyncio import async_sessionmaker
+        from sqlalchemy.future import select
 
         sf = async_sessionmaker(bind=db_engine, expire_on_commit=False)
         async with sf() as session:
@@ -67,8 +65,8 @@ class TestSettingsAPI:
         )
 
         # Verify updated
-        from sqlalchemy.future import select
         from sqlalchemy.ext.asyncio import async_sessionmaker
+        from sqlalchemy.future import select
 
         sf = async_sessionmaker(bind=db_engine, expire_on_commit=False)
         async with sf() as session:
@@ -86,8 +84,8 @@ class TestSettingsAPI:
             headers={"content-type": "application/x-www-form-urlencoded"},
         )
 
-        from sqlalchemy.future import select
         from sqlalchemy.ext.asyncio import async_sessionmaker
+        from sqlalchemy.future import select
 
         sf = async_sessionmaker(bind=db_engine, expire_on_commit=False)
         async with sf() as session:
@@ -106,8 +104,8 @@ class TestSettingsAPI:
             headers={"content-type": "application/x-www-form-urlencoded"},
         )
 
-        from sqlalchemy.future import select
         from sqlalchemy.ext.asyncio import async_sessionmaker
+        from sqlalchemy.future import select
 
         sf = async_sessionmaker(bind=db_engine, expire_on_commit=False)
         async with sf() as session:
@@ -131,8 +129,8 @@ class TestSettingsAPI:
             headers={"content-type": "application/x-www-form-urlencoded"},
         )
 
-        from sqlalchemy.future import select
         from sqlalchemy.ext.asyncio import async_sessionmaker
+        from sqlalchemy.future import select
 
         sf = async_sessionmaker(bind=db_engine, expire_on_commit=False)
         async with sf() as session:
@@ -160,8 +158,8 @@ class TestSettingsIntegrationWithExecution:
         )
 
         # Verify settings are returned
-        from sqlalchemy.future import select
         from sqlalchemy.ext.asyncio import async_sessionmaker
+        from sqlalchemy.future import select
 
         sf = async_sessionmaker(bind=db_engine, expire_on_commit=False)
         async with sf() as session:

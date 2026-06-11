@@ -2,14 +2,14 @@
 Tests for the scheduler service layer and background task.
 Covers: SchedulerService, _process_due_schedules, and schedule API endpoints.
 """
-import pytest
+from datetime import datetime, timedelta, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
-from datetime import datetime, timezone, timedelta
 
-from maestro.services.scheduler import SchedulerService, _process_due_schedules
-from maestro.schemas.enums import ScheduledReleaseStatus
+import pytest
+
 from maestro.database.models import ScheduledRelease
-
+from maestro.schemas.enums import ScheduledReleaseStatus
+from maestro.services.scheduler import SchedulerService, _process_due_schedules
 
 # ===========================================================================
 # SchedulerService.schedule_release
@@ -261,8 +261,8 @@ class TestScheduleAPIRoutes:
     @pytest.fixture
     def app_with_scheduler_override(self, override_get_db, mock_scheduler_service):
         with patch("subprocess.run"):
-            from maestro.main import app
             from maestro.database.session import get_db
+            from maestro.main import app
 
             app.dependency_overrides[get_db] = override_get_db
             app.dependency_overrides[SchedulerService] = lambda: mock_scheduler_service
@@ -271,7 +271,7 @@ class TestScheduleAPIRoutes:
 
     @pytest.fixture
     async def client(self, app_with_scheduler_override):
-        from httpx import AsyncClient, ASGITransport
+        from httpx import ASGITransport, AsyncClient
         transport = ASGITransport(app=app_with_scheduler_override)
         async with AsyncClient(transport=transport, base_url="http://test") as c:
             yield c

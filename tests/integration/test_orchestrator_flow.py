@@ -1,4 +1,5 @@
 import re
+
 """
 Integration tests for the Orchestrator flow.
 
@@ -13,8 +14,7 @@ All tests use a real PostgreSQL database and mock external HTTP APIs.
 import pytest
 
 from maestro.schemas.enums import ExecutionStatus
-from tests.integration.conftest import SAMPLE_RELEASE_YAML, SAMPLE_RELEASE_YAML_MULTI_STAGE
-
+from tests.integration.conftest import SAMPLE_RELEASE_YAML
 
 pytestmark = [
     pytest.mark.integration,
@@ -373,9 +373,10 @@ class TestRetryStep:
         exec_id = exec_response.json()["release_execution_id"]
 
         # Get step ID from DB
-        from maestro.database.models import ReleaseStepExecution
-        from sqlalchemy.future import select
         from sqlalchemy.ext.asyncio import async_sessionmaker
+        from sqlalchemy.future import select
+
+        from maestro.database.models import ReleaseStepExecution
 
         sf = async_sessionmaker(bind=db_engine, expire_on_commit=False)
         async with sf() as session:
@@ -389,9 +390,10 @@ class TestRetryStep:
             step_id = step_row.id
 
         # Manually mark step as failure (simulate Jenkins failure callback)
-        from maestro.database.models import ReleaseStepExecution
-        from sqlalchemy.future import select
         from sqlalchemy.ext.asyncio import async_sessionmaker
+        from sqlalchemy.future import select
+
+        from maestro.database.models import ReleaseStepExecution
 
         sf = async_sessionmaker(bind=db_engine, expire_on_commit=False)
         async with sf() as session:

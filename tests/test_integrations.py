@@ -3,16 +3,15 @@ Tests for integration clients.
 Covers: GithubIntegration, JenkinsIntegration.
 Uses httpx mock responses to simulate external API calls.
 """
-import pytest
-import json
-from unittest.mock import AsyncMock, patch, MagicMock
+from unittest.mock import patch
+
 import httpx
+import pytest
 
 from maestro.integration.github import GithubIntegration
 from maestro.integration.jenkins import JenkinsIntegration
-from maestro.schemas.github import PullRequestSchema, PullRequestDetailSchema
+from maestro.schemas.github import PullRequestDetailSchema, PullRequestSchema
 from maestro.schemas.jenkins import JenkinsQueueItemSchema
-
 
 # ===========================================================================
 # GithubIntegration

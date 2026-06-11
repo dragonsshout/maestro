@@ -7,20 +7,19 @@ for full end-to-end testing.
 
 External APIs (Jenkins, GitHub) are mocked at the HTTP level via pytest-httpx.
 """
+import asyncio
 import os
 import re
 import subprocess
-import asyncio
 
 import pytest
 import pytest_asyncio
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
-from httpx import AsyncClient, ASGITransport
+from httpx import ASGITransport, AsyncClient
+from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from testcontainers.postgres import PostgresContainer
 
 from maestro.database.models import Base
 from maestro.database.session import get_db
-
 
 # ---------------------------------------------------------------------------
 # PostgreSQL container fixture (session-scoped via testcontainers)
@@ -131,7 +130,7 @@ async def app(db_engine):
     subprocess.run is patched to prevent Alembic from running in lifespan.
     process_workflow is patched to prevent background tasks from using different sessions.
     """
-    from unittest.mock import patch, AsyncMock
+    from unittest.mock import AsyncMock, patch
 
     session_factory = async_sessionmaker(bind=db_engine, expire_on_commit=False)
 

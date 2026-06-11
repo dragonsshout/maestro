@@ -3,13 +3,13 @@ Tests for the OrchestratorService.process_workflow state machine.
 Covers: pending->in_progress, step failure->execution failure, all success,
 waiting approval, timeout halts, and multi-stage progression.
 """
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from maestro.services.orchestrator import OrchestratorService
-from maestro.schemas.enums import ExecutionStatus
-from maestro.database.models import ReleaseExecution, ReleaseStepExecution
+import pytest
 
+from maestro.database.models import ReleaseExecution, ReleaseStepExecution
+from maestro.schemas.enums import ExecutionStatus
+from maestro.services.orchestrator import OrchestratorService
 from tests.conftest import SAMPLE_RELEASE_YAML, SAMPLE_RELEASE_YAML_MULTI_STAGE
 
 

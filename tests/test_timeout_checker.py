@@ -3,16 +3,14 @@ Tests for the timeout_checker background service.
 Covers: _check_timeouts logic - marking steps as TIMEOUT based on
 step-level and global timeout settings.
 """
-import pytest
+from datetime import datetime, timedelta, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
-from datetime import datetime, timezone, timedelta
 
-from maestro.services.timeout_checker import _check_timeouts
+import pytest
+
+from maestro.database.models import OrchestratorDescriptor, ReleaseExecution, ReleaseStepExecution
 from maestro.schemas.enums import ExecutionStatus
-from maestro.database.models import ReleaseStepExecution, ReleaseExecution, OrchestratorDescriptor
-
-from tests.conftest import SAMPLE_RELEASE_YAML
-
+from maestro.services.timeout_checker import _check_timeouts
 
 YAML_WITH_TIMEOUT = """\
 apiVersion: v1

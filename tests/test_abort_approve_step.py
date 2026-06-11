@@ -10,20 +10,18 @@ Covers:
 - POST /ui/step/{id}/abort (thin route test)
 - POST /ui/step/{id}/approve (thin route test)
 """
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
-from httpx import AsyncClient, ASGITransport
+
 import httpx
+import pytest
+from httpx import ASGITransport, AsyncClient
 
 from maestro.database.session import get_db
-from maestro.schemas.enums import ExecutionStatus
-from maestro.database.models import ReleaseExecution, ReleaseStepExecution, OrchestratorDescriptor
 from maestro.integration.jenkins import JenkinsIntegration
+from maestro.schemas.enums import ExecutionStatus
 from maestro.services.jenkins import JenkinsService
 from maestro.services.orchestrator import OrchestratorService
-
 from tests.conftest import SAMPLE_RELEASE_YAML
-
 
 # ===========================================================================
 # JenkinsIntegration.abort_build
@@ -417,8 +415,8 @@ def mock_session():
 @pytest.fixture
 def app_override(mock_session):
     with patch("subprocess.run"):
-        from maestro.main import app
         from maestro.auth.dependencies import can_admin, can_approve, can_operate, can_view, get_current_user
+        from maestro.main import app
 
         mock_user = MagicMock()
         mock_user.id = 1

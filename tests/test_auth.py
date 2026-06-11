@@ -1,7 +1,6 @@
 """Tests for authentication and authorization feature."""
 
 import pytest
-from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from maestro.database.models import Base, Group, User, UserGroupAssociation

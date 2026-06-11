@@ -3,22 +3,20 @@ Tests for service layer.
 Covers: OrchestratorService, JenkinsService, ReleaseValidationService,
 UISettingsService, UIService.
 """
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch, PropertyMock
-
-from maestro.services.orchestrator import OrchestratorService
-from maestro.services.jenkins import JenkinsService
-from maestro.services.validation import ReleaseValidationService
-from maestro.services.settings import UISettingsService, KNOWN_SETTINGS
-from maestro.services.ui import UIService, _assemble_stages, _build_snapshot
-from maestro.schemas.enums import ExecutionStatus
-from maestro.schemas.orchestrator import ReleaseConfigSchema
-from maestro.schemas.github import PullRequestSchema, PullRequestDetailSchema
-from maestro.database.models import ReleaseExecution, ReleaseStepExecution
-from tests.conftest import SAMPLE_RELEASE_YAML, SAMPLE_RELEASE_YAML_MULTI_STAGE
-
 import yaml
 
+from maestro.schemas.enums import ExecutionStatus
+from maestro.schemas.github import PullRequestDetailSchema, PullRequestSchema
+from maestro.schemas.orchestrator import ReleaseConfigSchema
+from maestro.services.jenkins import JenkinsService
+from maestro.services.orchestrator import OrchestratorService
+from maestro.services.settings import KNOWN_SETTINGS, UISettingsService
+from maestro.services.ui import UIService, _assemble_stages, _build_snapshot
+from maestro.services.validation import ReleaseValidationService
+from tests.conftest import SAMPLE_RELEASE_YAML
 
 # ===========================================================================
 # OrchestratorService

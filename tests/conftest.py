@@ -6,22 +6,21 @@ Provides:
 - FastAPI TestClient with dependency overrides
 - Common test data (sample YAML, model factories)
 """
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
-from httpx import AsyncClient, ASGITransport
+
+import pytest
+from httpx import ASGITransport, AsyncClient
 
 from maestro.auth.dependencies import can_admin, can_approve, can_operate, can_view, get_current_user
-from maestro.database.session import get_db
 from maestro.database.models import (
     OrchestratorDescriptor,
     ReleaseExecution,
     ReleaseStepExecution,
-    UISettings,
     StepEvent,
     User,
 )
+from maestro.database.session import get_db
 from maestro.schemas.enums import ExecutionStatus
-
 
 # ---------------------------------------------------------------------------
 # Sample YAML for tests
