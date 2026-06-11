@@ -2,7 +2,7 @@
   "id": "FEAT-003",
   "type": "feat",
   "description": "Add unit tests for the authentication and authorization system covering: auth service (login, password hashing, session management), auth dependencies (permission checks, cookie parsing), auth routes (login/logout, user CRUD, change password), and authorization enforcement (group-based access control).",
-  "status": "in_progress",
+  "status": "completed",
   "steps": [
     "Create tests/test_auth.py with tests for: 1) AuthService.authenticate with valid/invalid credentials, 2) password hashing and verification, 3) user creation with group assignment, 4) password change, 5) get_current_user dependency behavior (valid cookie, invalid cookie, no cookie).",
     "Add tests for authorization: 1) Administrators can access all routes, 2) Viewers cannot POST to action endpoints (execute, approve, retry, etc.), 3) Operators can execute/approve releases but cannot access settings or user management, 4) Approver can approve/deny but not execute, 5) unauthenticated requests to protected routes get redirected to login.",
@@ -20,5 +20,5 @@
     "ruff check src/ tests/"
   ],
   "blocked_reason": null,
-  "findings": ""
+  "findings": "Added 31 tests in tests/test_auth_routes.py covering login/logout flow, authorization enforcement (admin, viewer, operator, approver roles), and user management routes. All 339 tests pass (308 existing + 31 new). Ruff check passes clean for both src/ and the new test file. Used the same httpx AsyncClient + ASGITransport pattern from conftest.py with dependency overrides for different permission levels."
 }
