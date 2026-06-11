@@ -137,8 +137,10 @@ class TestJobSchema:
         assert job.path == "job/deploy"
 
     def test_missing_fields(self):
-        with pytest.raises(ValidationError):
-            JobSchema(type="jenkins")
+        """path is optional — only type without path should still be valid."""
+        job = JobSchema(type="jenkins")
+        assert job.type == "jenkins"
+        assert job.path is None
 
 
 class TestStepSchema:

@@ -13,7 +13,7 @@ from maestro.repositories.orchestrator import OrchestratorDescriptorRepository
 from maestro.schemas.enums import ExecutionStatus
 from maestro.schemas.orchestrator import DryRunResponse, DryRunStageResult, DryRunStepResult, ReleaseConfigSchema
 from maestro.services.jenkins import JenkinsService
-from maestro.services.job_path_resolver import resolve_job_path, resolve_job_path_async
+from maestro.services.job_path_resolver import resolve_job_path_async
 from maestro.services.validation import ReleaseValidationService
 
 logger = get_logger(__name__)

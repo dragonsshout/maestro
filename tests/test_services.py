@@ -31,6 +31,7 @@ class TestOrchestratorServiceSaveDescriptor:
         svc.repository = AsyncMock()
         svc.execution_repo = AsyncMock()
         svc.jenkins_service = AsyncMock()
+        svc.job_path_registry_repo = AsyncMock()
         return svc
 
     @patch("maestro.services.orchestrator.ReleaseValidationService")
@@ -74,6 +75,7 @@ class TestOrchestratorServiceDryRun:
         svc.repository = AsyncMock()
         svc.execution_repo = AsyncMock()
         svc.jenkins_service = AsyncMock()
+        svc.job_path_registry_repo = AsyncMock()
         return svc
 
     @patch("maestro.services.app_settings.get_integration_settings")
@@ -181,6 +183,7 @@ class TestOrchestratorServiceExecuteRelease:
         svc.repository = AsyncMock()
         svc.execution_repo = AsyncMock()
         svc.jenkins_service = AsyncMock()
+        svc.job_path_registry_repo = AsyncMock()
         return svc
 
     @patch("maestro.services.app_settings.get_integration_settings")
@@ -272,6 +275,7 @@ class TestOrchestratorServiceCancelExecution:
         svc.repository = AsyncMock()
         svc.execution_repo = AsyncMock()
         svc.jenkins_service = AsyncMock()
+        svc.job_path_registry_repo = AsyncMock()
         return svc
 
     async def test_cancel_not_found(self, service):
@@ -379,6 +383,7 @@ class TestOrchestratorServiceRetryStep:
         svc.repository = AsyncMock()
         svc.execution_repo = AsyncMock()
         svc.jenkins_service = AsyncMock()
+        svc.job_path_registry_repo = AsyncMock()
         return svc
 
     async def test_retry_step_not_found(self, service):
@@ -423,6 +428,7 @@ class TestOrchestratorServiceApproveRelease:
         svc.repository = AsyncMock()
         svc.execution_repo = AsyncMock()
         svc.jenkins_service = AsyncMock()
+        svc.job_path_registry_repo = AsyncMock()
         return svc
 
     async def test_approve_not_found(self, service):

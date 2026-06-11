@@ -20,6 +20,7 @@ def service():
     svc.repository = AsyncMock()
     svc.execution_repo = AsyncMock()
     svc.jenkins_service = AsyncMock()
+    svc.job_path_registry_repo = AsyncMock()
     return svc
 
 

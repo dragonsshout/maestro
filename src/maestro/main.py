@@ -7,9 +7,9 @@ import uvicorn
 from fastapi import FastAPI
 
 from maestro.api.routes.callback import router as callback_router
+from maestro.api.routes.job_path_registry import router as job_registry_router
 from maestro.api.routes.orchestrator import router as orchestrator_router
 from maestro.api.routes.ui import router as ui_router
-from maestro.api.routes.job_path_registry import router as job_registry_router
 from maestro.config.logger import get_logger
 
 logger = get_logger(__name__)

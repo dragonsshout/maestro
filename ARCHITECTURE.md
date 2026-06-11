@@ -49,28 +49,37 @@ src/maestro/
 ├── api/routes/
 │   ├── orchestrator.py                  # REST: /orchestrator/* (CRUD, execute, dry-run, retry, approve)
 │   ├── callback.py                      # REST: /callback/* (release callback, event callback)
+│   ├── job_path_registry.py             # HTML: /ui/job-registry/* (cadastro de job paths)
 │   └── ui.py                            # HTML: /ui/* (dashboard HTMX + SSE)
 ├── config/
 │   ├── settings.py                      # Pydantic BaseSettings (DB, Jenkins, GitHub)
+│   ├── crypto.py                        # Criptografia de valores sensíveis
 │   └── logger.py                        # JSON structured logger
 ├── database/
-│   ├── models.py                        # SQLAlchemy ORM (5 modelos)
+│   ├── models.py                        # SQLAlchemy ORM (8 modelos)
 │   └── session.py                       # AsyncSession factory (asyncpg ou aiosqlite, detectado via DB_URL)
 ├── repositories/
 │   ├── orchestrator.py                  # CRUD para OrchestratorDescriptor
 │   ├── execution.py                     # CRUD para ReleaseExecution, ReleaseStepExecution, StepEvent
+│   ├── job_path_registry.py             # CRUD + upsert para JobPathRegistry
+│   ├── schedule.py                      # CRUD para ScheduledRelease
 │   └── settings.py                      # CRUD para UISettings (upsert dialect-aware: PostgreSQL/SQLite)
 ├── schemas/
 │   ├── enums.py                         # ExecutionStatus enum
 │   ├── orchestrator.py                  # ReleaseConfigSchema (YAML), DTOs, DryRun responses
 │   ├── callback.py                      # ReleaseCallbackSchema, StepEventSchema
 │   ├── github.py                        # PullRequestSchema, PullRequestDetailSchema
-│   └── jenkins.py                       # JenkinsQueueItemSchema, JenkinsPendingInputSchema
+│   ├── jenkins.py                       # JenkinsQueueItemSchema, JenkinsPendingInputSchema
+│   └── job_path_registry.py             # JobPathRegistryResponse, DiscoveryResponse
 ├── services/
 │   ├── orchestrator.py                  # Maquina de estados (process_workflow, execute, approve, retry)
 │   ├── jenkins.py                       # JenkinsService (trigger, poll correlation, approve)
+│   ├── job_path_registry.py             # JobPathRegistryService (discovery Jenkins, upsert)
+│   ├── job_path_resolver.py             # Resolucao de job path (registry > fallback)
 │   ├── validation.py                    # ReleaseValidationService (pre-save branch/job checks)
 │   ├── timeout_checker.py              # Background loop - marca steps com TIMEOUT
+│   ├── scheduler.py                     # SchedulerService (agendamento de releases)
+│   ├── app_settings.py                  # IntegrationSettings (banco + fallback .env)
 │   ├── settings.py                      # UISettingsService (CRUD + constantes de settings)
 │   └── ui.py                            # UIService (views de execucao, SSE stream, stages)
 ├── integration/
@@ -78,16 +87,19 @@ src/maestro/
 │   ├── jenkins.py                       # HTTP client - trigger, queue poll, approve, job_exists
 │   └── github.py                        # HTTP client - branch_exists, PR lookup, PR details
 └── ui/templates/
-    ├── base.html                        # Layout base
+    ├── base.html                        # Layout base (sidebar com Job Registry)
     ├── index.html                       # Dashboard principal
     ├── execution_detail.html            # Detalhes de uma execucao
+    ├── job_registry.html                # Pagina de Job Path Registry
     ├── releases.html                    # Lista de releases
+    ├── schedules.html                   # Pagina de agendamentos
     ├── settings.html                    # Pagina de configuracoes
     └── partials/                         # Fragmentos HTMX
         ├── approve_result.html
         ├── dry_run_result.html
         ├── execute_result.html
         ├── executions_table.html
+        ├── job_registry_table.html      # Tabela paginada do Job Registry
         ├── release_yaml_modal.html
         ├── resolve_timeout_result.html
         ├── retry_result.html
@@ -101,13 +113,19 @@ Diretorio de testes:
 ```
 tests/
 ├── conftest.py                          # Fixtures globais (mocks de banco, app de teste)
+├── test_abort_approve_step.py
 ├── test_dry_run.py
 ├── test_integrations.py
+├── test_job_path_registry.py            # Job Path Registry (repo, service, resolver, routes)
 ├── test_main.py
+├── test_process_workflow.py
 ├── test_repositories.py
 ├── test_routes.py
+├── test_scheduler.py
 ├── test_schemas.py
 ├── test_services.py
+├── test_timeout_checker.py
+├── test_ui_routes.py
 └── integration/                         # Testes com Testcontainers (PostgreSQL real)
     ├── conftest.py
     ├── test_callback_flow.py
@@ -206,7 +224,7 @@ A deteccao ocorre em tres pontos:
 - **Timezone**: colunas `DateTime(timezone=True)` armazenam timestamps como texto ISO sem offset; a aplicacao deve operar em UTC
 - **Concorrencia**: para multiplos workers uvicorn ou alta carga de escrita, PostgreSQL e fortemente recomendado
 
-### 5.1 Modelos (5 tabelas)
+### 5.1 Modelos (8 tabelas)
 
 #### `orchestrator_descriptor`
 Armazena os descritores YAML de release.
@@ -268,6 +286,22 @@ Log de eventos (mensagens) recebidos para cada step.
 | message | Text | NOT NULL |
 | created_at | DateTime(tz) | server_default=now() |
 
+#### `job_path_registry`
+Cadastro de job paths por repositorio e environment. Permite que o YAML de release nao precise definir `job.path` explicitamente.
+
+| Coluna | Tipo | Restricoes |
+|--------|------|-----------|
+| id | Integer | PK, autoincrement |
+| repository | String | NOT NULL |
+| environment | String | NOT NULL |
+| domain | String | nullable |
+| type | String | NOT NULL, default="jenkins" |
+| path | String | NOT NULL |
+| created_at | DateTime(tz) | server_default=now() |
+| updated_at | DateTime(tz) | server_default=now(), onupdate=now() |
+
+**Unique Constraint**: `uq_job_path_registry_repository_environment` (repository, environment)
+
 ### 5.2 Relacionamentos
 
 ```
@@ -292,7 +326,8 @@ migrations/versions/
 ├── a1b2c3d4e5f6_create_ui_settings.py
 ├── b2c3d4e5f6a7_create_step_event.py
 ├── c3d4e5f6a7b8_create_execution_action_log.py
-└── d4e5f6a7b8c9_create_scheduled_release.py
+├── d4e5f6a7b8c9_create_scheduled_release.py
+└── e5f6a7b8c9d0_create_job_path_registry.py
 ```
 
 ---
@@ -395,7 +430,15 @@ class ExecutionStatus(str, Enum):
 | POST | `/ui/dry-run/{name}` | Dry-run via UI |
 | GET | `/ui/releases/{id}/yaml` | Visualizar YAML de release |
 
-### 7.4 System
+### 7.4 Job Path Registry (`/ui/job-registry`)
+
+| Metodo | Rota | Descricao |
+|--------|------|-----------|
+| GET | `/ui/job-registry/` | Pagina principal do Job Registry |
+| GET | `/ui/job-registry/partials/list` | Lista paginada com filtro (partial HTMX) |
+| POST | `/ui/job-registry/discover` | Discovery de jobs via API do Jenkins |
+
+### 7.5 System
 
 | Metodo | Rota | Descricao |
 |--------|------|-----------|
@@ -595,6 +638,21 @@ A resolucao de timeout segue prioridade:
 - No modo `fire-and-forget`, steps continuam independentemente
 - Steps sao processados sequencialmente dentro de um stage
 - Stages sao processados sequencialmente (proximo stage so inicia quando o anterior completa)
+
+### 10.9 Job Path Resolution
+
+O Maestro resolve o caminho (path) do job Jenkins para cada step com a seguinte prioridade:
+
+1. **`job.path` explicito no YAML** — sempre prevalece, sem consulta ao banco
+2. **Tabela `job_path_registry`** — busca por `(repository, environment)`. Populada via discovery automatico da API do Jenkins
+3. **Fallback** — gera o padrao `job/<ENV>/job/<repository>/job/<repository>`
+
+O discovery consulta `<JENKINS_BASE_URL>/api/json?tree=jobs[name,url,jobs[name,url,jobs[name,url]]]` e extrai a estrutura hierarquica:
+- Nivel 1: Environment (PRD, UAT, DEV)
+- Nivel 2: Domain (agrupamento logico)
+- Nivel 3: Repository (o job em si)
+
+O resultado e persistido via **upsert** (chave unica: repository + environment), garantindo que execucoes repetidas do discovery nunca dupliquem registros.
 
 ---
 
