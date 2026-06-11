@@ -9,6 +9,6 @@
     "tests": "pass",
     "test_quality": "pass",
     "docker_build": "skipped",
-    "summary": "All 340 tests pass (308 existing + 20 auth unit + 12 auth route/authorization tests). ruff check src/ passes clean. Review fixes applied: 401 JSON for non-HTML auth errors, secure cookie flag, password min length on user creation, last-admin deactivation safeguard."
+    "summary": "340 tests pass (288 pre-existing + 20 auth unit + 31 auth route/authorization + 1 review fix test). ruff check src/ passes clean. Alembic migration runs successfully. Code review findings addressed (cookie security, 401 for API, password validation, admin safeguard)."
   }
 }
