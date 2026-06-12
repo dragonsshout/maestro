@@ -6,7 +6,7 @@ from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 from sse_starlette.sse import EventSourceResponse
 
-from maestro.auth.dependencies import can_admin, can_approve, can_operate, can_view
+from maestro.auth.dependencies import can_admin, can_approve, can_operate, can_view, get_user_permissions
 from maestro.database.models import ExecutionActionLog, User
 from maestro.repositories.execution import ExecutionRepository
 from maestro.repositories.orchestrator import OrchestratorDescriptorRepository
@@ -29,8 +29,14 @@ router = APIRouter(prefix="/ui", tags=["UI"])
 
 
 @router.get("/", response_class=HTMLResponse)
-async def index(request: Request, current_user: User = Depends(can_view)):
-    return templates.TemplateResponse(request, "index.html", {"current_user": current_user})
+async def index(
+    request: Request,
+    current_user: User = Depends(can_view),
+    user_permissions: dict = Depends(get_user_permissions),
+):
+    return templates.TemplateResponse(
+        request, "index.html", {"current_user": current_user, "user_permissions": user_permissions}
+    )
 
 
 @router.get("/partials/executions", response_class=HTMLResponse)
@@ -39,6 +45,7 @@ async def partials_executions(
     page: int = 1,
     service: UIService = Depends(),
     current_user: User = Depends(can_view),
+    user_permissions: dict = Depends(get_user_permissions),
 ):
     executions, total_pages = await service.get_executions_paginated(page=page, per_page=15)
     return templates.TemplateResponse(
@@ -49,6 +56,7 @@ async def partials_executions(
             "current_page": page,
             "total_pages": total_pages,
             "current_user": current_user,
+            "user_permissions": user_permissions,
         },
     )
 
@@ -60,6 +68,7 @@ async def execution_detail(
     service: UIService = Depends(),
     settings_service: UISettingsService = Depends(),
     current_user: User = Depends(can_view),
+    user_permissions: dict = Depends(get_user_permissions),
 ):
     result = await service.get_execution_with_stages(execution_id)
     if not result:
@@ -82,6 +91,7 @@ async def execution_detail(
             "github_base_url": (github_base_url or "").rstrip("/"),
             "github_organization": github_organization or "",
             "current_user": current_user,
+            "user_permissions": user_permissions,
         },
     )
 
@@ -479,12 +489,14 @@ async def settings_page(
     request: Request,
     service: UISettingsService = Depends(),
     current_user: User = Depends(can_admin),
+    user_permissions: dict = Depends(get_user_permissions),
 ):
     current = await service.get_all_masked()
     return templates.TemplateResponse(
         request,
         "settings.html",
-        {"settings": current, "known_settings": KNOWN_SETTINGS, "current_user": current_user},
+        {"settings": current, "known_settings": KNOWN_SETTINGS, "current_user": current_user,
+         "user_permissions": user_permissions},
     )
 
 
@@ -524,6 +536,7 @@ async def settings_save(
     request: Request,
     service: UISettingsService = Depends(),
     current_user: User = Depends(can_admin),
+    user_permissions: dict = Depends(get_user_permissions),
 ):
     form = await request.form()
     data = {key: (form.get(key) or "").strip() or None for key in KNOWN_SETTINGS}
@@ -532,7 +545,8 @@ async def settings_save(
     return templates.TemplateResponse(
         request,
         "settings.html",
-        {"settings": current, "known_settings": KNOWN_SETTINGS, "saved": True, "current_user": current_user},
+        {"settings": current, "known_settings": KNOWN_SETTINGS, "saved": True,
+         "current_user": current_user, "user_permissions": user_permissions},
     )
 
 
@@ -544,6 +558,7 @@ async def partials_releases(
     orchestrator_repo: OrchestratorDescriptorRepository = Depends(),
     execution_repo: ExecutionRepository = Depends(),
     current_user: User = Depends(can_view),
+    user_permissions: dict = Depends(get_user_permissions),
 ):
     per_page = 15
     skip = (page - 1) * per_page
@@ -567,6 +582,7 @@ async def partials_releases(
             "total_pages": total_pages,
             "search_term": search or "",
             "current_user": current_user,
+            "user_permissions": user_permissions,
         },
     )
 
@@ -575,11 +591,12 @@ async def partials_releases(
 async def releases_page(
     request: Request,
     current_user: User = Depends(can_view),
+    user_permissions: dict = Depends(get_user_permissions),
 ):
     return templates.TemplateResponse(
         request,
         "releases.html",
-        {"current_user": current_user},
+        {"current_user": current_user, "user_permissions": user_permissions},
     )
 
 
@@ -591,6 +608,7 @@ async def releases_upload(
     orchestrator_repo: OrchestratorDescriptorRepository = Depends(),
     execution_repo: ExecutionRepository = Depends(),
     current_user: User = Depends(can_operate),
+    user_permissions: dict = Depends(get_user_permissions),
 ):
     error = None
     if not file.filename.endswith((".yaml", ".yml")):
@@ -622,6 +640,7 @@ async def releases_upload(
             "upload_error": error,
             "upload_success": error is None,
             "current_user": current_user,
+            "user_permissions": user_permissions,
         },
     )
 
@@ -714,8 +733,11 @@ async def schedule_release_ui(
 async def schedules_page(
     request: Request,
     current_user: User = Depends(can_view),
+    user_permissions: dict = Depends(get_user_permissions),
 ):
-    return templates.TemplateResponse(request, "schedules.html", {"current_user": current_user})
+    return templates.TemplateResponse(
+        request, "schedules.html", {"current_user": current_user, "user_permissions": user_permissions}
+    )
 
 
 @router.delete("/schedule/{schedule_id}", response_class=HTMLResponse)

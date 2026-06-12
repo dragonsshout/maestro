@@ -18,6 +18,7 @@ from maestro.auth.dependencies import (
     can_operate,
     can_view,
     get_current_user,
+    get_user_permissions,
 )
 from maestro.database.models import User
 from maestro.database.session import get_db
@@ -80,6 +81,9 @@ def app_as_admin(override_get_db):
         app.dependency_overrides[can_approve] = lambda: ADMIN_USER
         app.dependency_overrides[can_operate] = lambda: ADMIN_USER
         app.dependency_overrides[can_admin] = lambda: ADMIN_USER
+        app.dependency_overrides[get_user_permissions] = lambda: {
+            "can_operate": True, "can_approve": True, "can_admin": True
+        }
         yield app
         app.dependency_overrides.clear()
 
@@ -100,6 +104,9 @@ def app_as_viewer(override_get_db):
         app.dependency_overrides[can_approve] = _deny
         app.dependency_overrides[can_operate] = _deny
         app.dependency_overrides[can_admin] = _deny
+        app.dependency_overrides[get_user_permissions] = lambda: {
+            "can_operate": False, "can_approve": False, "can_admin": False
+        }
         yield app
         app.dependency_overrides.clear()
 
@@ -120,6 +127,9 @@ def app_as_operator(override_get_db):
         app.dependency_overrides[can_approve] = lambda: OPERATOR_USER
         app.dependency_overrides[can_operate] = lambda: OPERATOR_USER
         app.dependency_overrides[can_admin] = _deny
+        app.dependency_overrides[get_user_permissions] = lambda: {
+            "can_operate": True, "can_approve": True, "can_admin": False
+        }
         yield app
         app.dependency_overrides.clear()
 
@@ -140,6 +150,9 @@ def app_as_approver(override_get_db):
         app.dependency_overrides[can_approve] = lambda: APPROVER_USER
         app.dependency_overrides[can_operate] = _deny
         app.dependency_overrides[can_admin] = _deny
+        app.dependency_overrides[get_user_permissions] = lambda: {
+            "can_operate": False, "can_approve": True, "can_admin": False
+        }
         yield app
         app.dependency_overrides.clear()
 
@@ -160,6 +173,7 @@ def app_unauthenticated(override_get_db):
         app.dependency_overrides[can_approve] = _not_authenticated
         app.dependency_overrides[can_operate] = _not_authenticated
         app.dependency_overrides[can_admin] = _not_authenticated
+        app.dependency_overrides[get_user_permissions] = _not_authenticated
         yield app
         app.dependency_overrides.clear()
 

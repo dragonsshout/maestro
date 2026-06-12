@@ -44,6 +44,7 @@
 
                     <td>
                         <div class="flex items-center gap-2">
+                            {% if user_permissions.can_operate %}
                             <button
                                 class="btn btn-xs btn-circle hover:scale-110 active:scale-95 transition-transform shadow-sm relative group
                                        {% if active %}btn-warning{% else %}btn-success{% endif %}"
@@ -60,6 +61,14 @@
                                 {% endif %}
                                 <span class="loading loading-spinner loading-xs hidden group-[.htmx-request]:inline-block"></span>
                             </button>
+                            {% else %}
+                            <div class="perm-tooltip tooltip tooltip-bottom" data-tip="Voce nao tem permissao. Necessario: Operators ou Administrators.">
+                                <button type="button" class="btn btn-xs btn-circle btn-disabled opacity-50 cursor-not-allowed" disabled>
+                                    <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
+                                </button>
+                            </div>
+                            {% endif %}
+                            {% if user_permissions.can_operate %}
                             <button
                                 type="button"
                                 class="btn btn-xs btn-secondary btn-circle hover:scale-110 active:scale-95 transition-transform shadow-sm"
@@ -68,6 +77,13 @@
                             >
                                 <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                             </button>
+                            {% else %}
+                            <div class="perm-tooltip tooltip tooltip-bottom" data-tip="Voce nao tem permissao. Necessario: Operators ou Administrators.">
+                                <button type="button" class="btn btn-xs btn-secondary btn-circle btn-disabled opacity-50 cursor-not-allowed" disabled>
+                                    <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                </button>
+                            </div>
+                            {% endif %}
                             <dialog id="schedule-modal-{{ desc.id }}" class="modal text-left">
                                 <div class="modal-box w-full max-w-sm p-6 overflow-visible">
                                     <h3 class="font-bold text-lg mb-2 flex items-center gap-2">
@@ -95,6 +111,7 @@
                                     <button>close</button>
                                 </form>
                             </dialog>
+                            {% if user_permissions.can_operate %}
                             <button
                                 class="btn btn-xs btn-info btn-circle hover:scale-110 active:scale-95 transition-transform shadow-sm relative group"
                                 hx-post="/ui/dry-run/{{ desc.name }}"
@@ -105,6 +122,13 @@
                                 <svg class="w-3 h-3 group-[.htmx-request]:hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
                                 <span class="loading loading-spinner loading-xs hidden group-[.htmx-request]:inline-block"></span>
                             </button>
+                            {% else %}
+                            <div class="perm-tooltip tooltip tooltip-bottom" data-tip="Voce nao tem permissao. Necessario: Operators ou Administrators.">
+                                <button type="button" class="btn btn-xs btn-info btn-circle btn-disabled opacity-50 cursor-not-allowed" disabled>
+                                    <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                                </button>
+                            </div>
+                            {% endif %}
                             <button
                                 class="btn btn-xs btn-outline hover:scale-105 active:scale-95 transition-transform"
                                 hx-get="/ui/releases/{{ desc.id }}/yaml"

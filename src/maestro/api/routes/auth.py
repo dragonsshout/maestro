@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
-from maestro.auth.dependencies import can_admin, get_current_user
+from maestro.auth.dependencies import can_admin, get_current_user, get_user_permissions
 from maestro.config.settings import settings
 from maestro.database.models import User
 from maestro.repositories.auth import GroupRepository, UserRepository
@@ -65,13 +65,14 @@ async def users_page(
     request: Request,
     current_user: User = Depends(can_admin),
     group_repo: GroupRepository = Depends(),
+    user_permissions: dict = Depends(get_user_permissions),
 ):
     """User management page (admin only)."""
     groups = await group_repo.get_all_groups()
     return templates.TemplateResponse(
         request,
         "users.html",
-        {"current_user": current_user, "groups": groups},
+        {"current_user": current_user, "groups": groups, "user_permissions": user_permissions},
     )
 
 
@@ -250,12 +251,13 @@ async def toggle_user_active(
 async def change_password_page(
     request: Request,
     current_user: User = Depends(get_current_user),
+    user_permissions: dict = Depends(get_user_permissions),
 ):
     """Page for logged-in user to change their own password."""
     return templates.TemplateResponse(
         request,
         "change_password.html",
-        {"current_user": current_user},
+        {"current_user": current_user, "user_permissions": user_permissions},
     )
 
 
@@ -267,6 +269,7 @@ async def change_password_submit(
     confirm_password: str = Form(...),
     current_user: User = Depends(get_current_user),
     auth_service: AuthService = Depends(),
+    user_permissions: dict = Depends(get_user_permissions),
 ):
     """Change the logged-in user's password."""
     error = None
@@ -288,5 +291,5 @@ async def change_password_submit(
     return templates.TemplateResponse(
         request,
         "change_password.html",
-        {"current_user": current_user, "error": error, "success": success},
+        {"current_user": current_user, "error": error, "success": success, "user_permissions": user_permissions},
     )

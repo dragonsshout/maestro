@@ -1,0 +1,29 @@
+{
+  "project_type": "Python FastAPI app with HTMX + DaisyUI/Tailwind UI",
+  "language": "Python 3.11+",
+  "build_system": "hatchling via pyproject.toml, pip install -e .",
+  "test_framework": "pytest with pytest-asyncio, async tests, conftest.py fixtures",
+  "build_command": "pip install -e . && ruff check src/",
+  "test_command": "pytest tests/ -x --ignore=tests/integration",
+  "verification_instructions": "1. Run ruff check src/ to verify no lint errors. 2. Run pytest tests/ -x --ignore=tests/integration to verify all tests pass.",
+  "snapshot_or_generated_files": null,
+  "setup_instructions": "pip install -e '.[dev]' or pip install -e . && pip install pytest pytest-asyncio httpx pytest-httpx",
+  "environment_constraints": "No Docker daemon available. No external network for integration tests. Use unit tests only.",
+  "contribution_requirements": "Code must pass ruff check src/. Tests use pytest-asyncio with asyncio_mode=auto.",
+  "key_patterns": "Routes in src/maestro/api/routes/ui.py use FastAPI Depends() for auth. Templates are Jinja2 in src/maestro/ui/templates/. DaisyUI components used throughout. current_user (User model) already passed to all template contexts. Group permission checks happen in auth/dependencies.py using _require_any_group(). UserRepository.get_user_groups(user_id) returns list[Group] objects.",
+  "relevant_files": [
+    "src/maestro/api/routes/ui.py",
+    "src/maestro/auth/dependencies.py",
+    "src/maestro/database/models.py",
+    "src/maestro/repositories/auth.py",
+    "src/maestro/ui/templates/base.html",
+    "src/maestro/ui/templates/releases.html",
+    "src/maestro/ui/templates/execution_detail.html",
+    "src/maestro/ui/templates/settings.html",
+    "src/maestro/ui/templates/partials/releases_table.html",
+    "src/maestro/ui/templates/partials/stages.html",
+    "tests/test_ui_routes.py",
+    "tests/conftest.py"
+  ],
+  "directory_structure": "src/maestro/ = app code, src/maestro/api/routes/ = route handlers, src/maestro/auth/ = auth deps, src/maestro/ui/templates/ = Jinja2 templates, src/maestro/ui/templates/partials/ = partial templates for HTMX, tests/ = test files"
+}

@@ -415,7 +415,14 @@ def mock_session():
 @pytest.fixture
 def app_override(mock_session):
     with patch("subprocess.run"):
-        from maestro.auth.dependencies import can_admin, can_approve, can_operate, can_view, get_current_user
+        from maestro.auth.dependencies import (
+            can_admin,
+            can_approve,
+            can_operate,
+            can_view,
+            get_current_user,
+            get_user_permissions,
+        )
         from maestro.main import app
 
         mock_user = MagicMock()
@@ -433,6 +440,9 @@ def app_override(mock_session):
         app.dependency_overrides[can_approve] = lambda: mock_user
         app.dependency_overrides[can_operate] = lambda: mock_user
         app.dependency_overrides[can_admin] = lambda: mock_user
+        app.dependency_overrides[get_user_permissions] = lambda: {
+            "can_operate": True, "can_approve": True, "can_admin": True
+        }
         yield app
         app.dependency_overrides.clear()
 

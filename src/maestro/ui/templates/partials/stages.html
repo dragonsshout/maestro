@@ -258,6 +258,7 @@ function flowScrollTo(id) {
                         <!-- Ações do step (menu dropdown na coluna visível) -->
                         <td class="whitespace-nowrap">
                             {% if sv not in ["success", "aborted"] %}
+                            {% if user_permissions.can_operate %}
                             <div class="dropdown dropdown-end dropdown-left">
                                 <label tabindex="0" class="btn btn-ghost btn-xs btn-circle text-base-content/50 hover:text-base-content hover:bg-base-200">
                                     <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
@@ -332,6 +333,15 @@ function flowScrollTo(id) {
 
                                 </ul>
                             </div>
+                            {% else %}
+                            <div class="perm-tooltip tooltip tooltip-left" data-tip="Voce nao tem permissao. Necessario: Operators ou Administrators.">
+                                <button type="button" class="btn btn-ghost btn-xs btn-circle btn-disabled opacity-50 cursor-not-allowed" disabled>
+                                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                                        <circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/>
+                                    </svg>
+                                </button>
+                            </div>
+                            {% endif %}
                             {% else %}
                             <span class="text-base-content/20 text-xs">—</span>
                             {% endif %}

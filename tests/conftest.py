@@ -11,7 +11,14 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from httpx import ASGITransport, AsyncClient
 
-from maestro.auth.dependencies import can_admin, can_approve, can_operate, can_view, get_current_user
+from maestro.auth.dependencies import (
+    can_admin,
+    can_approve,
+    can_operate,
+    can_view,
+    get_current_user,
+    get_user_permissions,
+)
 from maestro.database.models import (
     OrchestratorDescriptor,
     ReleaseExecution,
@@ -139,6 +146,9 @@ def app_with_db_override(override_get_db, mock_admin_user):
         app.dependency_overrides[can_approve] = lambda: mock_admin_user
         app.dependency_overrides[can_operate] = lambda: mock_admin_user
         app.dependency_overrides[can_admin] = lambda: mock_admin_user
+        app.dependency_overrides[get_user_permissions] = lambda: {
+            "can_operate": True, "can_approve": True, "can_admin": True
+        }
         yield app
         app.dependency_overrides.clear()
 

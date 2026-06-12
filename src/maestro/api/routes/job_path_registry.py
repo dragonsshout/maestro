@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
-from maestro.auth.dependencies import can_admin, can_view
+from maestro.auth.dependencies import can_admin, can_view, get_user_permissions
 from maestro.database.models import User
 from maestro.services.job_path_registry import JobPathRegistryService
 
@@ -18,9 +18,12 @@ router = APIRouter(prefix="/ui/job-registry", tags=["Job Path Registry"])
 async def job_registry_page(
     request: Request,
     current_user: User = Depends(can_view),
+    user_permissions: dict = Depends(get_user_permissions),
 ):
     """Página principal do Job Path Registry."""
-    return templates.TemplateResponse(request, "job_registry.html", {"current_user": current_user})
+    return templates.TemplateResponse(
+        request, "job_registry.html", {"current_user": current_user, "user_permissions": user_permissions}
+    )
 
 
 @router.get("/partials/list", response_class=HTMLResponse)

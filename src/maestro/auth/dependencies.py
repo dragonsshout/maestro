@@ -91,3 +91,29 @@ can_view = get_current_user  # Any authenticated user can view
 can_approve = _require_any_group(["Approver", "Operators", "Administrators"])
 can_operate = _require_any_group(["Operators", "Administrators"])
 can_admin = _require_any_group(["Administrators"])
+
+
+# Permission groups mapping
+GROUPS_CAN_OPERATE = ["Operators", "Administrators"]
+GROUPS_CAN_APPROVE = ["Approver", "Operators", "Administrators"]
+GROUPS_CAN_ADMIN = ["Administrators"]
+
+
+def build_user_permissions(group_names: list[str]) -> dict:
+    """Build a permissions dict from user group names."""
+    return {
+        "can_operate": any(g in GROUPS_CAN_OPERATE for g in group_names),
+        "can_approve": any(g in GROUPS_CAN_APPROVE for g in group_names),
+        "can_admin": any(g in GROUPS_CAN_ADMIN for g in group_names),
+    }
+
+
+async def get_user_permissions(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """FastAPI dependency that returns a permissions dict for the current user."""
+    user_repo = UserRepository(db=db)
+    groups = await user_repo.get_user_groups(current_user.id)
+    group_names = [g.name for g in groups]
+    return build_user_permissions(group_names)

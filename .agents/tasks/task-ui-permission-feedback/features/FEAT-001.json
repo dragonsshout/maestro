@@ -1,0 +1,34 @@
+{
+  "id": "FEAT-001",
+  "type": "feat",
+  "description": "Pass user permissions to all templates and add visual feedback (disabled state + tooltip) for buttons/actions the user cannot perform",
+  "status": "in_progress",
+  "steps": [
+    "Step 1: Create a permission helper that builds a permissions dict from user groups. In src/maestro/auth/dependencies.py, add a function `build_user_permissions(group_names: list[str]) -> dict` that returns a dict like {'can_operate': bool, 'can_approve': bool, 'can_admin': bool} based on the same group logic already used in _require_any_group. The groups that grant each permission are: can_operate=['Operators','Administrators'], can_approve=['Approver','Operators','Administrators'], can_admin=['Administrators'].",
+    "Step 2: Create a new FastAPI dependency `get_user_permissions` in src/maestro/auth/dependencies.py that takes the current_user and db session, calls user_repo.get_user_groups, and returns the permissions dict from build_user_permissions. This dependency should be usable alongside existing auth dependencies.",
+    "Step 3: In src/maestro/api/routes/ui.py, modify EVERY route handler that renders a template to also inject `user_permissions` into the template context. Add a parameter `user_permissions: dict = Depends(get_user_permissions)` to each route function signature. Then include `'user_permissions': user_permissions` in every TemplateResponse context dict. This affects: index, partials_executions, execution_detail, releases_page, partials_releases, releases_upload, settings_page, settings_save, schedules_page, and all other template-rendering routes.",
+    "Step 4: In src/maestro/ui/templates/releases.html, wrap the upload form card in a conditional check. If `user_permissions.can_operate` is false, disable the file input and submit button: add `disabled` attribute to both, add DaisyUI classes `btn-disabled opacity-50 cursor-not-allowed`, and wrap the submit button in a DaisyUI tooltip `<div class=\"tooltip tooltip-bottom\" data-tip=\"Voce nao tem permissao para enviar releases. Necessario: Operators ou Administrators.\">` around the disabled button.",
+    "Step 5: In src/maestro/ui/templates/partials/releases_table.html, for the Execute button, Schedule button, and Dry-run button: wrap each in `{% if user_permissions.can_operate %}...{% else %}` blocks. In the else block, render the same button but with `btn-disabled disabled` class/attribute and wrap it in a tooltip div explaining the required permission. The YAML view button should remain accessible to all (it's read-only).",
+    "Step 6: In src/maestro/ui/templates/execution_detail.html, for the Cancel dropdown and Approve/Deny buttons: wrap the cancel dropdown in `{% if user_permissions.can_operate %}...{% else %}` showing a disabled button with tooltip 'Necessario: Operators ou Administrators'. Wrap approve/deny buttons in `{% if user_permissions.can_approve %}...{% else %}` showing disabled buttons with tooltip 'Necessario: Approver, Operators ou Administrators'.",
+    "Step 7: In src/maestro/ui/templates/partials/stages.html, for the step actions dropdown (the three-dot menu in the Acoes column): wrap the dropdown content in `{% if user_permissions.can_operate %}...{% else %}` block. In the else block, show a disabled icon button with a tooltip explaining the user needs Operators or Administrators group to perform step actions.",
+    "Step 8: In src/maestro/ui/templates/settings.html, wrap the submit button in `{% if user_permissions.can_admin %}...{% else %}` showing a disabled button with tooltip 'Necessario: Administrators'. Note: the settings page route already requires can_admin, but in case the access model changes, this provides defense in depth.",
+    "Step 9: In src/maestro/ui/templates/base.html, for the sidebar navigation: add a visual indicator (lock icon or reduced opacity) to menu items that require higher permissions. Specifically: the 'Configuracoes' and 'Usuarios' links should show a small lock icon or be slightly dimmed if user_permissions.can_admin is false. They should still be clickable (server will redirect/403), but the visual cue tells the user they may not have access. Use a small SVG lock icon appended after the nav-label text.",
+    "Step 10: Add a CSS class in base.html's <style> block for the disabled tooltip pattern: `.perm-disabled { opacity: 0.5; cursor: not-allowed; pointer-events: none; }` and a wrapper `.perm-tooltip { display: inline-block; }` to ensure tooltips work on disabled buttons (since disabled elements don't fire hover events, the tooltip div must be on a non-disabled parent wrapper)."
+  ],
+  "acceptance_criteria": [
+    "A user_permissions dict is available in all template contexts containing can_operate, can_approve, and can_admin booleans",
+    "In releases.html, the upload form is disabled for users without can_operate permission, with a tooltip explaining why",
+    "In partials/releases_table.html, Execute/Schedule/Dry-run buttons are disabled with tooltip for users without can_operate",
+    "In execution_detail.html, Cancel button disabled for non-operators, Approve/Deny disabled for non-approvers, both with tooltips",
+    "In partials/stages.html, the step actions dropdown is disabled for users without can_operate",
+    "In base.html sidebar, Settings and Users menu items show a lock icon for non-admin users",
+    "Running `ruff check src/` passes with no errors",
+    "Running `pytest tests/ -x --ignore=tests/integration` passes all tests"
+  ],
+  "verification": [
+    "ruff check src/",
+    "pytest tests/ -x --ignore=tests/integration"
+  ],
+  "blocked_reason": null,
+  "findings": ""
+}

@@ -32,6 +32,7 @@
                 {% set active_statuses = ["pending", "in_progress", "waiting_approval"] %}
                 {% set exec_status_val = execution.status.value if execution.status.value is defined else execution.status %}
                 {% if exec_status_val in active_statuses %}
+                {% if user_permissions.can_operate %}
                 <div class="dropdown dropdown-end">
                     <label tabindex="0" class="btn btn-outline btn-error btn-sm gap-2">
                         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -64,12 +65,23 @@
                         </li>
                     </ul>
                 </div>
+                {% else %}
+                <div class="perm-tooltip tooltip tooltip-bottom" data-tip="Voce nao tem permissao. Necessario: Operators ou Administrators.">
+                    <button type="button" class="btn btn-outline btn-error btn-sm btn-disabled opacity-50 cursor-not-allowed gap-2" disabled>
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/>
+                        </svg>
+                        Cancelar
+                    </button>
+                </div>
+                {% endif %}
                 {% endif %}
                 </div>
 
                 <!-- Botão de aprovação — atualizado via SSE OOB -->
                 <div id="approve-area">
                     {% if waiting_approval %}
+                    {% if user_permissions.can_approve %}
                     <div class="flex gap-2" hx-ext="json-enc">
                         <button
                             class="btn btn-error btn-sm gap-2"
@@ -97,6 +109,20 @@
                             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg> Aprovar
                         </button>
                     </div>
+                    {% else %}
+                    <div class="flex gap-2">
+                        <div class="perm-tooltip tooltip tooltip-bottom" data-tip="Voce nao tem permissao. Necessario: Approver, Operators ou Administrators.">
+                            <button type="button" class="btn btn-error btn-sm btn-disabled opacity-50 cursor-not-allowed gap-2" disabled>
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg> Negar
+                            </button>
+                        </div>
+                        <div class="perm-tooltip tooltip tooltip-bottom" data-tip="Voce nao tem permissao. Necessario: Approver, Operators ou Administrators.">
+                            <button type="button" class="btn btn-info btn-sm btn-disabled opacity-50 cursor-not-allowed gap-2" disabled>
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg> Aprovar
+                            </button>
+                        </div>
+                    </div>
+                    {% endif %}
                     {% endif %}
                 </div>
             </div>
