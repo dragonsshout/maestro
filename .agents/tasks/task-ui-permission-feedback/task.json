@@ -1,7 +1,7 @@
 {
   "task_id": "task-ui-permission-feedback",
   "task_description": "Add visual permission feedback to the UI so users without permission to perform an action see disabled buttons with tooltips explaining why they cannot perform that action, instead of silently getting 403 errors.",
-  "status": "in_progress",
+  "status": "completed",
   "feature_order": ["FEAT-001"],
   "blocked_reason": null
 }
