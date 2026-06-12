@@ -171,3 +171,32 @@ class ExecutionRepository:
             .order_by(ExecutionActionLog.created_at.desc())
         )
         return list(result.scalars().all())
+
+    async def get_in_progress_steps_with_correlation(self) -> List[ReleaseStepExecution]:
+        """Retorna steps em IN_PROGRESS que possuem correlation_id (build em andamento no Jenkins)."""
+        result = await self.db.execute(
+            select(ReleaseStepExecution).where(
+                ReleaseStepExecution.status == ExecutionStatus.IN_PROGRESS,
+                ReleaseStepExecution.job_execution_correlation_id.isnot(None),
+            )
+        )
+        return list(result.scalars().all())
+
+    async def get_executions_by_ids(self, execution_ids: set[int]) -> dict[int, ReleaseExecution]:
+        """Retorna execuções por IDs."""
+        if not execution_ids:
+            return {}
+        result = await self.db.execute(
+            select(ReleaseExecution).where(ReleaseExecution.id.in_(execution_ids))
+        )
+        return {e.id: e for e in result.scalars().all()}
+
+    async def get_descriptors_by_ids(self, descriptor_ids: set[int]) -> dict[int, "OrchestratorDescriptor"]:
+        """Retorna descriptors por IDs."""
+        from maestro.database.models import OrchestratorDescriptor
+        if not descriptor_ids:
+            return {}
+        result = await self.db.execute(
+            select(OrchestratorDescriptor).where(OrchestratorDescriptor.id.in_(descriptor_ids))
+        )
+        return {d.id: d for d in result.scalars().all()}

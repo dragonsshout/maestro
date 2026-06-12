@@ -95,7 +95,7 @@
                     Geral
                 </h2>
 
-                {% for key in ['step_timeout_minutes'] %}
+                {% for key in ['step_timeout_minutes', 'build_poll_interval_seconds'] %}
                 {% set meta = known_settings[key] %}
                 <div class="form-control">
                     <label class="label pb-1" for="{{ key }}">

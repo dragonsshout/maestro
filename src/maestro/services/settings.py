@@ -12,6 +12,7 @@ SETTING_GITHUB_ORGANIZATION = "github_organization"
 SETTING_GITHUB_TOKEN = "github_token"
 SETTING_STEP_TIMEOUT_MINUTES = "step_timeout_minutes"
 SETTING_HTTP_TRUST_ENV = "http_trust_env"
+SETTING_BUILD_POLL_INTERVAL_SECONDS = "build_poll_interval_seconds"
 
 # Chaves que contêm dados sensíveis (serão criptografadas no banco e mascaradas na UI)
 SENSITIVE_SETTINGS = {SETTING_JENKINS_TOKEN, SETTING_GITHUB_TOKEN}
@@ -71,6 +72,15 @@ KNOWN_SETTINGS = {
         ),
         "sensitive": False,
         "type": "toggle",
+    },
+    SETTING_BUILD_POLL_INTERVAL_SECONDS: {
+        "label": "Intervalo de polling dos builds (segundos)",
+        "placeholder": "10",
+        "help": (
+            "Frequência (em segundos) com que o Maestro consulta o Jenkins para verificar "
+            "o status dos builds em andamento. Padrão: 10 segundos."
+        ),
+        "sensitive": False,
     },
 }
 
