@@ -19,3 +19,10 @@ class JenkinsInputParameterSchema(BaseModel):
 class JenkinsPendingInputSchema(BaseModel):
     id: str
     inputs: List[JenkinsInputParameterSchema] = []
+
+
+class JenkinsBuildInfoSchema(BaseModel):
+    """Informações relevantes de um build do Jenkins."""
+    number: int
+    result: Optional[str] = None  # SUCCESS, FAILURE, ABORTED, null (still running)
+    building: bool = True

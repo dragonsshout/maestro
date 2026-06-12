@@ -3,7 +3,7 @@ from typing import Dict, Optional
 
 import httpx
 
-from maestro.schemas.jenkins import JenkinsQueueItemSchema
+from maestro.schemas.jenkins import JenkinsQueueItemSchema, JenkinsBuildInfoSchema, JenkinsPendingInputSchema
 
 
 class JenkinsIntegration:
@@ -107,3 +107,29 @@ class JenkinsIntegration:
             endpoint = f"/{job_name.strip('/')}/api/json"
             response = await client.get(endpoint)
             return response.status_code == 200
+
+    async def get_build_info(self, job_name: str, build_number: int) -> JenkinsBuildInfoSchema:
+        """
+        Obtém informações de um build específico.
+        Retorna result (SUCCESS/FAILURE/ABORTED/null) e building (true/false).
+        """
+        async with self._get_client() as client:
+            endpoint = f"/{job_name.strip('/')}/{build_number}/api/json"
+            response = await client.get(endpoint, params={"tree": "number,result,building"}, follow_redirects=True)
+            response.raise_for_status()
+            return JenkinsBuildInfoSchema(**response.json())
+
+    async def get_pending_inputs(self, job_name: str, build_number: int) -> list[JenkinsPendingInputSchema]:
+        """
+        Verifica se um build tem inputs pendentes (waiting for approval).
+        Retorna lista de inputs pendentes (vazia se não houver).
+        """
+        async with self._get_client() as client:
+            endpoint = f"/{job_name.strip('/')}/{build_number}/wfapi/pendingInputActions"
+            response = await client.get(endpoint, follow_redirects=True)
+            if response.status_code != 200:
+                return []
+            raw = response.json()
+            if not raw:
+                return []
+            return [JenkinsPendingInputSchema(**item) for item in raw]

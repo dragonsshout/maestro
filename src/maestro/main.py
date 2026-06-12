@@ -39,17 +39,27 @@ async def lifespan(app: FastAPI):
 
     scheduler_task = asyncio.create_task(start_scheduler_checker())
 
+    # Inicia o poller de builds do Jenkins em background
+    from maestro.services.build_poller import start_build_poller
+
+    build_poller_task = asyncio.create_task(start_build_poller())
+
     yield
 
     # Cancela os checkers ao encerrar
     timeout_task.cancel()
     scheduler_task.cancel()
+    build_poller_task.cancel()
     try:
         await timeout_task
     except asyncio.CancelledError:
         pass
     try:
         await scheduler_task
+    except asyncio.CancelledError:
+        pass
+    try:
+        await build_poller_task
     except asyncio.CancelledError:
         pass
     logger.info("Encerrando o Maestro.")
