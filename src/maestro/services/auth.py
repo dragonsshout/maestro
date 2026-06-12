@@ -2,8 +2,8 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from fastapi import Depends
+import bcrypt
 from jose import JWTError, jwt
-from passlib.context import CryptContext
 
 from maestro.config.settings import settings
 from maestro.database.models import User
@@ -11,8 +11,6 @@ from maestro.repositories.auth import GroupRepository, UserRepository
 
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_HOURS = 24
-
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
 class AuthService:
@@ -31,7 +29,7 @@ class AuthService:
             return None
         if not user.is_active:
             return None
-        if not pwd_context.verify(password, user.password_hash):
+        if not bcrypt.checkpw(password.encode('utf-8'), user.password_hash.encode('utf-8')):
             return None
         return user
 
@@ -43,7 +41,7 @@ class AuthService:
         group_ids: Optional[list[int]] = None,
     ) -> User:
         """Create a new user with hashed password and optional group assignments."""
-        password_hash = pwd_context.hash(password)
+        password_hash = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
         user = await self.user_repo.create_user(username, password_hash, full_name)
         if group_ids:
             await self.user_repo.set_user_groups(user.id, group_ids)
@@ -54,7 +52,7 @@ class AuthService:
         user = await self.user_repo.get_user_by_id(user_id)
         if user is None:
             return None
-        user.password_hash = pwd_context.hash(new_password)
+        user.password_hash = bcrypt.hashpw(new_password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
         return await self.user_repo.update_user(user)
 
     async def get_user_by_id(self, user_id: int) -> Optional[User]:
