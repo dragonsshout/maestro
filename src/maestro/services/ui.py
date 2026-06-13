@@ -156,8 +156,8 @@ def _assemble_stages(config: ReleaseConfigSchema, steps: list[ReleaseStepExecuti
                     "execution": execution_step,
                     "repository": step_def.repository,
                     "release": step_def.release,
-                    "job_type": step_def.job.type,
-                    "job_path": step_def.job.path,
+                    "job_type": step_def.job.type if step_def.job else "jenkins",
+                    "job_path": step_def.job.path if step_def.job else None,
                 }
             )
         result.append({"id": stage.id, "steps": enriched_steps})

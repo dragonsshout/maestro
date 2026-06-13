@@ -72,6 +72,10 @@ async def _poll_builds():
         descriptors = await repo.get_descriptors_by_ids(descriptor_ids)
 
         # Monta mapa de job_path a partir dos YAMLs
+        from maestro.repositories.job_path_registry import JobPathRegistryRepository
+        from maestro.services.job_path_resolver import resolve_job_path_async
+
+        registry_repo = JobPathRegistryRepository(db=session)
         job_path_map: dict[tuple[int, str, str], str] = {}
         for exec_id, execution in executions.items():
             descriptor = descriptors.get(execution.orchestrator_descriptor_id)
@@ -80,7 +84,8 @@ async def _poll_builds():
             config = ReleaseConfigSchema(**yaml.safe_load(descriptor.yaml))
             for stage in config.spec.stages:
                 for step_def in stage.steps:
-                    job_path_map[(exec_id, stage.id, step_def.id)] = step_def.job.path
+                    resolved_path = await resolve_job_path_async(step_def, config.spec, registry_repo)
+                    job_path_map[(exec_id, stage.id, step_def.id)] = resolved_path
 
         # Obtém integração Jenkins
         cfg = await get_integration_settings(session)

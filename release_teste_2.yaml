@@ -1,0 +1,24 @@
+apiVersion: maestro.ecosoft.com/v1alpha1
+kind: Release
+metadata:
+  name: "release-teste-2"
+  author: "Erico Marineli"
+  description: "Testes de Release 2"
+spec:
+  strategy:
+    # "all-or-nothing": "Se um job critico falhar, todos os outros jobs que dependem dele não serão executados"
+    # "fire-and-forget": "Se um job critico falhar, todos os outros jobs que dependem dele serão executados"
+    type: "all-or-nothing"
+  # environment: se não informado, o padrão é "PRD"
+  # O job path será gerado como: job/<environment>/job/<repository>/job/<repository>
+  environment: PRD
+  stages:
+    - id: "deploy"
+      steps:
+        # Step SEM job.path - será gerado automaticamente:
+        # job/DEV/job/api-teste/job/api-teste
+        - id: deploy-teste
+          repository: api-teste
+          release: "release/teste"
+          critical: true
+          requires_approval: true
