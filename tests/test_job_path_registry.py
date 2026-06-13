@@ -235,9 +235,9 @@ class TestJobPathRegistryService:
                                 {
                                     "name": "function-autenticar-securitysvc",
                                     "url": (
-                            f"{jenkins_base_url}/job/UAT/job/risk-energy"
-                            "/job/function-autenticar-securitysvc/"
-                        ),
+                                        f"{jenkins_base_url}/job/UAT/job/risk-energy"
+                                        "/job/function-autenticar-securitysvc/"
+                                    ),
                                 },
                                 {
                                     "name": "api-gateway",
@@ -606,9 +606,7 @@ class TestJobRegistryRoutes:
         mock_count_result = MagicMock()
         mock_count_result.scalar.return_value = 0
 
-        mock_db_session.execute = AsyncMock(
-            side_effect=[mock_result_upsert, mock_result_list, mock_count_result]
-        )
+        mock_db_session.execute = AsyncMock(side_effect=[mock_result_upsert, mock_result_list, mock_count_result])
 
         response = await async_client.post("/ui/job-registry/discover")
         assert response.status_code == 200

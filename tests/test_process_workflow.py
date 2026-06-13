@@ -3,13 +3,14 @@ Tests for the OrchestratorService.process_workflow state machine.
 Covers: pending->in_progress, step failure->execution failure, all success,
 waiting approval, timeout halts, and multi-stage progression.
 """
-import pytest
+
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from maestro.services.orchestrator import OrchestratorService
-from maestro.schemas.enums import ExecutionStatus
-from maestro.database.models import ReleaseExecution, ReleaseStepExecution
+import pytest
 
+from maestro.database.models import ReleaseExecution, ReleaseStepExecution
+from maestro.schemas.enums import ExecutionStatus
+from maestro.services.orchestrator import OrchestratorService
 from tests.conftest import SAMPLE_RELEASE_YAML, SAMPLE_RELEASE_YAML_MULTI_STAGE
 
 
@@ -33,8 +34,9 @@ def _make_execution(id=1, status=ExecutionStatus.PENDING, descriptor_id=1, name=
     return execution
 
 
-def _make_step(stage_id="stage-1", step_id="step-1", status=ExecutionStatus.PENDING,
-               release_execution_id=1, correlation_id=None):
+def _make_step(
+    stage_id="stage-1", step_id="step-1", status=ExecutionStatus.PENDING, release_execution_id=1, correlation_id=None
+):
     step = MagicMock(spec=ReleaseStepExecution)
     step.release_execution_id = release_execution_id
     step.stage_id = stage_id
@@ -58,12 +60,11 @@ def _patch_session_local(exec_repo, orch_repo):
     class FakeSessionLocal:
         async def __aenter__(self):
             return session_mock
+
         async def __aexit__(self, *args):
             pass
 
-    return patch.dict(
-        "maestro.services.orchestrator.__builtins__", {}
-    )  # placeholder - we'll use a different approach
+    return patch.dict("maestro.services.orchestrator.__builtins__", {})  # placeholder - we'll use a different approach
 
 
 class TestProcessWorkflowBasic:
@@ -75,6 +76,7 @@ class TestProcessWorkflowBasic:
         class FakeCtx:
             async def __aenter__(self_):
                 return session
+
             async def __aexit__(self_, *a):
                 pass
 
@@ -83,8 +85,10 @@ class TestProcessWorkflowBasic:
         exec_repo = AsyncMock()
         exec_repo.get_execution_by_id.return_value = None
 
-        with patch("maestro.repositories.execution.ExecutionRepository", return_value=exec_repo), \
-             patch("maestro.repositories.orchestrator.OrchestratorDescriptorRepository", return_value=AsyncMock()):
+        with (
+            patch("maestro.repositories.execution.ExecutionRepository", return_value=exec_repo),
+            patch("maestro.repositories.orchestrator.OrchestratorDescriptorRepository", return_value=AsyncMock()),
+        ):
             await service.process_workflow(999)
 
     @patch("maestro.database.session.AsyncSessionLocal")
@@ -95,6 +99,7 @@ class TestProcessWorkflowBasic:
         class FakeCtx:
             async def __aenter__(self_):
                 return session
+
             async def __aexit__(self_, *a):
                 pass
 
@@ -104,8 +109,10 @@ class TestProcessWorkflowBasic:
         exec_repo = AsyncMock()
         exec_repo.get_execution_by_id.return_value = execution
 
-        with patch("maestro.repositories.execution.ExecutionRepository", return_value=exec_repo), \
-             patch("maestro.repositories.orchestrator.OrchestratorDescriptorRepository", return_value=AsyncMock()):
+        with (
+            patch("maestro.repositories.execution.ExecutionRepository", return_value=exec_repo),
+            patch("maestro.repositories.orchestrator.OrchestratorDescriptorRepository", return_value=AsyncMock()),
+        ):
             await service.process_workflow(1)
 
         exec_repo.update_release_execution.assert_not_awaited()
@@ -118,6 +125,7 @@ class TestProcessWorkflowBasic:
         class FakeCtx:
             async def __aenter__(self_):
                 return session
+
             async def __aexit__(self_, *a):
                 pass
 
@@ -138,8 +146,10 @@ class TestProcessWorkflowBasic:
 
         service._trigger_step_standalone = AsyncMock(return_value=ExecutionStatus.IN_PROGRESS)
 
-        with patch("maestro.repositories.execution.ExecutionRepository", return_value=exec_repo), \
-             patch("maestro.repositories.orchestrator.OrchestratorDescriptorRepository", return_value=orch_repo):
+        with (
+            patch("maestro.repositories.execution.ExecutionRepository", return_value=exec_repo),
+            patch("maestro.repositories.orchestrator.OrchestratorDescriptorRepository", return_value=orch_repo),
+        ):
             await service.process_workflow(1)
 
         assert execution.status == ExecutionStatus.IN_PROGRESS
@@ -154,6 +164,7 @@ class TestProcessWorkflowStepOutcomes:
         class FakeCtx:
             async def __aenter__(self_):
                 return session
+
             async def __aexit__(self_, *a):
                 pass
 
@@ -173,8 +184,10 @@ class TestProcessWorkflowStepOutcomes:
 
         service._trigger_step_standalone = AsyncMock(return_value=ExecutionStatus.FAILURE)
 
-        with patch("maestro.repositories.execution.ExecutionRepository", return_value=exec_repo), \
-             patch("maestro.repositories.orchestrator.OrchestratorDescriptorRepository", return_value=orch_repo):
+        with (
+            patch("maestro.repositories.execution.ExecutionRepository", return_value=exec_repo),
+            patch("maestro.repositories.orchestrator.OrchestratorDescriptorRepository", return_value=orch_repo),
+        ):
             await service.process_workflow(1)
 
         assert execution.status == ExecutionStatus.FAILURE
@@ -187,6 +200,7 @@ class TestProcessWorkflowStepOutcomes:
         class FakeCtx:
             async def __aenter__(self_):
                 return session
+
             async def __aexit__(self_, *a):
                 pass
 
@@ -204,8 +218,10 @@ class TestProcessWorkflowStepOutcomes:
         orch_repo = AsyncMock()
         orch_repo.get_by_id.return_value = descriptor
 
-        with patch("maestro.repositories.execution.ExecutionRepository", return_value=exec_repo), \
-             patch("maestro.repositories.orchestrator.OrchestratorDescriptorRepository", return_value=orch_repo):
+        with (
+            patch("maestro.repositories.execution.ExecutionRepository", return_value=exec_repo),
+            patch("maestro.repositories.orchestrator.OrchestratorDescriptorRepository", return_value=orch_repo),
+        ):
             await service.process_workflow(1)
 
         assert execution.status == ExecutionStatus.SUCCESS
@@ -218,6 +234,7 @@ class TestProcessWorkflowStepOutcomes:
         class FakeCtx:
             async def __aenter__(self_):
                 return session
+
             async def __aexit__(self_, *a):
                 pass
 
@@ -235,8 +252,10 @@ class TestProcessWorkflowStepOutcomes:
         orch_repo = AsyncMock()
         orch_repo.get_by_id.return_value = descriptor
 
-        with patch("maestro.repositories.execution.ExecutionRepository", return_value=exec_repo), \
-             patch("maestro.repositories.orchestrator.OrchestratorDescriptorRepository", return_value=orch_repo):
+        with (
+            patch("maestro.repositories.execution.ExecutionRepository", return_value=exec_repo),
+            patch("maestro.repositories.orchestrator.OrchestratorDescriptorRepository", return_value=orch_repo),
+        ):
             await service.process_workflow(1)
 
         assert execution.status == ExecutionStatus.IN_PROGRESS
@@ -249,6 +268,7 @@ class TestProcessWorkflowStepOutcomes:
         class FakeCtx:
             async def __aenter__(self_):
                 return session
+
             async def __aexit__(self_, *a):
                 pass
 
@@ -266,8 +286,10 @@ class TestProcessWorkflowStepOutcomes:
         orch_repo = AsyncMock()
         orch_repo.get_by_id.return_value = descriptor
 
-        with patch("maestro.repositories.execution.ExecutionRepository", return_value=exec_repo), \
-             patch("maestro.repositories.orchestrator.OrchestratorDescriptorRepository", return_value=orch_repo):
+        with (
+            patch("maestro.repositories.execution.ExecutionRepository", return_value=exec_repo),
+            patch("maestro.repositories.orchestrator.OrchestratorDescriptorRepository", return_value=orch_repo),
+        ):
             await service.process_workflow(1)
 
         assert execution.status == ExecutionStatus.WAITING_APPROVAL
@@ -280,6 +302,7 @@ class TestProcessWorkflowStepOutcomes:
         class FakeCtx:
             async def __aenter__(self_):
                 return session
+
             async def __aexit__(self_, *a):
                 pass
 
@@ -297,8 +320,10 @@ class TestProcessWorkflowStepOutcomes:
         orch_repo = AsyncMock()
         orch_repo.get_by_id.return_value = descriptor
 
-        with patch("maestro.repositories.execution.ExecutionRepository", return_value=exec_repo), \
-             patch("maestro.repositories.orchestrator.OrchestratorDescriptorRepository", return_value=orch_repo):
+        with (
+            patch("maestro.repositories.execution.ExecutionRepository", return_value=exec_repo),
+            patch("maestro.repositories.orchestrator.OrchestratorDescriptorRepository", return_value=orch_repo),
+        ):
             await service.process_workflow(1)
 
         # Workflow halts - execution stays IN_PROGRESS (not updated to terminal)
@@ -312,6 +337,7 @@ class TestProcessWorkflowStepOutcomes:
         class FakeCtx:
             async def __aenter__(self_):
                 return session
+
             async def __aexit__(self_, *a):
                 pass
 
@@ -329,8 +355,10 @@ class TestProcessWorkflowStepOutcomes:
         orch_repo = AsyncMock()
         orch_repo.get_by_id.return_value = descriptor
 
-        with patch("maestro.repositories.execution.ExecutionRepository", return_value=exec_repo), \
-             patch("maestro.repositories.orchestrator.OrchestratorDescriptorRepository", return_value=orch_repo):
+        with (
+            patch("maestro.repositories.execution.ExecutionRepository", return_value=exec_repo),
+            patch("maestro.repositories.orchestrator.OrchestratorDescriptorRepository", return_value=orch_repo),
+        ):
             await service.process_workflow(1)
 
         assert execution.status == ExecutionStatus.FAILURE
@@ -345,6 +373,7 @@ class TestProcessWorkflowMultiStage:
         class FakeCtx:
             async def __aenter__(self_):
                 return session
+
             async def __aexit__(self_, *a):
                 pass
 
@@ -367,8 +396,10 @@ class TestProcessWorkflowMultiStage:
 
         service._trigger_step_standalone = AsyncMock(return_value=ExecutionStatus.IN_PROGRESS)
 
-        with patch("maestro.repositories.execution.ExecutionRepository", return_value=exec_repo), \
-             patch("maestro.repositories.orchestrator.OrchestratorDescriptorRepository", return_value=orch_repo):
+        with (
+            patch("maestro.repositories.execution.ExecutionRepository", return_value=exec_repo),
+            patch("maestro.repositories.orchestrator.OrchestratorDescriptorRepository", return_value=orch_repo),
+        ):
             await service.process_workflow(1)
 
         # Stage-2 step should have been triggered
@@ -383,6 +414,7 @@ class TestProcessWorkflowMultiStage:
         class FakeCtx:
             async def __aenter__(self_):
                 return session
+
             async def __aexit__(self_, *a):
                 pass
 
@@ -402,8 +434,10 @@ class TestProcessWorkflowMultiStage:
         orch_repo = AsyncMock()
         orch_repo.get_by_id.return_value = descriptor
 
-        with patch("maestro.repositories.execution.ExecutionRepository", return_value=exec_repo), \
-             patch("maestro.repositories.orchestrator.OrchestratorDescriptorRepository", return_value=orch_repo):
+        with (
+            patch("maestro.repositories.execution.ExecutionRepository", return_value=exec_repo),
+            patch("maestro.repositories.orchestrator.OrchestratorDescriptorRepository", return_value=orch_repo),
+        ):
             await service.process_workflow(1)
 
         assert execution.status == ExecutionStatus.SUCCESS
@@ -416,6 +450,7 @@ class TestProcessWorkflowMultiStage:
         class FakeCtx:
             async def __aenter__(self_):
                 return session
+
             async def __aexit__(self_, *a):
                 pass
 
@@ -437,8 +472,10 @@ class TestProcessWorkflowMultiStage:
 
         service._trigger_step_standalone = AsyncMock()
 
-        with patch("maestro.repositories.execution.ExecutionRepository", return_value=exec_repo), \
-             patch("maestro.repositories.orchestrator.OrchestratorDescriptorRepository", return_value=orch_repo):
+        with (
+            patch("maestro.repositories.execution.ExecutionRepository", return_value=exec_repo),
+            patch("maestro.repositories.orchestrator.OrchestratorDescriptorRepository", return_value=orch_repo),
+        ):
             await service.process_workflow(1)
 
         # Execution failed, stage-2 not triggered

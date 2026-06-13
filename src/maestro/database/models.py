@@ -100,8 +100,6 @@ class ExecutionActionLog(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
 
-
-
 class JobPathRegistry(Base):
     """Cadastro de job paths por repositório e environment."""
 

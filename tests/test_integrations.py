@@ -3,20 +3,21 @@ Tests for integration clients.
 Covers: GithubIntegration, JenkinsIntegration.
 Uses httpx mock responses to simulate external API calls.
 """
-import pytest
-import json
-from unittest.mock import AsyncMock, patch, MagicMock
+
+from unittest.mock import patch
+
 import httpx
+import pytest
 
 from maestro.integration.github import GithubIntegration
 from maestro.integration.jenkins import JenkinsIntegration
-from maestro.schemas.github import PullRequestSchema, PullRequestDetailSchema
+from maestro.schemas.github import PullRequestDetailSchema, PullRequestSchema
 from maestro.schemas.jenkins import JenkinsQueueItemSchema
-
 
 # ===========================================================================
 # GithubIntegration
 # ===========================================================================
+
 
 class TestGithubIntegration:
     @pytest.fixture
@@ -106,6 +107,7 @@ class TestGithubIntegration:
 # JenkinsIntegration
 # ===========================================================================
 
+
 class TestJenkinsIntegration:
     @pytest.fixture
     def jenkins(self):
@@ -147,9 +149,7 @@ class TestJenkinsIntegration:
             headers={"Location": "http://jenkins.local:8080/queue/item/123/"},
         )
         with patch.object(httpx.AsyncClient, "post", return_value=mock_response):
-            result = await jenkins.trigger_job_and_get_queue_url(
-                "job/deploy", parameters={"BRANCH": "main"}
-            )
+            result = await jenkins.trigger_job_and_get_queue_url("job/deploy", parameters={"BRANCH": "main"})
             assert result == "http://jenkins.local:8080/queue/item/123/"
 
     async def test_trigger_job_and_get_queue_url_without_params(self, jenkins):
@@ -192,7 +192,7 @@ class TestJenkinsIntegration:
         """If queue_url contains base_url, it should be stripped."""
         queue_data = {"executable": {"number": 10}}
         mock_response = httpx.Response(200, json=queue_data, request=httpx.Request("GET", "http://test"))
-        with patch.object(httpx.AsyncClient, "get", return_value=mock_response) as mock_get:
+        with patch.object(httpx.AsyncClient, "get", return_value=mock_response):
             full_url = "http://jenkins.local:8080/queue/item/999"
             result = await jenkins.get_queue_item_info(full_url)
             assert result.executable.number == 10
@@ -205,9 +205,7 @@ class TestJenkinsIntegration:
 
     async def test_approve_pipeline_without_input_id_fetches_pending(self, jenkins):
         # First call returns pending input actions
-        pending_response_data = [
-            {"id": "auto-discovered-id", "inputs": [{"name": "APPROVAL"}]}
-        ]
+        pending_response_data = [{"id": "auto-discovered-id", "inputs": [{"name": "APPROVAL"}]}]
         mock_get_response = httpx.Response(200, json=pending_response_data)
         mock_post_response = httpx.Response(200)
 

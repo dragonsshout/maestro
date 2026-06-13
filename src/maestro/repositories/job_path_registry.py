@@ -11,9 +11,7 @@ class JobPathRegistryRepository:
     def __init__(self, db: AsyncSession = Depends(get_db)):
         self.db = db
 
-    async def get_by_repository_and_environment(
-        self, repository: str, environment: str
-    ) -> JobPathRegistry | None:
+    async def get_by_repository_and_environment(self, repository: str, environment: str) -> JobPathRegistry | None:
         result = await self.db.execute(
             select(JobPathRegistry).where(
                 JobPathRegistry.repository == repository,
@@ -71,9 +69,7 @@ class JobPathRegistryRepository:
         return count
 
     async def delete(self, entry_id: int) -> bool:
-        result = await self.db.execute(
-            select(JobPathRegistry).where(JobPathRegistry.id == entry_id)
-        )
+        result = await self.db.execute(select(JobPathRegistry).where(JobPathRegistry.id == entry_id))
         entry = result.scalars().first()
         if not entry:
             return False

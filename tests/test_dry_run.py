@@ -1,7 +1,9 @@
-from unittest.mock import AsyncMock, patch, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
+
 from fastapi.testclient import TestClient
+
 from maestro.main import app
-from maestro.schemas.github import PullRequestSchema, PullRequestDetailSchema
+from maestro.schemas.github import PullRequestDetailSchema, PullRequestSchema
 
 client = TestClient(app)
 
@@ -49,15 +51,22 @@ def test_dry_run_descriptor_not_found(mock_dry_run, mock_init, mock_github, mock
 @patch("maestro.services.orchestrator.JenkinsIntegration")
 @patch("maestro.services.orchestrator.GithubIntegration")
 @patch.object(
-    __import__("maestro.repositories.orchestrator", fromlist=["OrchestratorDescriptorRepository"]).OrchestratorDescriptorRepository,
+    __import__(
+        "maestro.repositories.orchestrator", fromlist=["OrchestratorDescriptorRepository"]
+    ).OrchestratorDescriptorRepository,
     "get_by_name",
     new_callable=AsyncMock,
 )
 def test_dry_run_all_validations_pass(mock_get_by_name, mock_github_cls, mock_jenkins_cls, mock_get_settings):
     """All validations pass returns valid=true."""
     mock_get_settings.return_value = MagicMock(
-        github_organization="org", github_token="t", github_base_url=None, http_trust_env=True,
-        jenkins_url="http://j:8080", jenkins_username="u", jenkins_token="t",
+        github_organization="org",
+        github_token="t",
+        github_base_url=None,
+        http_trust_env=True,
+        jenkins_url="http://j:8080",
+        jenkins_username="u",
+        jenkins_token="t",
     )
     mock_get_by_name.return_value = _mock_descriptor()
 
@@ -94,15 +103,22 @@ def test_dry_run_all_validations_pass(mock_get_by_name, mock_github_cls, mock_je
 @patch("maestro.services.orchestrator.JenkinsIntegration")
 @patch("maestro.services.orchestrator.GithubIntegration")
 @patch.object(
-    __import__("maestro.repositories.orchestrator", fromlist=["OrchestratorDescriptorRepository"]).OrchestratorDescriptorRepository,
+    __import__(
+        "maestro.repositories.orchestrator", fromlist=["OrchestratorDescriptorRepository"]
+    ).OrchestratorDescriptorRepository,
     "get_by_name",
     new_callable=AsyncMock,
 )
 def test_dry_run_branch_not_found(mock_get_by_name, mock_github_cls, mock_jenkins_cls, mock_get_settings):
     """Branch not found returns valid=false with branch_exists=false."""
     mock_get_settings.return_value = MagicMock(
-        github_organization="org", github_token="t", github_base_url=None, http_trust_env=True,
-        jenkins_url="http://j:8080", jenkins_username="u", jenkins_token="t",
+        github_organization="org",
+        github_token="t",
+        github_base_url=None,
+        http_trust_env=True,
+        jenkins_url="http://j:8080",
+        jenkins_username="u",
+        jenkins_token="t",
     )
     mock_get_by_name.return_value = _mock_descriptor()
 
@@ -127,15 +143,22 @@ def test_dry_run_branch_not_found(mock_get_by_name, mock_github_cls, mock_jenkin
 @patch("maestro.services.orchestrator.JenkinsIntegration")
 @patch("maestro.services.orchestrator.GithubIntegration")
 @patch.object(
-    __import__("maestro.repositories.orchestrator", fromlist=["OrchestratorDescriptorRepository"]).OrchestratorDescriptorRepository,
+    __import__(
+        "maestro.repositories.orchestrator", fromlist=["OrchestratorDescriptorRepository"]
+    ).OrchestratorDescriptorRepository,
     "get_by_name",
     new_callable=AsyncMock,
 )
 def test_dry_run_pr_not_found(mock_get_by_name, mock_github_cls, mock_jenkins_cls, mock_get_settings):
     """PR not found returns valid=false with pr_found=false."""
     mock_get_settings.return_value = MagicMock(
-        github_organization="org", github_token="t", github_base_url=None, http_trust_env=True,
-        jenkins_url="http://j:8080", jenkins_username="u", jenkins_token="t",
+        github_organization="org",
+        github_token="t",
+        github_base_url=None,
+        http_trust_env=True,
+        jenkins_url="http://j:8080",
+        jenkins_username="u",
+        jenkins_token="t",
     )
     mock_get_by_name.return_value = _mock_descriptor()
 
@@ -161,15 +184,22 @@ def test_dry_run_pr_not_found(mock_get_by_name, mock_github_cls, mock_jenkins_cl
 @patch("maestro.services.orchestrator.JenkinsIntegration")
 @patch("maestro.services.orchestrator.GithubIntegration")
 @patch.object(
-    __import__("maestro.repositories.orchestrator", fromlist=["OrchestratorDescriptorRepository"]).OrchestratorDescriptorRepository,
+    __import__(
+        "maestro.repositories.orchestrator", fromlist=["OrchestratorDescriptorRepository"]
+    ).OrchestratorDescriptorRepository,
     "get_by_name",
     new_callable=AsyncMock,
 )
 def test_dry_run_pr_not_clean(mock_get_by_name, mock_github_cls, mock_jenkins_cls, mock_get_settings):
     """PR not clean returns valid=false with correct mergeable_state."""
     mock_get_settings.return_value = MagicMock(
-        github_organization="org", github_token="t", github_base_url=None, http_trust_env=True,
-        jenkins_url="http://j:8080", jenkins_username="u", jenkins_token="t",
+        github_organization="org",
+        github_token="t",
+        github_base_url=None,
+        http_trust_env=True,
+        jenkins_url="http://j:8080",
+        jenkins_username="u",
+        jenkins_token="t",
     )
     mock_get_by_name.return_value = _mock_descriptor()
 
@@ -202,15 +232,22 @@ def test_dry_run_pr_not_clean(mock_get_by_name, mock_github_cls, mock_jenkins_cl
 @patch("maestro.services.orchestrator.JenkinsIntegration")
 @patch("maestro.services.orchestrator.GithubIntegration")
 @patch.object(
-    __import__("maestro.repositories.orchestrator", fromlist=["OrchestratorDescriptorRepository"]).OrchestratorDescriptorRepository,
+    __import__(
+        "maestro.repositories.orchestrator", fromlist=["OrchestratorDescriptorRepository"]
+    ).OrchestratorDescriptorRepository,
     "get_by_name",
     new_callable=AsyncMock,
 )
 def test_dry_run_jenkins_job_not_found(mock_get_by_name, mock_github_cls, mock_jenkins_cls, mock_get_settings):
     """Jenkins job not found returns valid=false with jenkins_job_exists=false."""
     mock_get_settings.return_value = MagicMock(
-        github_organization="org", github_token="t", github_base_url=None, http_trust_env=True,
-        jenkins_url="http://j:8080", jenkins_username="u", jenkins_token="t",
+        github_organization="org",
+        github_token="t",
+        github_base_url=None,
+        http_trust_env=True,
+        jenkins_url="http://j:8080",
+        jenkins_username="u",
+        jenkins_token="t",
     )
     mock_get_by_name.return_value = _mock_descriptor()
 

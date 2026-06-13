@@ -10,24 +10,24 @@ Covers:
 - POST /ui/step/{id}/abort (thin route test)
 - POST /ui/step/{id}/approve (thin route test)
 """
-import pytest
+
 from unittest.mock import AsyncMock, MagicMock, patch
-from httpx import AsyncClient, ASGITransport
+
 import httpx
+import pytest
+from httpx import ASGITransport, AsyncClient
 
 from maestro.database.session import get_db
-from maestro.schemas.enums import ExecutionStatus
-from maestro.database.models import ReleaseExecution, ReleaseStepExecution, OrchestratorDescriptor
 from maestro.integration.jenkins import JenkinsIntegration
+from maestro.schemas.enums import ExecutionStatus
 from maestro.services.jenkins import JenkinsService
 from maestro.services.orchestrator import OrchestratorService
-
 from tests.conftest import SAMPLE_RELEASE_YAML
-
 
 # ===========================================================================
 # JenkinsIntegration.abort_build
 # ===========================================================================
+
 
 class TestJenkinsIntegrationAbortBuild:
     @pytest.fixture
@@ -59,6 +59,7 @@ class TestJenkinsIntegrationAbortBuild:
 # JenkinsService.abort_build
 # ===========================================================================
 
+
 class TestJenkinsServiceAbortBuild:
     @pytest.fixture
     def service(self):
@@ -76,6 +77,7 @@ class TestJenkinsServiceAbortBuild:
 # ===========================================================================
 # OrchestratorService.abort_step (unit tests)
 # ===========================================================================
+
 
 class TestOrchestratorServiceAbortStep:
     @pytest.fixture
@@ -222,6 +224,7 @@ class TestOrchestratorServiceAbortStep:
 # OrchestratorService.approve_step (unit tests)
 # ===========================================================================
 
+
 class TestOrchestratorServiceApproveStep:
     @pytest.fixture
     def service(self):
@@ -335,6 +338,7 @@ class TestOrchestratorServiceApproveStep:
 # OrchestratorService._resolve_job_path (unit tests)
 # ===========================================================================
 
+
 class TestResolveJobPath:
     @pytest.fixture
     def service(self):
@@ -403,6 +407,7 @@ class TestResolveJobPath:
 # ===========================================================================
 # Route tests (thin — only verify delegation and template rendering)
 # ===========================================================================
+
 
 @pytest.fixture
 def mock_session():

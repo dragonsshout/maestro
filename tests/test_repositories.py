@@ -3,12 +3,11 @@ Tests for repository layer.
 Covers: OrchestratorDescriptorRepository, ExecutionRepository, UISettingsRepository.
 All DB interactions are mocked at the AsyncSession level.
 """
-import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
 
-from maestro.repositories.orchestrator import OrchestratorDescriptorRepository
-from maestro.repositories.execution import ExecutionRepository
-from maestro.repositories.settings import UISettingsRepository
+from unittest.mock import MagicMock
+
+import pytest
+
 from maestro.database.models import (
     OrchestratorDescriptor,
     ReleaseExecution,
@@ -16,12 +15,15 @@ from maestro.database.models import (
     StepEvent,
     UISettings,
 )
+from maestro.repositories.execution import ExecutionRepository
+from maestro.repositories.orchestrator import OrchestratorDescriptorRepository
+from maestro.repositories.settings import UISettingsRepository
 from maestro.schemas.enums import ExecutionStatus
-
 
 # ===========================================================================
 # OrchestratorDescriptorRepository
 # ===========================================================================
+
 
 class TestOrchestratorDescriptorRepository:
     @pytest.fixture
@@ -98,6 +100,7 @@ class TestOrchestratorDescriptorRepository:
 # ===========================================================================
 # ExecutionRepository
 # ===========================================================================
+
 
 class TestExecutionRepository:
     @pytest.fixture
@@ -286,6 +289,7 @@ class TestExecutionRepository:
 
     async def test_add_action_log(self, repo, mock_db_session):
         from maestro.database.models import ExecutionActionLog
+
         log = ExecutionActionLog(
             release_execution_id=1,
             action="approve",
@@ -299,6 +303,7 @@ class TestExecutionRepository:
 
     async def test_get_action_logs_by_execution_id(self, repo, mock_db_session):
         from maestro.database.models import ExecutionActionLog
+
         log1 = MagicMock(spec=ExecutionActionLog)
         log2 = MagicMock(spec=ExecutionActionLog)
 
@@ -313,6 +318,7 @@ class TestExecutionRepository:
 # ===========================================================================
 # UISettingsRepository
 # ===========================================================================
+
 
 class TestUISettingsRepository:
     @pytest.fixture

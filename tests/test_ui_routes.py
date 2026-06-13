@@ -3,13 +3,15 @@ Tests for UI API routes.
 Covers: cancel execution, override step, resolve timeout, retry step via UI,
 execute release via UI, dry-run via UI, releases page, settings page.
 """
-import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
-from httpx import AsyncClient, ASGITransport
 
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
+from httpx import ASGITransport, AsyncClient
+
+from maestro.database.models import ReleaseExecution, ReleaseStepExecution
 from maestro.database.session import get_db
 from maestro.schemas.enums import ExecutionStatus
-from maestro.database.models import ReleaseExecution, ReleaseStepExecution, ExecutionActionLog
 
 
 @pytest.fixture
@@ -45,6 +47,7 @@ async def client(app_override):
 # ===========================================================================
 # Cancel Execution
 # ===========================================================================
+
 
 class TestCancelExecution:
     @patch("maestro.services.orchestrator.OrchestratorService.cancel_execution")
@@ -92,6 +95,7 @@ class TestCancelExecution:
 # ===========================================================================
 # Override Step
 # ===========================================================================
+
 
 class TestOverrideStep:
     async def test_override_invalid_action(self, client):
@@ -178,6 +182,7 @@ class TestOverrideStep:
 # Resolve Timeout
 # ===========================================================================
 
+
 class TestResolveTimeout:
     @patch("maestro.services.orchestrator.OrchestratorService.process_workflow", new_callable=AsyncMock)
     async def test_resolve_timeout_step_not_found(self, mock_process, client, mock_session):
@@ -256,6 +261,7 @@ class TestResolveTimeout:
 # Retry Step via UI
 # ===========================================================================
 
+
 class TestRetryStepUI:
     @patch("maestro.services.orchestrator.OrchestratorService.retry_step")
     async def test_retry_step_ui_success(self, mock_retry, client, mock_session):
@@ -287,6 +293,7 @@ class TestRetryStepUI:
 # Execute Release via UI
 # ===========================================================================
 
+
 class TestExecuteReleaseUI:
     @patch("maestro.services.orchestrator.OrchestratorService.execute_release")
     async def test_execute_ui_success(self, mock_execute, client):
@@ -307,6 +314,7 @@ class TestExecuteReleaseUI:
 # ===========================================================================
 # Dry-Run via UI
 # ===========================================================================
+
 
 class TestDryRunUI:
     @patch("maestro.services.orchestrator.OrchestratorService.dry_run_release")
@@ -354,6 +362,7 @@ class TestDryRunUI:
 # Settings Page
 # ===========================================================================
 
+
 class TestSettingsUI:
     @patch("maestro.services.settings.UISettingsService.get_all_masked")
     async def test_settings_page_get(self, mock_get_all_masked, client):
@@ -381,7 +390,12 @@ class TestSettingsUI:
 
         response = await client.post(
             "/ui/settings",
-            data={"jenkins_base_url": "http://new:8080", "github_base_url": "", "github_organization": "", "step_timeout_minutes": ""},
+            data={
+                "jenkins_base_url": "http://new:8080",
+                "github_base_url": "",
+                "github_organization": "",
+                "step_timeout_minutes": "",
+            },
             headers={"content-type": "application/x-www-form-urlencoded"},
         )
         assert response.status_code == 200
@@ -390,6 +404,7 @@ class TestSettingsUI:
 # ===========================================================================
 # Approve Execution via UI
 # ===========================================================================
+
 
 class TestApproveExecutionUI:
     @patch("maestro.services.orchestrator.OrchestratorService.approve_release")

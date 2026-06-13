@@ -3,10 +3,10 @@ from typing import List
 from maestro.config.logger import get_logger
 from maestro.integration.github import GithubIntegration
 from maestro.integration.jenkins import JenkinsIntegration
+from maestro.repositories.job_path_registry import JobPathRegistryRepository
 from maestro.schemas.orchestrator import ReleaseConfigSchema
 from maestro.services.app_settings import get_integration_settings
 from maestro.services.job_path_resolver import resolve_job_path_async
-from maestro.repositories.job_path_registry import JobPathRegistryRepository
 
 logger = get_logger(__name__)
 

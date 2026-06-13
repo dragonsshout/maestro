@@ -2,14 +2,15 @@
 Tests for the scheduler service layer and background task.
 Covers: SchedulerService, _process_due_schedules, and schedule API endpoints.
 """
-import pytest
+
+from datetime import datetime, timedelta, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
-from datetime import datetime, timezone, timedelta
 
-from maestro.services.scheduler import SchedulerService, _process_due_schedules
-from maestro.schemas.enums import ScheduledReleaseStatus
+import pytest
+
 from maestro.database.models import ScheduledRelease
-
+from maestro.schemas.enums import ScheduledReleaseStatus
+from maestro.services.scheduler import SchedulerService, _process_due_schedules
 
 # ===========================================================================
 # SchedulerService.schedule_release
@@ -95,9 +96,7 @@ class TestSchedulerServiceCancelSchedule:
         service.schedule_repo.cancel_schedule.assert_awaited_once_with(1)
 
     async def test_cancel_schedule_not_found_or_not_pending(self, service):
-        service.schedule_repo.cancel_schedule = AsyncMock(
-            side_effect=ValueError("Agendamento #99 nao encontrado.")
-        )
+        service.schedule_repo.cancel_schedule = AsyncMock(side_effect=ValueError("Agendamento #99 nao encontrado."))
 
         with pytest.raises(ValueError, match="nao encontrado"):
             await service.cancel_schedule(99)
@@ -144,8 +143,14 @@ class TestProcessDueSchedules:
     @patch("maestro.repositories.orchestrator.OrchestratorDescriptorRepository")
     @patch("maestro.database.session.AsyncSessionLocal")
     async def test_due_schedule_triggers_execution(
-        self, mock_session_local, mock_orch_repo_cls, mock_exec_repo_cls,
-        mock_sched_repo_cls, mock_jenkins_cls, mock_execute_release, mock_create_task
+        self,
+        mock_session_local,
+        mock_orch_repo_cls,
+        mock_exec_repo_cls,
+        mock_sched_repo_cls,
+        mock_jenkins_cls,
+        mock_execute_release,
+        mock_create_task,
     ):
         session = AsyncMock()
         mock_session_local.return_value.__aenter__.return_value = session
@@ -178,8 +183,7 @@ class TestProcessDueSchedules:
     @patch("maestro.repositories.orchestrator.OrchestratorDescriptorRepository")
     @patch("maestro.database.session.AsyncSessionLocal")
     async def test_due_schedule_with_active_execution_marks_failed(
-        self, mock_session_local, mock_orch_repo_cls, mock_exec_repo_cls,
-        mock_sched_repo_cls, mock_create_task
+        self, mock_session_local, mock_orch_repo_cls, mock_exec_repo_cls, mock_sched_repo_cls, mock_create_task
     ):
         session = AsyncMock()
         mock_session_local.return_value.__aenter__.return_value = session
@@ -217,8 +221,14 @@ class TestProcessDueSchedules:
     @patch("maestro.repositories.orchestrator.OrchestratorDescriptorRepository")
     @patch("maestro.database.session.AsyncSessionLocal")
     async def test_due_schedule_execution_raises_exception_marks_failed(
-        self, mock_session_local, mock_orch_repo_cls, mock_exec_repo_cls,
-        mock_sched_repo_cls, mock_jenkins_cls, mock_execute_release, mock_create_task
+        self,
+        mock_session_local,
+        mock_orch_repo_cls,
+        mock_exec_repo_cls,
+        mock_sched_repo_cls,
+        mock_jenkins_cls,
+        mock_execute_release,
+        mock_create_task,
     ):
         session = AsyncMock()
         mock_session_local.return_value.__aenter__.return_value = session
@@ -261,8 +271,8 @@ class TestScheduleAPIRoutes:
     @pytest.fixture
     def app_with_scheduler_override(self, override_get_db, mock_scheduler_service):
         with patch("subprocess.run"):
-            from maestro.main import app
             from maestro.database.session import get_db
+            from maestro.main import app
 
             app.dependency_overrides[get_db] = override_get_db
             app.dependency_overrides[SchedulerService] = lambda: mock_scheduler_service
@@ -271,7 +281,8 @@ class TestScheduleAPIRoutes:
 
     @pytest.fixture
     async def client(self, app_with_scheduler_override):
-        from httpx import AsyncClient, ASGITransport
+        from httpx import ASGITransport, AsyncClient
+
         transport = ASGITransport(app=app_with_scheduler_override)
         async with AsyncClient(transport=transport, base_url="http://test") as c:
             yield c
@@ -353,9 +364,7 @@ class TestScheduleAPIRoutes:
         assert "cancelado" in response.json()["message"].lower()
 
     async def test_delete_schedule_not_found(self, client, mock_scheduler_service):
-        mock_scheduler_service.cancel_schedule = AsyncMock(
-            side_effect=ValueError("Agendamento #999 nao encontrado.")
-        )
+        mock_scheduler_service.cancel_schedule = AsyncMock(side_effect=ValueError("Agendamento #999 nao encontrado."))
 
         response = await client.delete("/orchestrator/schedule/999")
 

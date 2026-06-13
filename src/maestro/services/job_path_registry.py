@@ -132,7 +132,7 @@ class JobPathRegistryService:
         """
         # Remove a base URL para obter apenas o path relativo
         if job_url.startswith(jenkins_base_url):
-            relative = job_url[len(jenkins_base_url):]
+            relative = job_url[len(jenkins_base_url) :]
         else:
             # Fallback: extrai apenas o path da URL
             parsed = urlparse(job_url)

@@ -1,4 +1,3 @@
-import re
 """
 Integration tests for the Orchestrator flow.
 
@@ -10,11 +9,12 @@ Tests the full lifecycle:
 
 All tests use a real PostgreSQL database and mock external HTTP APIs.
 """
+import re
+
 import pytest
 
 from maestro.schemas.enums import ExecutionStatus
-from tests.integration.conftest import SAMPLE_RELEASE_YAML, SAMPLE_RELEASE_YAML_MULTI_STAGE
-
+from tests.integration.conftest import SAMPLE_RELEASE_YAML
 
 pytestmark = [
     pytest.mark.integration,
@@ -25,6 +25,7 @@ pytestmark = [
 # ===========================================================================
 # Upload Config (save descriptor)
 # ===========================================================================
+
 
 class TestUploadConfig:
     async def test_upload_yaml_success(self, client, mock_github_repo_exists, mock_jenkins_job_exists):
@@ -110,6 +111,7 @@ class TestUploadConfig:
 # ===========================================================================
 # Dry-Run
 # ===========================================================================
+
 
 class TestDryRun:
     @pytest.fixture(autouse=True)
@@ -208,6 +210,7 @@ class TestDryRun:
 # Execute Release
 # ===========================================================================
 
+
 class TestExecuteRelease:
     @pytest.fixture(autouse=True)
     async def _setup_descriptor(self, client, httpx_mock):
@@ -248,13 +251,15 @@ class TestExecuteRelease:
             url=re.compile(r".*/buildWithParameters"),
             status_code=201,
             headers={"Location": "http://jenkins:8080/queue/item/1/"},
-            is_reusable=True, is_optional=True,
+            is_reusable=True,
+            is_optional=True,
         )
         # Mock Jenkins queue poll
         httpx_mock.add_response(
             url=re.compile(r".*/queue/item/.*/api/json$"),
             json={"executable": {"number": 100}},
-            is_reusable=True, is_optional=True,
+            is_reusable=True,
+            is_optional=True,
         )
 
         response = await client.post("/orchestrator/execute", json={"name": "execute-test"})
@@ -289,12 +294,14 @@ class TestExecuteRelease:
             url=re.compile(r".*/buildWithParameters"),
             status_code=201,
             headers={"Location": "http://jenkins:8080/queue/item/1/"},
-            is_reusable=True, is_optional=True,
+            is_reusable=True,
+            is_optional=True,
         )
         httpx_mock.add_response(
             url=re.compile(r".*/queue/item/.*/api/json$"),
             json={"executable": {"number": 200}},
-            is_reusable=True, is_optional=True,
+            is_reusable=True,
+            is_optional=True,
         )
 
         # First execute
@@ -325,6 +332,7 @@ class TestExecuteRelease:
 # ===========================================================================
 # Retry Step
 # ===========================================================================
+
 
 class TestRetryStep:
     async def test_retry_step_not_found(self, client):
@@ -369,12 +377,14 @@ class TestRetryStep:
             url=re.compile(r".*/buildWithParameters"),
             status_code=201,
             headers={"Location": "http://jenkins:8080/queue/item/1/"},
-            is_reusable=True, is_optional=True,
+            is_reusable=True,
+            is_optional=True,
         )
         httpx_mock.add_response(
             url=re.compile(r".*/queue/item/.*/api/json$"),
             json={"executable": {"number": 300}},
-            is_reusable=True, is_optional=True,
+            is_reusable=True,
+            is_optional=True,
         )
 
         exec_response = await client.post("/orchestrator/execute", json={"name": "retry-flow-test"})
@@ -382,31 +392,29 @@ class TestRetryStep:
         exec_id = exec_response.json()["release_execution_id"]
 
         # Get step ID from DB
-        from maestro.database.models import ReleaseStepExecution
-        from sqlalchemy.future import select
         from sqlalchemy.ext.asyncio import async_sessionmaker
+        from sqlalchemy.future import select
+
+        from maestro.database.models import ReleaseStepExecution
 
         sf = async_sessionmaker(bind=db_engine, expire_on_commit=False)
         async with sf() as session:
             result = await session.execute(
-                select(ReleaseStepExecution).where(
-                    ReleaseStepExecution.release_execution_id == exec_id
-                )
+                select(ReleaseStepExecution).where(ReleaseStepExecution.release_execution_id == exec_id)
             )
             step_row = result.scalars().first()
             assert step_row is not None
             step_id = step_row.id
 
         # Manually mark step as failure (simulate Jenkins failure callback)
-        from maestro.database.models import ReleaseStepExecution
-        from sqlalchemy.future import select
         from sqlalchemy.ext.asyncio import async_sessionmaker
+        from sqlalchemy.future import select
+
+        from maestro.database.models import ReleaseStepExecution
 
         sf = async_sessionmaker(bind=db_engine, expire_on_commit=False)
         async with sf() as session:
-            result = await session.execute(
-                select(ReleaseStepExecution).where(ReleaseStepExecution.id == step_id)
-            )
+            result = await session.execute(select(ReleaseStepExecution).where(ReleaseStepExecution.id == step_id))
             step = result.scalars().first()
             step.status = ExecutionStatus.FAILURE
             step.message = "Build failed"
@@ -418,12 +426,14 @@ class TestRetryStep:
             url=re.compile(r".*/buildWithParameters"),
             status_code=201,
             headers={"Location": "http://jenkins:8080/queue/item/2/"},
-            is_reusable=True, is_optional=True,
+            is_reusable=True,
+            is_optional=True,
         )
         httpx_mock.add_response(
             url=re.compile(r".*/queue/item/.*/api/json$"),
             json={"executable": {"number": 301}},
-            is_reusable=True, is_optional=True,
+            is_reusable=True,
+            is_optional=True,
         )
 
         retry_response = await client.post(f"/orchestrator/retry-step/{step_id}")

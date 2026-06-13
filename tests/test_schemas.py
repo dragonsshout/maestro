@@ -3,34 +3,30 @@ Tests for Pydantic schemas and enums.
 Covers: ExecutionStatus enum, callback schemas, orchestrator schemas,
 GitHub schemas, Jenkins schemas.
 """
+
 import pytest
 from pydantic import ValidationError
 
-from maestro.schemas.enums import ExecutionStatus
 from maestro.schemas.callback import ReleaseCallbackSchema, StepEventSchema
+from maestro.schemas.enums import ExecutionStatus
+from maestro.schemas.github import PullRequestDetailSchema, PullRequestSchema
+from maestro.schemas.jenkins import JenkinsExecutableSchema, JenkinsQueueItemSchema
 from maestro.schemas.orchestrator import (
-    ReleaseConfigSchema,
-    JobSchema,
-    StepSchema,
-    StageSchema,
-    MetadataSchema,
-    ReleaseSpecSchema,
-    ExecuteReleaseRequest,
     ApproveReleaseRequest,
-    DryRunStepResult,
-    DryRunStageResult,
     DryRunResponse,
-    ReleaseStatusResponse,
-    ReleaseStepResponse,
-    ReleaseDetailsResponse,
+    DryRunStageResult,
+    DryRunStepResult,
+    ExecuteReleaseRequest,
+    JobSchema,
+    ReleaseConfigSchema,
+    StageSchema,
+    StepSchema,
 )
-from maestro.schemas.github import PullRequestSchema, PullRequestDetailSchema
-from maestro.schemas.jenkins import JenkinsQueueItemSchema, JenkinsExecutableSchema
-
 
 # ===========================================================================
 # ExecutionStatus Enum
 # ===========================================================================
+
 
 class TestExecutionStatus:
     def test_all_members(self):
@@ -75,6 +71,7 @@ class TestExecutionStatus:
 # ===========================================================================
 # Callback Schemas
 # ===========================================================================
+
 
 class TestReleaseCallbackSchema:
     def test_valid_minimal(self):
@@ -130,6 +127,7 @@ class TestStepEventSchema:
 # Orchestrator Schemas
 # ===========================================================================
 
+
 class TestJobSchema:
     def test_valid(self):
         job = JobSchema(type="jenkins", path="job/deploy")
@@ -172,9 +170,7 @@ class TestStageSchema:
     def test_valid(self):
         stage = StageSchema(
             id="stage-1",
-            steps=[
-                {"id": "s1", "repository": "repo", "release": "branch", "job": {"type": "jenkins", "path": "p"}}
-            ],
+            steps=[{"id": "s1", "repository": "repo", "release": "branch", "job": {"type": "jenkins", "path": "p"}}],
         )
         assert stage.id == "stage-1"
         assert len(stage.steps) == 1
@@ -326,6 +322,7 @@ class TestDryRunSchemas:
 # GitHub Schemas
 # ===========================================================================
 
+
 class TestPullRequestSchema:
     def test_valid(self):
         pr = PullRequestSchema(number=1, state="open", title="My PR")
@@ -339,9 +336,7 @@ class TestPullRequestSchema:
 
 class TestPullRequestDetailSchema:
     def test_valid_with_details(self):
-        pr = PullRequestDetailSchema(
-            number=10, state="open", title="PR", mergeable_state="clean", mergeable=True
-        )
+        pr = PullRequestDetailSchema(number=10, state="open", title="PR", mergeable_state="clean", mergeable=True)
         assert pr.mergeable_state == "clean"
         assert pr.mergeable is True
 
@@ -354,6 +349,7 @@ class TestPullRequestDetailSchema:
 # ===========================================================================
 # Jenkins Schemas
 # ===========================================================================
+
 
 class TestJenkinsSchemas:
     def test_queue_item_without_executable(self):

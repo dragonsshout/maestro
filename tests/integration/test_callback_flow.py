@@ -8,12 +8,12 @@ Tests the callback flow with a real database:
 
 All tests persist data in a real PostgreSQL and mock only external HTTP calls.
 """
+
 import pytest
 
+from maestro.database.models import OrchestratorDescriptor, ReleaseExecution, ReleaseStepExecution
 from maestro.schemas.enums import ExecutionStatus
-from maestro.database.models import ReleaseStepExecution, ReleaseExecution, OrchestratorDescriptor
 from tests.integration.conftest import SAMPLE_RELEASE_YAML
-
 
 pytestmark = pytest.mark.integration
 
@@ -62,6 +62,7 @@ async def execution_with_step(db_engine):
 # Release Callback
 # ===========================================================================
 
+
 class TestReleaseCallback:
     async def test_callback_success_updates_step(self, client, execution_with_step, db_engine):
         """Callback with status=success updates step in DB."""
@@ -79,14 +80,12 @@ class TestReleaseCallback:
         assert data["status"] == "success"
 
         # Verify DB was updated
-        from sqlalchemy.future import select
         from sqlalchemy.ext.asyncio import async_sessionmaker
+        from sqlalchemy.future import select
 
         sf = async_sessionmaker(bind=db_engine, expire_on_commit=False)
         async with sf() as session:
-            result = await session.execute(
-                select(ReleaseStepExecution).where(ReleaseStepExecution.id == step.id)
-            )
+            result = await session.execute(select(ReleaseStepExecution).where(ReleaseStepExecution.id == step.id))
             updated_step = result.scalars().first()
             assert updated_step.status == ExecutionStatus.SUCCESS
             assert updated_step.message == "Build completed successfully"
@@ -103,14 +102,12 @@ class TestReleaseCallback:
         response = await client.post("/callback/release", json=payload)
         assert response.status_code == 200
 
-        from sqlalchemy.future import select
         from sqlalchemy.ext.asyncio import async_sessionmaker
+        from sqlalchemy.future import select
 
         sf = async_sessionmaker(bind=db_engine, expire_on_commit=False)
         async with sf() as session:
-            result = await session.execute(
-                select(ReleaseStepExecution).where(ReleaseStepExecution.id == step.id)
-            )
+            result = await session.execute(select(ReleaseStepExecution).where(ReleaseStepExecution.id == step.id))
             updated_step = result.scalars().first()
             assert updated_step.status == ExecutionStatus.FAILURE
 
@@ -126,14 +123,12 @@ class TestReleaseCallback:
         response = await client.post("/callback/release", json=payload)
         assert response.status_code == 200
 
-        from sqlalchemy.future import select
         from sqlalchemy.ext.asyncio import async_sessionmaker
+        from sqlalchemy.future import select
 
         sf = async_sessionmaker(bind=db_engine, expire_on_commit=False)
         async with sf() as session:
-            result = await session.execute(
-                select(ReleaseStepExecution).where(ReleaseStepExecution.id == step.id)
-            )
+            result = await session.execute(select(ReleaseStepExecution).where(ReleaseStepExecution.id == step.id))
             updated_step = result.scalars().first()
             assert updated_step.status == ExecutionStatus.WAITING_APPROVAL
             assert updated_step.job_input_id == "approval-input-xyz"
@@ -177,6 +172,7 @@ class TestReleaseCallback:
 # Event Callback
 # ===========================================================================
 
+
 class TestEventCallback:
     async def test_event_callback_success(self, client, execution_with_step, db_engine):
         """Event callback persists a StepEvent in DB."""
@@ -192,15 +188,14 @@ class TestEventCallback:
         assert "Evento registrado" in data["message"]
 
         # Verify event was persisted in DB
-        from maestro.database.models import StepEvent
-        from sqlalchemy.future import select
         from sqlalchemy.ext.asyncio import async_sessionmaker
+        from sqlalchemy.future import select
+
+        from maestro.database.models import StepEvent
 
         sf = async_sessionmaker(bind=db_engine, expire_on_commit=False)
         async with sf() as session:
-            result = await session.execute(
-                select(StepEvent).where(StepEvent.job_execution_correlation_id == 500)
-            )
+            result = await session.execute(select(StepEvent).where(StepEvent.job_execution_correlation_id == 500))
             events = result.scalars().all()
             assert len(events) >= 1
             assert events[0].message == "Build #500 started on agent linux-01"
@@ -224,9 +219,10 @@ class TestEventCallback:
             assert response.status_code == 200
 
         # Verify all events persisted
-        from maestro.database.models import StepEvent
-        from sqlalchemy.future import select
         from sqlalchemy.ext.asyncio import async_sessionmaker
+        from sqlalchemy.future import select
+
+        from maestro.database.models import StepEvent
 
         sf = async_sessionmaker(bind=db_engine, expire_on_commit=False)
         async with sf() as session:

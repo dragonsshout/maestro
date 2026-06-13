@@ -7,24 +7,25 @@ for full end-to-end testing.
 
 External APIs (Jenkins, GitHub) are mocked at the HTTP level via pytest-httpx.
 """
+
+import asyncio
 import os
 import re
 import subprocess
-import asyncio
 
 import pytest
 import pytest_asyncio
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
-from httpx import AsyncClient, ASGITransport
+from httpx import ASGITransport, AsyncClient
+from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from testcontainers.postgres import PostgresContainer
 
 from maestro.database.models import Base
 from maestro.database.session import get_db
 
-
 # ---------------------------------------------------------------------------
 # PostgreSQL container fixture (session-scoped via testcontainers)
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture(scope="session")
 def postgres_container():
@@ -49,6 +50,7 @@ def postgres_container():
 # ---------------------------------------------------------------------------
 # Database engine & migrations
 # ---------------------------------------------------------------------------
+
 
 @pytest_asyncio.fixture
 async def db_engine(postgres_container):
@@ -95,6 +97,7 @@ def ao(postgres_container):
 # Async session fixture (function-scoped with table truncation for isolation)
 # ---------------------------------------------------------------------------
 
+
 @pytest_asyncio.fixture
 async def db_session(db_engine):
     """
@@ -111,10 +114,13 @@ async def _cleanup_db(db_engine):
     """Truncate all tables BEFORE each test for isolation."""
     async with db_engine.begin() as conn:
         from sqlalchemy import text
-        await conn.execute(text(
-            "TRUNCATE step_event, release_step_execution, release_execution, "
-            "orchestrator_descriptor, ui_settings, execution_action_log CASCADE"
-        ))
+
+        await conn.execute(
+            text(
+                "TRUNCATE step_event, release_step_execution, release_execution, "
+                "orchestrator_descriptor, ui_settings, execution_action_log CASCADE"
+            )
+        )
     yield
 
 
@@ -122,24 +128,27 @@ async def _cleanup_db(db_engine):
 # FastAPI app with real DB override
 # ---------------------------------------------------------------------------
 
+
 @pytest_asyncio.fixture
 async def app(db_engine):
     """
     FastAPI app with the DB dependency overridden to use the test database.
     Background tasks are all mocked out.
     """
-    from unittest.mock import patch, AsyncMock
+    from unittest.mock import AsyncMock, patch
 
     session_factory = async_sessionmaker(bind=db_engine, expire_on_commit=False)
 
     async def _noop():
         pass
 
-    with patch("subprocess.run"), \
-         patch("maestro.services.orchestrator.OrchestratorService.process_workflow", new_callable=AsyncMock), \
-         patch("maestro.services.timeout_checker.start_timeout_checker", return_value=_noop()), \
-         patch("maestro.services.build_poller.start_build_poller", return_value=_noop()), \
-         patch("maestro.services.scheduler.start_scheduler_checker", return_value=_noop()):
+    with (
+        patch("subprocess.run"),
+        patch("maestro.services.orchestrator.OrchestratorService.process_workflow", new_callable=AsyncMock),
+        patch("maestro.services.timeout_checker.start_timeout_checker", return_value=_noop()),
+        patch("maestro.services.build_poller.start_build_poller", return_value=_noop()),
+        patch("maestro.services.scheduler.start_scheduler_checker", return_value=_noop()),
+    ):
         from maestro.main import app as _app
 
         async def _get_test_db():
@@ -162,6 +171,7 @@ async def client(app):
 # ---------------------------------------------------------------------------
 # Jenkins/GitHub HTTP mocks (fixtures using pytest-httpx)
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 def mock_github_branch_exists(httpx_mock):
@@ -215,7 +225,9 @@ def mock_github_pr_details_clean(httpx_mock):
 
 
 @pytest.fixture
-def mock_github_all_ok(mock_github_repo_exists, mock_github_branch_exists, mock_github_pr_found, mock_github_pr_details_clean):
+def mock_github_all_ok(
+    mock_github_repo_exists, mock_github_branch_exists, mock_github_pr_found, mock_github_pr_details_clean
+):
     """Combines all GitHub mocks for happy path."""
     pass
 

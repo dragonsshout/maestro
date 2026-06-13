@@ -3,7 +3,7 @@ from typing import Dict, Optional
 
 import httpx
 
-from maestro.schemas.jenkins import JenkinsQueueItemSchema, JenkinsBuildInfoSchema, JenkinsPendingInputSchema
+from maestro.schemas.jenkins import JenkinsBuildInfoSchema, JenkinsPendingInputSchema, JenkinsQueueItemSchema
 
 
 class JenkinsIntegration:

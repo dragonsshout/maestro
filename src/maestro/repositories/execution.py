@@ -1,4 +1,7 @@
-from typing import List
+from typing import TYPE_CHECKING, List
+
+if TYPE_CHECKING:
+    from maestro.database.models import OrchestratorDescriptor
 
 from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -186,14 +189,13 @@ class ExecutionRepository:
         """Retorna execuções por IDs."""
         if not execution_ids:
             return {}
-        result = await self.db.execute(
-            select(ReleaseExecution).where(ReleaseExecution.id.in_(execution_ids))
-        )
+        result = await self.db.execute(select(ReleaseExecution).where(ReleaseExecution.id.in_(execution_ids)))
         return {e.id: e for e in result.scalars().all()}
 
     async def get_descriptors_by_ids(self, descriptor_ids: set[int]) -> dict[int, "OrchestratorDescriptor"]:
         """Retorna descriptors por IDs."""
         from maestro.database.models import OrchestratorDescriptor
+
         if not descriptor_ids:
             return {}
         result = await self.db.execute(

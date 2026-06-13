@@ -7,11 +7,10 @@ Tests the settings CRUD flow with a real database:
 - Upsert behavior (insert or update)
 - Unknown keys are filtered
 """
+
 import pytest
 
 from maestro.database.models import UISettings
-from maestro.services.settings import KNOWN_SETTINGS
-
 
 pytestmark = pytest.mark.integration
 
@@ -38,14 +37,12 @@ class TestSettingsAPI:
         assert response.status_code == 200
 
         # Verify persisted in DB
-        from sqlalchemy.future import select
         from sqlalchemy.ext.asyncio import async_sessionmaker
+        from sqlalchemy.future import select
 
         sf = async_sessionmaker(bind=db_engine, expire_on_commit=False)
         async with sf() as session:
-            result = await session.execute(
-                select(UISettings).where(UISettings.key == "jenkins_base_url")
-            )
+            result = await session.execute(select(UISettings).where(UISettings.key == "jenkins_base_url"))
             setting = result.scalars().first()
             assert setting is not None
             assert setting.value == "https://jenkins.mycompany.com"
@@ -67,14 +64,12 @@ class TestSettingsAPI:
         )
 
         # Verify updated
-        from sqlalchemy.future import select
         from sqlalchemy.ext.asyncio import async_sessionmaker
+        from sqlalchemy.future import select
 
         sf = async_sessionmaker(bind=db_engine, expire_on_commit=False)
         async with sf() as session:
-            result = await session.execute(
-                select(UISettings).where(UISettings.key == "jenkins_base_url")
-            )
+            result = await session.execute(select(UISettings).where(UISettings.key == "jenkins_base_url"))
             setting = result.scalars().first()
             assert setting.value == "https://new-jenkins.io"
 
@@ -86,14 +81,12 @@ class TestSettingsAPI:
             headers={"content-type": "application/x-www-form-urlencoded"},
         )
 
-        from sqlalchemy.future import select
         from sqlalchemy.ext.asyncio import async_sessionmaker
+        from sqlalchemy.future import select
 
         sf = async_sessionmaker(bind=db_engine, expire_on_commit=False)
         async with sf() as session:
-            result = await session.execute(
-                select(UISettings).where(UISettings.key == "jenkins_base_url")
-            )
+            result = await session.execute(select(UISettings).where(UISettings.key == "jenkins_base_url"))
             setting = result.scalars().first()
             assert setting is not None
             assert setting.value is None
@@ -106,14 +99,12 @@ class TestSettingsAPI:
             headers={"content-type": "application/x-www-form-urlencoded"},
         )
 
-        from sqlalchemy.future import select
         from sqlalchemy.ext.asyncio import async_sessionmaker
+        from sqlalchemy.future import select
 
         sf = async_sessionmaker(bind=db_engine, expire_on_commit=False)
         async with sf() as session:
-            result = await session.execute(
-                select(UISettings).where(UISettings.key == "jenkins_base_url")
-            )
+            result = await session.execute(select(UISettings).where(UISettings.key == "jenkins_base_url"))
             setting = result.scalars().first()
             assert setting is not None
             assert setting.value is None
@@ -131,14 +122,12 @@ class TestSettingsAPI:
             headers={"content-type": "application/x-www-form-urlencoded"},
         )
 
-        from sqlalchemy.future import select
         from sqlalchemy.ext.asyncio import async_sessionmaker
+        from sqlalchemy.future import select
 
         sf = async_sessionmaker(bind=db_engine, expire_on_commit=False)
         async with sf() as session:
-            result = await session.execute(
-                select(UISettings).where(UISettings.key == "hacker_key")
-            )
+            result = await session.execute(select(UISettings).where(UISettings.key == "hacker_key"))
             setting = result.scalars().first()
             assert setting is None
 
@@ -160,8 +149,8 @@ class TestSettingsIntegrationWithExecution:
         )
 
         # Verify settings are returned
-        from sqlalchemy.future import select
         from sqlalchemy.ext.asyncio import async_sessionmaker
+        from sqlalchemy.future import select
 
         sf = async_sessionmaker(bind=db_engine, expire_on_commit=False)
         async with sf() as session:

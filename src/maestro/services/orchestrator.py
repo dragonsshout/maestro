@@ -457,7 +457,6 @@ class OrchestratorService:
             self.jenkins_service.execution_repo = exec_repo
             self.jenkins_service._jenkins_integration = None
 
-
             execution = await exec_repo.get_execution_by_id(execution_id)
             if not execution:
                 logger.warning(f"Execução {execution_id} não encontrada.")

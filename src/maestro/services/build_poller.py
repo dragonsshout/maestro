@@ -5,6 +5,7 @@ Background service that polls Jenkins builds to automatically detect:
 
 This eliminates the need for callbacks from Jenkins for status updates.
 """
+
 import asyncio
 
 import yaml
@@ -110,18 +111,14 @@ async def _poll_builds():
                 if changed:
                     any_changed = True
             except Exception as e:
-                logger.warning(
-                    f"Error polling build #{build_number} for step {step.step_id} "
-                    f"(job={job_path}): {e}"
-                )
+                logger.warning(f"Error polling build #{build_number} for step {step.step_id} (job={job_path}): {e}")
 
         if any_changed:
             await session.commit()
 
             # Re-dispara workflow para execuções que tiveram mudança
             changed_execution_ids = set(
-                s.release_execution_id for s in steps
-                if s.status != ExecutionStatus.IN_PROGRESS
+                s.release_execution_id for s in steps if s.status != ExecutionStatus.IN_PROGRESS
             )
             for exec_id in changed_execution_ids:
                 try:
@@ -132,8 +129,8 @@ async def _poll_builds():
 
 async def _retrigger_workflow(execution_id: int):
     """Re-dispara o process_workflow para uma execução."""
-    from maestro.services.orchestrator import OrchestratorService
     from maestro.services.jenkins import JenkinsService
+    from maestro.services.orchestrator import OrchestratorService
 
     svc = OrchestratorService.__new__(OrchestratorService)
     jenkins_svc = JenkinsService.__new__(JenkinsService)
