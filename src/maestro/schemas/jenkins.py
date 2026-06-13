@@ -27,3 +27,14 @@ class JenkinsBuildInfoSchema(BaseModel):
     number: int
     result: Optional[str] = None  # SUCCESS, FAILURE, ABORTED, null (still running)
     building: bool = True
+
+
+class JenkinsStageSchema(BaseModel):
+    id: str
+    name: str
+    status: str
+    durationMillis: int
+
+
+class JenkinsDescribeSchema(BaseModel):
+    stages: List[JenkinsStageSchema]

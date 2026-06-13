@@ -3,7 +3,12 @@ from typing import Dict, Optional
 
 import httpx
 
-from maestro.schemas.jenkins import JenkinsBuildInfoSchema, JenkinsPendingInputSchema, JenkinsQueueItemSchema
+from maestro.schemas.jenkins import (
+    JenkinsBuildInfoSchema,
+    JenkinsPendingInputSchema,
+    JenkinsQueueItemSchema,
+    JenkinsStageSchema,
+)
 
 
 class JenkinsIntegration:
@@ -133,3 +138,16 @@ class JenkinsIntegration:
             if not raw:
                 return []
             return [JenkinsPendingInputSchema(**item) for item in raw]
+
+    async def get_build_stages(self, job_name: str, build_number: int) -> list[JenkinsStageSchema]:
+        """
+        Obtém os stages de um build na API do Jenkins Workflow.
+        """
+        async with self._get_client() as client:
+            endpoint = f"/{job_name.strip('/')}/{build_number}/wfapi/describe"
+            response = await client.get(endpoint, follow_redirects=True)
+            if response.status_code != 200:
+                return []
+            raw = response.json()
+            stages = raw.get("stages", [])
+            return [JenkinsStageSchema(**item) for item in stages]

@@ -150,7 +150,30 @@ async def _check_step_build(
     """
     Check a single build status. Returns True if the step status was updated.
     """
-    # 1. Verifica pending inputs primeiro (maior prioridade)
+    # 1. Verifica stages e salva eventos de transição
+    from maestro.repositories.execution import ExecutionRepository
+    from maestro.database.models import StepEvent
+
+    try:
+        stages = await jenkins.get_build_stages(job_path, build_number)
+        if stages:
+            repo = ExecutionRepository(db=session)
+            existing_events = await repo.get_events_by_correlation_id(build_number)
+            existing_messages = {e.message for e in existing_events}
+
+            for stage in stages:
+                msg = f"[Stage: {stage.name}] - {stage.status}"
+                if msg not in existing_messages:
+                    event = StepEvent(
+                        job_execution_correlation_id=build_number,
+                        message=msg,
+                    )
+                    await repo.add_step_event(event)
+                    logger.info(f"Step {step.step_id} (build #{build_number}): registered new stage event -> {msg}")
+    except Exception as e:
+        logger.debug(f"Could not check stages for build #{build_number}: {e}")
+
+    # 2. Verifica pending inputs primeiro (maior prioridade)
     #    Jenkins pode reportar building=false enquanto parado em input
     try:
         pending_inputs = await jenkins.get_pending_inputs(job_path, build_number)
