@@ -151,8 +151,8 @@ async def _check_step_build(
     Check a single build status. Returns True if the step status was updated.
     """
     # 1. Verifica stages e salva eventos de transição
-    from maestro.repositories.execution import ExecutionRepository
     from maestro.database.models import StepEvent
+    from maestro.repositories.execution import ExecutionRepository
 
     try:
         stages = await jenkins.get_build_stages(job_path, build_number)
