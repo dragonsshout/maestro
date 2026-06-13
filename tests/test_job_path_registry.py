@@ -185,7 +185,8 @@ class TestJobPathRegistryService:
     @pytest.fixture
     def service(self):
         svc = JobPathRegistryService.__new__(JobPathRegistryService)
-        svc.repository = AsyncMock(spec=JobPathRegistryRepository)
+        svc.repository = AsyncMock()
+        svc.repository.db = AsyncMock()
         return svc
 
     async def test_get_all_paginated(self, service):

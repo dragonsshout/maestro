@@ -19,7 +19,7 @@ class JenkinsService:
     async def _get_jenkins(self) -> JenkinsIntegration:
         """Obtém integração Jenkins com credenciais do banco (fallback .env já resolvido)."""
         if self._jenkins_integration is None:
-            cfg = await get_integration_settings()
+            cfg = await get_integration_settings(session=self.execution_repo.db)
             self._jenkins_integration = JenkinsIntegration(
                 base_url=cfg.jenkins_url,
                 username=cfg.jenkins_username,

@@ -27,7 +27,7 @@ pytestmark = [
 # ===========================================================================
 
 class TestUploadConfig:
-    async def test_upload_yaml_success(self, client, mock_github_branch_exists, mock_jenkins_job_exists):
+    async def test_upload_yaml_success(self, client, mock_github_repo_exists, mock_jenkins_job_exists):
         """Upload a valid YAML file → descriptor saved in DB."""
         response = await client.post(
             "/orchestrator/config",
@@ -38,7 +38,7 @@ class TestUploadConfig:
         assert data["id"] is not None
         assert "sucesso" in data["message"]
 
-    async def test_upload_yaml_duplicate_name(self, client, mock_github_branch_exists, mock_jenkins_job_exists):
+    async def test_upload_yaml_duplicate_name(self, client, mock_github_repo_exists, mock_jenkins_job_exists):
         """Uploading the same YAML twice should fail with duplicate error."""
         yaml_content = SAMPLE_RELEASE_YAML.replace("integration-test-release", "duplicate-test")
 
@@ -85,10 +85,10 @@ class TestUploadConfig:
         assert response.status_code == 400
 
     async def test_upload_branch_not_found_fails_validation(self, client, httpx_mock):
-        """If branch doesn't exist in GitHub, upload should fail validation."""
-        # Mock GitHub branch check → 404
+        """If repository doesn't exist in GitHub, upload should fail validation."""
+        # Mock GitHub repo check → 404
         httpx_mock.add_response(
-            url=re.compile(r".*api\.github\.com/repos/.*/branches/.*"),
+            url=re.compile(r".*api\.github\.com/repos/[^/]+/[^/]+$"),
             status_code=404,
         )
         # Mock Jenkins job → exists
@@ -98,13 +98,13 @@ class TestUploadConfig:
             json={"name": "deploy"},
         )
 
-        yaml_content = SAMPLE_RELEASE_YAML.replace("integration-test-release", "branch-fail-test")
+        yaml_content = SAMPLE_RELEASE_YAML.replace("integration-test-release", "repo-fail-test")
         response = await client.post(
             "/orchestrator/config",
             files={"file": ("r.yaml", yaml_content.encode(), "application/x-yaml")},
         )
         assert response.status_code == 400
-        assert "Branch" in response.json()["detail"]
+        assert "não encontrado" in response.json()["detail"]
 
 
 # ===========================================================================
@@ -115,15 +115,18 @@ class TestDryRun:
     @pytest.fixture(autouse=True)
     async def _setup_descriptor(self, client, httpx_mock):
         """Upload a descriptor before each dry-run test."""
-        # Mock validations for upload
+        # Mock validations for upload (repo exists + jenkins job exists)
         httpx_mock.add_response(
-            url=re.compile(r".*api\.github\.com/repos/.*/branches/.*"),
+            url=re.compile(r".*api\.github\.com/repos/[^/]+/[^/]+$"),
             status_code=200,
+            json={"name": "my-repo"},
+            is_reusable=True,
         )
         httpx_mock.add_response(
             url=re.compile(r".*/api/json$"),
             status_code=200,
             json={"name": "deploy"},
+            is_reusable=True,
         )
 
         yaml_content = SAMPLE_RELEASE_YAML.replace("integration-test-release", "dry-run-test")
@@ -210,13 +213,16 @@ class TestExecuteRelease:
     async def _setup_descriptor(self, client, httpx_mock):
         """Upload a descriptor before execute tests."""
         httpx_mock.add_response(
-            url=re.compile(r".*api\.github\.com/repos/.*/branches/.*"),
+            url=re.compile(r".*api\.github\.com/repos/[^/]+/[^/]+$"),
             status_code=200,
+            json={"name": "my-repo"},
+            is_reusable=True,
         )
         httpx_mock.add_response(
             url=re.compile(r".*/api/json$"),
             status_code=200,
             json={"name": "deploy"},
+            is_reusable=True,
         )
 
         yaml_content = SAMPLE_RELEASE_YAML.replace("integration-test-release", "execute-test")
@@ -331,13 +337,16 @@ class TestRetryStep:
         """Full flow: upload → execute → mark step as failed → retry."""
         # Setup: Upload descriptor
         httpx_mock.add_response(
-            url=re.compile(r".*api\.github\.com/repos/.*/branches/.*"),
+            url=re.compile(r".*api\.github\.com/repos/[^/]+/[^/]+$"),
             status_code=200,
+            json={"name": "my-repo"},
+            is_reusable=True,
         )
         httpx_mock.add_response(
             url=re.compile(r".*/api/json$"),
             status_code=200,
             json={"name": "deploy"},
+            is_reusable=True,
         )
 
         yaml_content = SAMPLE_RELEASE_YAML.replace("integration-test-release", "retry-flow-test")

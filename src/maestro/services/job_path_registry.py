@@ -45,7 +45,7 @@ class JobPathRegistryService:
         """
         from maestro.services.app_settings import get_integration_settings
 
-        cfg = await get_integration_settings()
+        cfg = await get_integration_settings(session=self.repository.db)
         if not cfg.jenkins_url:
             raise ValueError("URL base do Jenkins não configurada.")
 

@@ -52,7 +52,7 @@ def postgres_container():
 
 @pytest_asyncio.fixture
 async def db_engine(postgres_container):
-    """Create a fresh async engine for each test (function-scoped)."""
+    """Create an async engine for tests."""
     engine = create_async_engine(
         postgres_container,
         echo=False,
@@ -108,14 +108,13 @@ async def db_session(db_engine):
 
 @pytest_asyncio.fixture(autouse=True)
 async def _cleanup_db(db_engine):
-    """Truncate all tables BEFORE each test for isolation (setup-based cleanup)."""
-    async with db_engine.connect() as conn:
+    """Truncate all tables BEFORE each test for isolation."""
+    async with db_engine.begin() as conn:
         from sqlalchemy import text
         await conn.execute(text(
             "TRUNCATE step_event, release_step_execution, release_execution, "
-            "orchestrator_descriptor, ui_settings CASCADE"
+            "orchestrator_descriptor, ui_settings, execution_action_log CASCADE"
         ))
-        await conn.commit()
     yield
 
 
@@ -127,16 +126,20 @@ async def _cleanup_db(db_engine):
 async def app(db_engine):
     """
     FastAPI app with the DB dependency overridden to use the test database.
-    Each request gets its own session from the test engine.
-    subprocess.run is patched to prevent Alembic from running in lifespan.
-    process_workflow is patched to prevent background tasks from using different sessions.
+    Background tasks are all mocked out.
     """
     from unittest.mock import patch, AsyncMock
 
     session_factory = async_sessionmaker(bind=db_engine, expire_on_commit=False)
 
+    async def _noop():
+        pass
+
     with patch("subprocess.run"), \
-         patch("maestro.services.orchestrator.OrchestratorService.process_workflow", new_callable=AsyncMock):
+         patch("maestro.services.orchestrator.OrchestratorService.process_workflow", new_callable=AsyncMock), \
+         patch("maestro.services.timeout_checker.start_timeout_checker", return_value=_noop()), \
+         patch("maestro.services.build_poller.start_build_poller", return_value=_noop()), \
+         patch("maestro.services.scheduler.start_scheduler_checker", return_value=_noop()):
         from maestro.main import app as _app
 
         async def _get_test_db():
@@ -172,6 +175,18 @@ def mock_github_branch_exists(httpx_mock):
 
 
 @pytest.fixture
+def mock_github_repo_exists(httpx_mock):
+    """Mock GitHub repository_exists → True."""
+    httpx_mock.add_response(
+        url=re.compile(r".*api\.github\.com/repos/[^/]+/[^/]+$"),
+        status_code=200,
+        json={"name": "my-repo", "full_name": "org/my-repo"},
+        is_reusable=True,
+    )
+    return httpx_mock
+
+
+@pytest.fixture
 def mock_github_pr_found(httpx_mock):
     """Mock GitHub get_pull_request_by_branch → returns a PR."""
     httpx_mock.add_response(
@@ -200,7 +215,7 @@ def mock_github_pr_details_clean(httpx_mock):
 
 
 @pytest.fixture
-def mock_github_all_ok(mock_github_branch_exists, mock_github_pr_found, mock_github_pr_details_clean):
+def mock_github_all_ok(mock_github_repo_exists, mock_github_branch_exists, mock_github_pr_found, mock_github_pr_details_clean):
     """Combines all GitHub mocks for happy path."""
     pass
 

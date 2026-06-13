@@ -18,9 +18,9 @@ class ReleaseValidationService:
     NÃO valida branches — apenas path do Jenkins e se o repositório existe no GitHub.
     """
 
-    async def _init_integrations(self):
+    async def _init_integrations(self, session=None):
         """Inicializa integrações com credenciais do banco (fallback .env já resolvido)."""
-        cfg = await get_integration_settings()
+        cfg = await get_integration_settings(session)
         self.github = GithubIntegration(
             organization=cfg.github_organization,
             token=cfg.github_token,
@@ -34,7 +34,7 @@ class ReleaseValidationService:
             trust_env=cfg.http_trust_env,
         )
 
-    async def validate(self, config: ReleaseConfigSchema) -> None:
+    async def validate(self, config: ReleaseConfigSchema, session=None) -> None:
         """
         Valida repositórios (GitHub) e jobs (Jenkins) definidos no YAML de release.
         NÃO valida se a branch existe.
@@ -43,7 +43,7 @@ class ReleaseValidationService:
         :param config: Schema validado do YAML de release.
         :raises ValueError: Se houver repositórios inexistentes ou jobs inválidos.
         """
-        await self._init_integrations()
+        await self._init_integrations(session)
         errors: List[str] = []
 
         # Coleta repositórios únicos para evitar chamadas duplicadas

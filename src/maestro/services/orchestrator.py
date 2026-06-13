@@ -45,7 +45,7 @@ class OrchestratorService:
 
         # Validação de branches (GitHub) e jobs (Jenkins)
         validation_service = ReleaseValidationService()
-        await validation_service.validate(release_config)
+        await validation_service.validate(release_config, session=self.repository.db)
 
         descriptor = OrchestratorDescriptor(name=release_config.metadata.name, yaml=yaml_content)
 
@@ -63,7 +63,7 @@ class OrchestratorService:
 
         from maestro.services.app_settings import get_integration_settings
 
-        cfg = await get_integration_settings()
+        cfg = await get_integration_settings(session=self.repository.db)
         github = GithubIntegration(
             organization=cfg.github_organization,
             token=cfg.github_token,
@@ -171,7 +171,7 @@ class OrchestratorService:
 
         from maestro.services.app_settings import get_integration_settings as _get_cfg
 
-        _cfg = await _get_cfg()
+        _cfg = await _get_cfg(session=self.repository.db)
         github = GithubIntegration(
             organization=_cfg.github_organization,
             token=_cfg.github_token,
@@ -452,6 +452,11 @@ class OrchestratorService:
         async with AsyncSessionLocal() as session:
             exec_repo = _ExecRepo(db=session)
             orch_repo = _OrcRepo(db=session)
+
+            # Atualizar a instância do jenkins_service com a nova sessão de banco ativa
+            self.jenkins_service.execution_repo = exec_repo
+            self.jenkins_service._jenkins_integration = None
+
 
             execution = await exec_repo.get_execution_by_id(execution_id)
             if not execution:
