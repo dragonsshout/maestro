@@ -925,28 +925,30 @@ class TestUIService:
 
 
 class TestAssembleStages:
-    def test_assemble_stages_basic(self):
+    async def test_assemble_stages_basic(self):
         config = ReleaseConfigSchema(**yaml.safe_load(SAMPLE_RELEASE_YAML))
         step = MagicMock()
         step.stage_id = "stage-1"
         step.step_id = "step-1"
         step.status = ExecutionStatus.PENDING
 
-        result = _assemble_stages(config, [step])
+        registry_repo = MagicMock()
+        result = await _assemble_stages(config, [step], registry_repo)
         assert len(result) == 1
         assert result[0]["id"] == "stage-1"
         assert len(result[0]["steps"]) == 1
         assert result[0]["steps"][0]["repository"] == "my-repo"
         assert result[0]["steps"][0]["job_path"] == "job/path/deploy"
 
-    def test_assemble_stages_no_matching_steps(self):
+    async def test_assemble_stages_no_matching_steps(self):
         config = ReleaseConfigSchema(**yaml.safe_load(SAMPLE_RELEASE_YAML))
         # Step with mismatched IDs
         step = MagicMock()
         step.stage_id = "stage-99"
         step.step_id = "step-99"
 
-        result = _assemble_stages(config, [step])
+        registry_repo = MagicMock()
+        result = await _assemble_stages(config, [step], registry_repo)
         assert len(result) == 1
         assert result[0]["steps"] == []
 
