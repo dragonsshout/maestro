@@ -23,6 +23,7 @@ class ReleaseExecution(Base):
     status = Column(String, nullable=False)
     message = Column(Text, nullable=True)
     orchestrator_descriptor_id = Column(Integer, ForeignKey("orchestrator_descriptor.id"), nullable=False)
+    environment = Column(String, nullable=False, server_default="PRD")
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
 

@@ -102,6 +102,7 @@ class DryRunStepResult(BaseModel):
     pr_is_clean: bool
     jenkins_job_path: str
     jenkins_job_exists: bool
+    environment: str = "PRD"
 
 
 class DryRunStageResult(BaseModel):
@@ -112,4 +113,5 @@ class DryRunStageResult(BaseModel):
 class DryRunResponse(BaseModel):
     name: str
     valid: bool
+    environment: str = "PRD"
     stages: List[DryRunStageResult]

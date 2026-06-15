@@ -79,6 +79,7 @@ class OrchestratorService:
 
         all_valid = True
         stages_results: list[DryRunStageResult] = []
+        environment = config.spec.environment or "PRD"
 
         for stage in config.spec.stages:
             steps_results: list[DryRunStepResult] = []
@@ -117,7 +118,10 @@ class OrchestratorService:
                 except Exception:
                     jenkins_job_exists = False
 
-                step_valid = branch_exists and pr_found and pr_is_clean and jenkins_job_exists
+                if environment == "PRD":
+                    step_valid = branch_exists and pr_found and pr_is_clean and jenkins_job_exists
+                else:
+                    step_valid = branch_exists and jenkins_job_exists
                 if not step_valid:
                     all_valid = False
 
@@ -147,6 +151,7 @@ class OrchestratorService:
         return DryRunResponse(
             name=name,
             valid=all_valid,
+            environment=environment,
             stages=stages_results,
         )
 
@@ -165,7 +170,10 @@ class OrchestratorService:
         config = ReleaseConfigSchema(**yaml.safe_load(descriptor.yaml))
 
         release_execution = ReleaseExecution(
-            name=name, status=ExecutionStatus.PENDING, orchestrator_descriptor_id=descriptor.id
+            name=name,
+            status=ExecutionStatus.PENDING,
+            orchestrator_descriptor_id=descriptor.id,
+            environment=config.spec.environment or "PRD",
         )
         release_execution = await self.execution_repo.add_release_execution(release_execution)
 
@@ -179,22 +187,23 @@ class OrchestratorService:
             trust_env=_cfg.http_trust_env,
         )
         try:
-            for stage in config.spec.stages:
-                for step in stage.steps:
-                    pr = await github.get_pull_request_by_branch(step.repository, step.release)
-                    if not pr:
-                        raise ValueError(
-                            f"Pull Request não encontrado para a branch '{step.release}' "
-                            f"no repositório '{step.repository}'."
-                        )
+            if (config.spec.environment or "PRD") == "PRD":
+                for stage in config.spec.stages:
+                    for step in stage.steps:
+                        pr = await github.get_pull_request_by_branch(step.repository, step.release)
+                        if not pr:
+                            raise ValueError(
+                                f"Pull Request não encontrado para a branch '{step.release}' "
+                                f"no repositório '{step.repository}'."
+                            )
 
-                    pr_detail = await github.get_pull_request_details(step.repository, pr.number)
-                    if pr_detail.mergeable_state != "clean":
-                        raise ValueError(
-                            f"O Pull Request para a branch '{step.release}' no repositório "
-                            f"'{step.repository}' não está no estado 'clean' "
-                            f"(estado atual: '{pr_detail.mergeable_state}')."
-                        )
+                        pr_detail = await github.get_pull_request_details(step.repository, pr.number)
+                        if pr_detail.mergeable_state != "clean":
+                            raise ValueError(
+                                f"O Pull Request para a branch '{step.release}' no repositório "
+                                f"'{step.repository}' não está no estado 'clean' "
+                                f"(estado atual: '{pr_detail.mergeable_state}')."
+                            )
 
         except Exception as e:
             release_execution.status = ExecutionStatus.FAILURE
