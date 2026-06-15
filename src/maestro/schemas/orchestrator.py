@@ -112,4 +112,5 @@ class DryRunStageResult(BaseModel):
 class DryRunResponse(BaseModel):
     name: str
     valid: bool
+    environment: str = "PRD"
     stages: List[DryRunStageResult]

@@ -10,9 +10,11 @@ from jinja2 import Environment, FileSystemLoader
 from maestro.config.logger import get_logger
 from maestro.database.models import ReleaseExecution, ReleaseStepExecution
 from maestro.repositories.execution import ExecutionRepository
+from maestro.repositories.job_path_registry import JobPathRegistryRepository
 from maestro.repositories.orchestrator import OrchestratorDescriptorRepository
 from maestro.schemas.enums import ExecutionStatus
 from maestro.schemas.orchestrator import ReleaseConfigSchema
+from maestro.services.job_path_resolver import resolve_job_path_async
 
 logger = get_logger(__name__)
 
@@ -133,13 +135,16 @@ class UIService:
         descriptor = await self.orchestrator_repo.get_by_id(execution.orchestrator_descriptor_id)
         config = ReleaseConfigSchema(**yaml.safe_load(descriptor.yaml))
         steps = await self.execution_repo.get_steps_by_execution_id(execution.id)
-        return _assemble_stages(config, steps)
+        registry_repo = JobPathRegistryRepository(db=self.execution_repo.db)
+        return await _assemble_stages(config, steps, registry_repo)
 
 
 # --- Funções puras auxiliares (sem estado, sem dependências) ---
 
 
-def _assemble_stages(config: ReleaseConfigSchema, steps: list[ReleaseStepExecution]) -> list:
+async def _assemble_stages(
+    config: ReleaseConfigSchema, steps: list[ReleaseStepExecution], registry_repo: JobPathRegistryRepository
+) -> list:
     """Combina a definição do YAML com os dados de execução do banco."""
     step_map = {(se.stage_id, se.step_id): se for se in steps}
 
@@ -157,7 +162,7 @@ def _assemble_stages(config: ReleaseConfigSchema, steps: list[ReleaseStepExecuti
                     "repository": step_def.repository,
                     "release": step_def.release,
                     "job_type": step_def.job.type if step_def.job else "jenkins",
-                    "job_path": step_def.job.path if step_def.job else None,
+                    "job_path": await resolve_job_path_async(step_def, config.spec, registry_repo),
                 }
             )
         result.append({"id": stage.id, "steps": enriched_steps})

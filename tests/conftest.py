@@ -44,6 +44,26 @@ spec:
             path: job/path/deploy
 """
 
+SAMPLE_RELEASE_YAML_UAT = """\
+apiVersion: v1
+kind: Release
+metadata:
+  name: test-release
+  author: tester
+  description: A test release
+spec:
+  environment: UAT
+  stages:
+    - id: stage-1
+      steps:
+        - id: step-1
+          repository: my-repo
+          release: feature/branch-1
+          job:
+            type: jenkins
+            path: job/path/deploy
+"""
+
 SAMPLE_RELEASE_YAML_MULTI_STAGE = """\
 apiVersion: v1
 kind: Release

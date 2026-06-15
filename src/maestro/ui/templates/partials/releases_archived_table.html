@@ -9,15 +9,26 @@
                 <tr>
                     <th>#</th>
                     <th>Nome</th>
+                    <th>Ambiente</th>
                     <th>Criado em</th>
                     <th>Ações</th>
                 </tr>
             </thead>
             <tbody>
                 {% for desc in descriptors %}
+                {% set env_val = environments.get(desc.name, "PRD") if environments is defined else "PRD" %}
                 <tr class="hover:bg-base-200/70 transition-colors duration-200">
                     <td class="font-mono text-base-content/50">{{ desc.id }}</td>
                     <td class="font-semibold font-mono">{{ desc.name }}</td>
+                    <td>
+                        {% if env_val == "PRD" %}
+                        <span class="badge badge-sm badge-error">{{ env_val }}</span>
+                        {% elif env_val == "UAT" %}
+                        <span class="badge badge-sm badge-warning">{{ env_val }}</span>
+                        {% else %}
+                        <span class="badge badge-sm badge-ghost">{{ env_val }}</span>
+                        {% endif %}
+                    </td>
                     <td class="text-base-content/60">{{ desc.created_at.strftime('%d/%m/%Y %H:%M') }}</td>
                     <td>
                         <div class="flex items-center gap-2">

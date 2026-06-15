@@ -181,7 +181,7 @@ function flowScrollTo(id) {
 
                         <!-- Step ID -->
                         <td>
-                            {% if step.job_type == "jenkins" and jenkins_base_url %}
+                            {% if step.job_type == "jenkins" and jenkins_base_url and step.job_path %}
                                 <a href="{{ jenkins_base_url }}/{{ step.job_path }}" target="_blank" rel="noopener"
                                    class="font-semibold font-mono link link-hover" title="{{ se.step_id }}">
                                     {{ se.step_id }}
@@ -193,7 +193,7 @@ function flowScrollTo(id) {
 
                         <!-- Job type -->
                         <td>
-                            {% if step.job_type == "jenkins" and jenkins_base_url %}
+                            {% if step.job_type == "jenkins" and jenkins_base_url and step.job_path %}
                                 <a href="{{ jenkins_base_url }}/{{ step.job_path }}" target="_blank" rel="noopener"
                                    class="badge badge-outline badge-sm font-mono hover:badge-primary transition-colors">
                                     {{ step.job_type }} ↗

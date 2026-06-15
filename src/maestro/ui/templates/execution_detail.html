@@ -15,6 +15,15 @@
                 <p class="text-base-content/60 text-sm mt-1">
                     Iniciado em {{ execution.created_at.strftime('%d/%m/%Y %H:%M:%S') }}
                     &nbsp;·&nbsp; ID #{{ execution.id }}
+                    &nbsp;·&nbsp;
+                    {% set env_val = execution.environment|default("PRD") %}
+                    {% if env_val == "PRD" %}
+                    <span class="badge badge-error badge-sm">{{ env_val }}</span>
+                    {% elif env_val == "UAT" %}
+                    <span class="badge badge-warning badge-sm">{{ env_val }}</span>
+                    {% else %}
+                    <span class="badge badge-ghost badge-sm">{{ env_val }}</span>
+                    {% endif %}
                 </p>
                 {% if execution.message %}
                 <p class="text-error text-sm mt-2">{{ execution.message }}</p>
