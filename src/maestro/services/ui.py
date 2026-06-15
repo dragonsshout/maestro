@@ -13,6 +13,7 @@ from maestro.repositories.execution import ExecutionRepository
 from maestro.repositories.orchestrator import OrchestratorDescriptorRepository
 from maestro.schemas.enums import ExecutionStatus
 from maestro.schemas.orchestrator import ReleaseConfigSchema
+from maestro.services.job_path_resolver import resolve_job_path
 
 logger = get_logger(__name__)
 
@@ -157,7 +158,7 @@ def _assemble_stages(config: ReleaseConfigSchema, steps: list[ReleaseStepExecuti
                     "repository": step_def.repository,
                     "release": step_def.release,
                     "job_type": step_def.job.type if step_def.job else "jenkins",
-                    "job_path": step_def.job.path if step_def.job else None,
+                    "job_path": resolve_job_path(step_def, config.spec),
                 }
             )
         result.append({"id": stage.id, "steps": enriched_steps})
