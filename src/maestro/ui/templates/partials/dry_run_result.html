@@ -36,6 +36,16 @@
         <div class="mb-3">
             <span class="font-semibold">Release:</span>
             <span class="font-mono">{{ result.name }}</span>
+            &nbsp;·&nbsp;
+            <span class="font-semibold">Ambiente:</span>
+            {% set env_val = result.environment|default("PRD") %}
+            {% if env_val == "PRD" %}
+            <span class="badge badge-error badge-sm">{{ env_val }}</span>
+            {% elif env_val == "UAT" %}
+            <span class="badge badge-warning badge-sm">{{ env_val }}</span>
+            {% else %}
+            <span class="badge badge-ghost badge-sm">{{ env_val }}</span>
+            {% endif %}
             {% if result.valid %}
             <span class="badge-modern-success ml-2">Pronto para execução</span>
             {% else %}
@@ -78,7 +88,9 @@
                                     {% endif %}
                                 </td>
                                 <td>
-                                    {% if step.pr_found %}
+                                    {% if result.environment|default("PRD") != "PRD" %}
+                                    <span class="badge-modern-ghost">N/A</span>
+                                    {% elif step.pr_found %}
                                     <span class="badge-modern-success">
                                         #{{ step.pr_number }}
                                     </span>
@@ -87,7 +99,9 @@
                                     {% endif %}
                                 </td>
                                 <td class="bg-base-300/10 border-l border-base-300/30">
-                                    {% if step.pr_is_clean %}
+                                    {% if result.environment|default("PRD") != "PRD" %}
+                                    <span class="badge-modern-ghost">N/A</span>
+                                    {% elif step.pr_is_clean %}
                                     <span class="badge-modern-success">Clean</span>
                                     {% elif step.pr_mergeable_state %}
                                     <span class="badge-modern-warning">{{ step.pr_mergeable_state }}</span>

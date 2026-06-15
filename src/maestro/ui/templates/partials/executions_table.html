@@ -9,6 +9,7 @@
             <tr>
                 <th>#</th>
                 <th>Nome</th>
+                <th>Ambiente</th>
                 <th>Status</th>
                 <th>Iniciado em</th>
                 <th>Atualizado em</th>
@@ -23,6 +24,16 @@
                 </td>
                 <td class="font-semibold">
                     <a href="/ui/execution/{{ ex.id }}" class="hover:underline hover:text-primary transition-colors cursor-pointer">{{ ex.name }}</a>
+                </td>
+                <td>
+                    {% set env_val = ex.environment|default("PRD") %}
+                    {% if env_val == "PRD" %}
+                    <span class="badge badge-error badge-sm">{{ env_val }}</span>
+                    {% elif env_val == "UAT" %}
+                    <span class="badge badge-warning badge-sm">{{ env_val }}</span>
+                    {% else %}
+                    <span class="badge badge-ghost badge-sm">{{ env_val }}</span>
+                    {% endif %}
                 </td>
                 <td>
                     {% set status_val = ex.status.value if ex.status.value is defined else ex.status %}
