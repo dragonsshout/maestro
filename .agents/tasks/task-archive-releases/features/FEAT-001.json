@@ -2,7 +2,7 @@
   "id": "FEAT-001",
   "type": "feat",
   "description": "Add archived column to OrchestratorDescriptor, create Alembic migration, update repository with archive filtering, add archive/unarchive UI endpoints, update templates with archive/unarchive buttons and archived releases view, block execution/schedule listing for archived releases, and add tests.",
-  "status": "in_progress",
+  "status": "completed",
   "steps": [
     "1. Add `archived` Boolean column to OrchestratorDescriptor model in `src/maestro/database/models.py`. Use `Column(Integer, nullable=False, server_default='0')` (Integer 0/1 for SQLite compatibility, works as boolean). Add it after `created_at`.",
     "2. Create Alembic migration file `migrations/versions/f6a7b8c9d0e1_add_archived_to_orchestrator_descriptor.py` with revision='f6a7b8c9d0e1' and down_revision='e5f6a7b8c9d0'. Use `op.add_column('orchestrator_descriptor', sa.Column('archived', sa.Integer(), nullable=False, server_default='0'))` in upgrade and `op.drop_column('orchestrator_descriptor', 'archived')` in downgrade. Use `render_as_batch=True` pattern is NOT needed here since add_column works fine without batch mode. Follow the exact pattern of existing migrations (imports, typing hints, docstring).",
@@ -34,5 +34,5 @@
     "Run `cd /projects/sandbox/maestro && uv run python -c 'from maestro.database.models import OrchestratorDescriptor; print(OrchestratorDescriptor.archived)'` and confirm no import errors"
   ],
   "blocked_reason": null,
-  "findings": ""
+  "findings": "Had to update test_ui_routes.py mock_session fixture to set a default execute.return_value (MagicMock with scalars().first() returning None) because the new archive check in execute_release_ui calls orchestrator_repo.get_by_name which requires the mock to return proper values. All 303 tests pass."
 }
