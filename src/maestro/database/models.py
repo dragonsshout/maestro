@@ -12,6 +12,7 @@ class OrchestratorDescriptor(Base):
     name = Column(String, nullable=False, unique=True)
     yaml = Column(Text, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    archived = Column(Integer, nullable=False, server_default="0")
 
 
 class ReleaseExecution(Base):

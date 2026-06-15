@@ -21,6 +21,12 @@ def mock_session():
     session.refresh = AsyncMock()
     session.execute = AsyncMock()
     session.add = MagicMock()
+    # Default execute return value so that .scalars().first() returns None
+    default_result = MagicMock()
+    default_result.scalars.return_value.first.return_value = None
+    default_result.scalars.return_value.all.return_value = []
+    default_result.scalar.return_value = 0
+    session.execute.return_value = default_result
     return session
 
 

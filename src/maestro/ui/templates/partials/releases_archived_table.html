@@ -1,0 +1,74 @@
+<div id="releases-archived-table-container"
+     hx-get="/ui/partials/releases-archived?page={{ current_page|default(1) }}&search={{ search_term|urlencode }}"
+     hx-trigger="refreshReleasesArchived from:body"
+     hx-swap="outerHTML">
+    {% if descriptors %}
+    <div class="overflow-x-auto">
+        <table class="table table-sm w-full text-sm">
+            <thead class="text-xs uppercase text-base-content/60">
+                <tr>
+                    <th>#</th>
+                    <th>Nome</th>
+                    <th>Criado em</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for desc in descriptors %}
+                <tr class="hover:bg-base-200/70 transition-colors duration-200">
+                    <td class="font-mono text-base-content/50">{{ desc.id }}</td>
+                    <td class="font-semibold font-mono">{{ desc.name }}</td>
+                    <td class="text-base-content/60">{{ desc.created_at.strftime('%d/%m/%Y %H:%M') }}</td>
+                    <td>
+                        <div class="flex items-center gap-2">
+                            <button
+                                class="btn btn-xs btn-outline btn-accent hover:scale-105 active:scale-95 transition-transform"
+                                hx-post="/ui/releases/{{ desc.id }}/unarchive"
+                                hx-target="#releases-archived-table-container"
+                                hx-swap="outerHTML"
+                                hx-confirm="Desarquivar a release {{ desc.name }}?"
+                                title="Desarquivar release"
+                            >
+                                <svg class="w-3 h-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" /></svg>
+                                Desarquivar
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Paginação -->
+    {% if total_pages and total_pages > 1 %}
+    <div class="flex justify-center mt-6">
+        <div class="join">
+            <button class="join-item btn"
+                    hx-get="/ui/partials/releases-archived?page={{ current_page - 1 }}&search={{ search_term|urlencode }}"
+                    hx-target="#releases-archived-table-container"
+                    hx-swap="outerHTML"
+                    {% if current_page <= 1 %}disabled{% endif %}>
+                «
+            </button>
+            <button class="join-item btn cursor-default text-base font-medium">
+                Página {{ current_page }} de {{ total_pages }}
+            </button>
+            <button class="join-item btn"
+                    hx-get="/ui/partials/releases-archived?page={{ current_page + 1 }}&search={{ search_term|urlencode }}"
+                    hx-target="#releases-archived-table-container"
+                    hx-swap="outerHTML"
+                    {% if current_page >= total_pages %}disabled{% endif %}>
+                »
+            </button>
+        </div>
+    </div>
+    {% endif %}
+
+    {% else %}
+    <div class="text-center py-8 text-base-content/50">
+        <svg class="w-12 h-12 mx-auto mb-4 text-base-content/30" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" /></svg>
+        <p>Nenhuma release arquivada encontrada.</p>
+    </div>
+    {% endif %}
+</div>
