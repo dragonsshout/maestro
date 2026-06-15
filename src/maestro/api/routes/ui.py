@@ -1,5 +1,6 @@
 from pathlib import Path
 
+import yaml as yaml_lib
 from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
@@ -10,6 +11,7 @@ from maestro.database.models import ExecutionActionLog
 from maestro.repositories.execution import ExecutionRepository
 from maestro.repositories.orchestrator import OrchestratorDescriptorRepository
 from maestro.schemas.enums import ExecutionStatus
+from maestro.schemas.orchestrator import ReleaseConfigSchema
 from maestro.services.orchestrator import OrchestratorService
 from maestro.services.scheduler import SchedulerService
 from maestro.services.settings import (
@@ -25,6 +27,18 @@ TEMPLATES_DIR = Path(__file__).parent.parent.parent / "ui" / "templates"
 templates = Jinja2Templates(directory=TEMPLATES_DIR)
 
 router = APIRouter(prefix="/ui", tags=["UI"])
+
+
+def _extract_environments(descriptors) -> dict:
+    """Extract environment from each descriptor's YAML spec. Returns dict keyed by descriptor name."""
+    environments: dict[str, str] = {}
+    for desc in descriptors:
+        try:
+            config = ReleaseConfigSchema(**yaml_lib.safe_load(desc.yaml))
+            environments[desc.name] = config.spec.environment or "PRD"
+        except Exception:
+            environments[desc.name] = "PRD"
+    return environments
 
 
 @router.get("/", response_class=HTMLResponse)
@@ -533,12 +547,15 @@ async def partials_releases(
         if active:
             active_executions[desc.name] = active
 
+    environments = _extract_environments(descriptors)
+
     return templates.TemplateResponse(
         request,
         "partials/releases_table.html",
         {
             "descriptors": descriptors,
             "active_executions": active_executions,
+            "environments": environments,
             "current_page": page,
             "total_pages": total_pages,
             "search_term": search or "",
@@ -579,11 +596,14 @@ async def partials_releases_archived(
     total_count = await orchestrator_repo.get_count(search=search, archived=True)
     total_pages = max(1, (total_count + per_page - 1) // per_page)
 
+    environments = _extract_environments(descriptors)
+
     return templates.TemplateResponse(
         request,
         "partials/releases_archived_table.html",
         {
             "descriptors": descriptors,
+            "environments": environments,
             "current_page": page,
             "total_pages": total_pages,
             "search_term": search or "",
@@ -650,12 +670,16 @@ async def releases_upload(
         active = await execution_repo.get_active_execution_by_name(desc.name)
         if active:
             active_executions[desc.name] = active
+
+    environments = _extract_environments(descriptors)
+
     return templates.TemplateResponse(
         request,
         "releases.html",
         {
             "descriptors": descriptors,
             "active_executions": active_executions,
+            "environments": environments,
             "upload_error": error,
             "upload_success": error is None,
         },
