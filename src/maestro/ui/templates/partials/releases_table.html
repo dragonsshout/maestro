@@ -106,6 +106,15 @@
                                 <span class="loading loading-spinner loading-xs hidden group-[.htmx-request]:inline-block"></span>
                             </button>
                             <button
+                                class="btn btn-xs btn-warning btn-circle hover:scale-110 active:scale-95 transition-transform shadow-sm"
+                                hx-post="/ui/releases/{{ desc.id }}/archive"
+                                hx-swap="none"
+                                hx-confirm="Arquivar a release {{ desc.name }}?"
+                                title="Arquivar release"
+                            >
+                                <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" /></svg>
+                            </button>
+                            <button
                                 class="btn btn-xs btn-outline hover:scale-105 active:scale-95 transition-transform"
                                 hx-get="/ui/releases/{{ desc.id }}/yaml"
                                 hx-target="body"

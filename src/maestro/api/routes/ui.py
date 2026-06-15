@@ -468,8 +468,16 @@ async def execute_release_ui(
     name: str,
     background_tasks: BackgroundTasks,
     orchestrator_service: OrchestratorService = Depends(),
+    orchestrator_repo: OrchestratorDescriptorRepository = Depends(),
 ):
     """Dispara execução de uma release pela UI."""
+    descriptor = await orchestrator_repo.get_by_name(name)
+    if descriptor and descriptor.archived == 1:
+        return templates.TemplateResponse(
+            request,
+            "partials/execute_result.html",
+            {"error": "Não é possível executar uma release arquivada.", "execution_id": None, "name": name},
+        )
     try:
         execution_id = await orchestrator_service.execute_release(name, background_tasks)
         return templates.TemplateResponse(
@@ -515,8 +523,8 @@ async def partials_releases(
 ):
     per_page = 15
     skip = (page - 1) * per_page
-    descriptors = await orchestrator_repo.get_all(skip=skip, limit=per_page, search=search)
-    total_count = await orchestrator_repo.get_count(search=search)
+    descriptors = await orchestrator_repo.get_all(skip=skip, limit=per_page, search=search, archived=False)
+    total_count = await orchestrator_repo.get_count(search=search, archived=False)
     total_pages = max(1, (total_count + per_page - 1) // per_page)
 
     active_executions: dict = {}
@@ -545,6 +553,71 @@ async def releases_page(
     return templates.TemplateResponse(
         request,
         "releases.html",
+    )
+
+
+@router.get("/releases/archived", response_class=HTMLResponse)
+async def releases_archived_page(
+    request: Request,
+):
+    return templates.TemplateResponse(
+        request,
+        "releases_archived.html",
+    )
+
+
+@router.get("/partials/releases-archived", response_class=HTMLResponse)
+async def partials_releases_archived(
+    request: Request,
+    page: int = 1,
+    search: str | None = None,
+    orchestrator_repo: OrchestratorDescriptorRepository = Depends(),
+):
+    per_page = 15
+    skip = (page - 1) * per_page
+    descriptors = await orchestrator_repo.get_all(skip=skip, limit=per_page, search=search, archived=True)
+    total_count = await orchestrator_repo.get_count(search=search, archived=True)
+    total_pages = max(1, (total_count + per_page - 1) // per_page)
+
+    return templates.TemplateResponse(
+        request,
+        "partials/releases_archived_table.html",
+        {
+            "descriptors": descriptors,
+            "current_page": page,
+            "total_pages": total_pages,
+            "search_term": search or "",
+        },
+    )
+
+
+@router.post("/releases/{descriptor_id}/archive", response_class=HTMLResponse)
+async def archive_release_ui(
+    request: Request,
+    descriptor_id: int,
+    orchestrator_repo: OrchestratorDescriptorRepository = Depends(),
+):
+    descriptor = await orchestrator_repo.set_archived(descriptor_id, True)
+    if not descriptor:
+        raise HTTPException(status_code=404, detail="Descriptor não encontrado.")
+    return HTMLResponse(
+        content="",
+        headers={"HX-Trigger": "refreshReleases"},
+    )
+
+
+@router.post("/releases/{descriptor_id}/unarchive", response_class=HTMLResponse)
+async def unarchive_release_ui(
+    request: Request,
+    descriptor_id: int,
+    orchestrator_repo: OrchestratorDescriptorRepository = Depends(),
+):
+    descriptor = await orchestrator_repo.set_archived(descriptor_id, False)
+    if not descriptor:
+        raise HTTPException(status_code=404, detail="Descriptor não encontrado.")
+    return HTMLResponse(
+        content="",
+        headers={"HX-Trigger": "refreshReleasesArchived"},
     )
 
 
@@ -639,10 +712,19 @@ async def schedule_release_ui(
     name: str,
     scheduled_at: str = Form(...),
     scheduler_service: SchedulerService = Depends(),
+    orchestrator_repo: OrchestratorDescriptorRepository = Depends(),
 ):
     """Agenda a execucao de uma release pela UI."""
     from datetime import datetime as dt
     from datetime import timezone as tz
+
+    descriptor = await orchestrator_repo.get_by_name(name)
+    if descriptor and descriptor.archived == 1:
+        return templates.TemplateResponse(
+            request,
+            "partials/schedule_result.html",
+            {"error": "Não é possível agendar uma release arquivada.", "schedule": None, "name": name},
+        )
 
     try:
         # Substitui 'Z' por '+00:00' para compatibilidade com fromisoformat no Python < 3.11

@@ -352,6 +352,16 @@
                     </a>
                 </li>
                 <li>
+                    <a href="/ui/releases/archived"
+                       class="nav-item flex items-center gap-3 transition-colors duration-200 hover:bg-base-200/70 {% if request.url.path == '/ui/releases/archived' %}active shadow-sm{% endif %}"
+                       title="Arquivadas">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+                        </svg>
+                        <span class="nav-label">Arquivadas</span>
+                    </a>
+                </li>
+                <li>
                     <a href="/ui/schedules"
                        class="nav-item flex items-center gap-3 transition-colors duration-200 hover:bg-base-200/70 {% if request.url.path == '/ui/schedules' %}active shadow-sm{% endif %}"
                        title="Agendamentos">
