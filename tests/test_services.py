@@ -17,7 +17,7 @@ from maestro.services.orchestrator import OrchestratorService
 from maestro.services.settings import KNOWN_SETTINGS, UISettingsService
 from maestro.services.ui import UIService, _assemble_stages, _build_snapshot
 from maestro.services.validation import ReleaseValidationService
-from tests.conftest import SAMPLE_RELEASE_YAML
+from tests.conftest import SAMPLE_RELEASE_YAML, SAMPLE_RELEASE_YAML_UAT
 
 # ===========================================================================
 # OrchestratorService
@@ -191,6 +191,77 @@ class TestOrchestratorServiceDryRun:
         assert result.stages[0].steps[0].jenkins_job_exists is False
 
 
+    @patch("maestro.services.app_settings.get_integration_settings")
+    @patch("maestro.services.orchestrator.JenkinsIntegration")
+    @patch("maestro.services.orchestrator.GithubIntegration")
+    async def test_dry_run_uat_valid_without_pr(self, mock_github_cls, mock_jenkins_cls, mock_get_settings, service):
+        mock_get_settings.return_value = MagicMock(
+            github_organization="org",
+            github_token="t",
+            github_base_url=None,
+            http_trust_env=True,
+            jenkins_url="http://j:8080",
+            jenkins_username="u",
+            jenkins_token="t",
+        )
+        descriptor = MagicMock()
+        descriptor.yaml = SAMPLE_RELEASE_YAML_UAT
+        service.repository.get_by_name = AsyncMock(return_value=descriptor)
+
+        mock_github = AsyncMock()
+        mock_github.branch_exists.return_value = True
+        mock_github.get_pull_request_by_branch.return_value = None
+        mock_github_cls.return_value = mock_github
+
+        mock_jenkins = AsyncMock()
+        mock_jenkins.job_exists.return_value = True
+        mock_jenkins_cls.return_value = mock_jenkins
+
+        result = await service.dry_run_release("test-release")
+
+        assert result.valid is True
+        assert result.environment == "UAT"
+        step = result.stages[0].steps[0]
+        assert step.branch_exists is True
+        assert step.pr_found is False
+        assert step.jenkins_job_exists is True
+
+    @patch("maestro.services.app_settings.get_integration_settings")
+    @patch("maestro.services.orchestrator.JenkinsIntegration")
+    @patch("maestro.services.orchestrator.GithubIntegration")
+    async def test_dry_run_prd_invalid_without_pr(self, mock_github_cls, mock_jenkins_cls, mock_get_settings, service):
+        mock_get_settings.return_value = MagicMock(
+            github_organization="org",
+            github_token="t",
+            github_base_url=None,
+            http_trust_env=True,
+            jenkins_url="http://j:8080",
+            jenkins_username="u",
+            jenkins_token="t",
+        )
+        descriptor = MagicMock()
+        descriptor.yaml = SAMPLE_RELEASE_YAML
+        service.repository.get_by_name = AsyncMock(return_value=descriptor)
+
+        mock_github = AsyncMock()
+        mock_github.branch_exists.return_value = True
+        mock_github.get_pull_request_by_branch.return_value = None
+        mock_github_cls.return_value = mock_github
+
+        mock_jenkins = AsyncMock()
+        mock_jenkins.job_exists.return_value = True
+        mock_jenkins_cls.return_value = mock_jenkins
+
+        result = await service.dry_run_release("test-release")
+
+        assert result.valid is False
+        assert result.environment == "PRD"
+        step = result.stages[0].steps[0]
+        assert step.branch_exists is True
+        assert step.pr_found is False
+        assert step.jenkins_job_exists is True
+
+
 class TestOrchestratorServiceExecuteRelease:
     @pytest.fixture
     def service(self):
@@ -287,6 +358,81 @@ class TestOrchestratorServiceExecuteRelease:
         background_tasks = MagicMock()
         with pytest.raises(ValueError, match="não está no estado 'clean'"):
             await service.execute_release("test-release", background_tasks)
+
+
+class TestOrchestratorServiceExecuteReleaseUAT:
+    @pytest.fixture
+    def service(self):
+        svc = OrchestratorService.__new__(OrchestratorService)
+        svc.repository = AsyncMock()
+        svc.execution_repo = AsyncMock()
+        svc.jenkins_service = AsyncMock()
+        svc.job_path_registry_repo = AsyncMock()
+        return svc
+
+    @patch("maestro.services.app_settings.get_integration_settings")
+    @patch("maestro.services.orchestrator.GithubIntegration")
+    async def test_execute_uat_skips_pr_validation(self, mock_github_cls, mock_get_settings, service):
+        mock_get_settings.return_value = MagicMock(
+            github_organization="org",
+            github_token="t",
+            github_base_url=None,
+            http_trust_env=True,
+        )
+        descriptor = MagicMock()
+        descriptor.id = 1
+        descriptor.yaml = SAMPLE_RELEASE_YAML_UAT
+        service.repository.get_by_name = AsyncMock(return_value=descriptor)
+        service.execution_repo.get_active_execution_by_name = AsyncMock(return_value=None)
+
+        exec_mock = MagicMock()
+        exec_mock.id = 42
+        service.execution_repo.add_release_execution = AsyncMock(return_value=exec_mock)
+        service.execution_repo.add_step_execution = AsyncMock()
+
+        mock_github = AsyncMock()
+        mock_github_cls.return_value = mock_github
+
+        background_tasks = MagicMock()
+        result = await service.execute_release("test-release", background_tasks)
+
+        assert result == 42
+        mock_github.get_pull_request_by_branch.assert_not_called()
+        background_tasks.add_task.assert_called_once()
+
+    @patch("maestro.services.app_settings.get_integration_settings")
+    @patch("maestro.services.orchestrator.GithubIntegration")
+    async def test_execute_prd_still_validates_pr(self, mock_github_cls, mock_get_settings, service):
+        mock_get_settings.return_value = MagicMock(
+            github_organization="org",
+            github_token="t",
+            github_base_url=None,
+            http_trust_env=True,
+        )
+        descriptor = MagicMock()
+        descriptor.id = 1
+        descriptor.yaml = SAMPLE_RELEASE_YAML
+        service.repository.get_by_name = AsyncMock(return_value=descriptor)
+        service.execution_repo.get_active_execution_by_name = AsyncMock(return_value=None)
+
+        exec_mock = MagicMock()
+        exec_mock.id = 42
+        service.execution_repo.add_release_execution = AsyncMock(return_value=exec_mock)
+        service.execution_repo.add_step_execution = AsyncMock()
+
+        mock_github = AsyncMock()
+        mock_github.get_pull_request_by_branch.return_value = PullRequestSchema(number=1, state="open", title="PR")
+        mock_github.get_pull_request_details.return_value = PullRequestDetailSchema(
+            number=1, state="open", title="PR", mergeable_state="clean", mergeable=True
+        )
+        mock_github_cls.return_value = mock_github
+
+        background_tasks = MagicMock()
+        result = await service.execute_release("test-release", background_tasks)
+
+        assert result == 42
+        mock_github.get_pull_request_by_branch.assert_called_once()
+        background_tasks.add_task.assert_called_once()
 
 
 class TestOrchestratorServiceCancelExecution:
