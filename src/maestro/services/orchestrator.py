@@ -79,7 +79,7 @@ class OrchestratorService:
 
         all_valid = True
         stages_results: list[DryRunStageResult] = []
-        environment = config.spec.environment or "PRD"
+        environment = (config.spec.environment or "PRD").upper()
 
         for stage in config.spec.stages:
             steps_results: list[DryRunStepResult] = []
@@ -97,7 +97,7 @@ class OrchestratorService:
                 except Exception:
                     branch_exists = False
 
-                if branch_exists:
+                if branch_exists and environment == "PRD":
                     try:
                         pr = await github.get_pull_request_by_branch(step.repository, step.release)
                         if pr:
@@ -173,7 +173,7 @@ class OrchestratorService:
             name=name,
             status=ExecutionStatus.PENDING,
             orchestrator_descriptor_id=descriptor.id,
-            environment=config.spec.environment or "PRD",
+            environment=(config.spec.environment or "PRD").upper(),
         )
         release_execution = await self.execution_repo.add_release_execution(release_execution)
 
@@ -187,7 +187,7 @@ class OrchestratorService:
             trust_env=_cfg.http_trust_env,
         )
         try:
-            if (config.spec.environment or "PRD") == "PRD":
+            if (config.spec.environment or "PRD").upper() == "PRD":
                 for stage in config.spec.stages:
                     for step in stage.steps:
                         pr = await github.get_pull_request_by_branch(step.repository, step.release)
