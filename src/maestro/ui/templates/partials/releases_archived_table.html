@@ -24,8 +24,7 @@
                             <button
                                 class="btn btn-xs btn-outline btn-accent hover:scale-105 active:scale-95 transition-transform"
                                 hx-post="/ui/releases/{{ desc.id }}/unarchive"
-                                hx-target="#releases-archived-table-container"
-                                hx-swap="outerHTML"
+                                hx-swap="none"
                                 hx-confirm="Desarquivar a release {{ desc.name }}?"
                                 title="Desarquivar release"
                             >

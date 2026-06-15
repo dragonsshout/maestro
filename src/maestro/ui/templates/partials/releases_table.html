@@ -115,8 +115,7 @@
                             <button
                                 class="btn btn-xs btn-ghost btn-circle hover:scale-105 active:scale-95 transition-transform opacity-60 hover:opacity-100"
                                 hx-post="/ui/releases/{{ desc.id }}/archive"
-                                hx-target="body"
-                                hx-swap="beforeend"
+                                hx-swap="none"
                                 hx-confirm="Arquivar a release {{ desc.name }}?"
                                 title="Arquivar release"
                             >

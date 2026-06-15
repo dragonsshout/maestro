@@ -601,7 +601,7 @@ async def archive_release_ui(
     if not descriptor:
         raise HTTPException(status_code=404, detail="Descriptor não encontrado.")
     return HTMLResponse(
-        content="<span>Arquivado com sucesso.</span>",
+        content="",
         headers={"HX-Trigger": "refreshReleases"},
     )
 
@@ -616,7 +616,7 @@ async def unarchive_release_ui(
     if not descriptor:
         raise HTTPException(status_code=404, detail="Descriptor não encontrado.")
     return HTMLResponse(
-        content="<span>Desarquivado com sucesso.</span>",
+        content="",
         headers={"HX-Trigger": "refreshReleasesArchived"},
     )
 
