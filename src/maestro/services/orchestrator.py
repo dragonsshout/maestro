@@ -43,6 +43,16 @@ class OrchestratorService:
         except (yaml.YAMLError, ValidationError) as e:
             raise ValueError(f"Erro de validação na estrutura do YAML:\n{e}")
 
+        # Verificar se já existe um descritor com o mesmo nome (ativo ou arquivado)
+        existing = await self.repository.get_by_name(release_config.metadata.name)
+        if existing:
+            if existing.archived:
+                raise ValueError(
+                    f"Já existe uma configuração de release arquivada com o nome "
+                    f"'{release_config.metadata.name}'. Desarquive-a ou utilize outro nome."
+                )
+            raise ValueError(f"Já existe uma configuração de release com o nome '{release_config.metadata.name}'.")
+
         # Validação de branches (GitHub) e jobs (Jenkins)
         validation_service = ReleaseValidationService()
         await validation_service.validate(release_config, session=self.repository.db)
