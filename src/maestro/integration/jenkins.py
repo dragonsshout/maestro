@@ -82,7 +82,7 @@ class JenkinsIntegration:
         async with self._get_client() as client:
             proceed_url = f"/{job_name.strip('/')}/{build_number}/input/{input_id}/proceed"
 
-            form_data = {"json": json.dumps({"parameter": [{"name": "STATUS", "value": status}]})}
+            form_data = {"json": json.dumps({"parameter": [{"name": "DEPLOYMENT_STATUS", "value": status}]})}
 
             response = await client.post(proceed_url, data=form_data)
             if response.status_code not in (200, 302):
