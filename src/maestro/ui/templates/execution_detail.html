@@ -18,7 +18,7 @@
                     &nbsp;·&nbsp;
                     {% set env_val = execution.environment|default("PRD") %}
                     {% if env_val == "PRD" %}
-                    <span class="badge badge-error badge-sm">{{ env_val }}</span>
+                    <span class="badge badge-success badge-sm">{{ env_val }}</span>
                     {% elif env_val == "UAT" %}
                     <span class="badge badge-warning badge-sm">{{ env_val }}</span>
                     {% else %}
