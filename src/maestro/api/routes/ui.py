@@ -167,13 +167,41 @@ async def step_events(
     request: Request,
     correlation_id: int,
     execution_repo: ExecutionRepository = Depends(),
+    settings_service: UISettingsService = Depends(),
 ):
     """Retorna modal com histórico de eventos de um step."""
     events = await execution_repo.get_events_by_correlation_id(correlation_id)
+
+    # Monta a URL do console output do Jenkins para esta build
+    console_url = ""
+    step = await execution_repo.get_step_by_correlation_id(correlation_id)
+    if step:
+        jenkins_base_url = (await settings_service.get(SETTING_JENKINS_BASE_URL) or "").rstrip("/")
+        if jenkins_base_url:
+            from maestro.repositories.job_path_registry import JobPathRegistryRepository
+            from maestro.services.job_path_resolver import resolve_job_path_async
+
+            execution = await execution_repo.get_execution_by_id(step.release_execution_id)
+            if execution:
+                orchestrator_repo = OrchestratorDescriptorRepository(db=execution_repo.db)
+                descriptor = await orchestrator_repo.get_by_id(execution.orchestrator_descriptor_id)
+                if descriptor:
+                    config = ReleaseConfigSchema(**yaml_lib.safe_load(descriptor.yaml))
+                    # Encontra o step_def correspondente
+                    registry_repo = JobPathRegistryRepository(db=execution_repo.db)
+                    for stage in config.spec.stages:
+                        for step_def in stage.steps:
+                            if stage.id == step.stage_id and step_def.id == step.step_id:
+                                job_path = await resolve_job_path_async(step_def, config.spec, registry_repo)
+                                console_url = f"{jenkins_base_url}/{job_path}/{correlation_id}/console"
+                                break
+                        if console_url:
+                            break
+
     return templates.TemplateResponse(
         request,
         "partials/step_events_modal.html",
-        {"events": events, "correlation_id": correlation_id},
+        {"events": events, "correlation_id": correlation_id, "console_url": console_url},
     )
 
 
