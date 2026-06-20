@@ -268,7 +268,7 @@ function flowScrollTo(id) {
                                     {% if sv == "failure" %}
                                     <li>
                                         <button class="text-warning gap-2"
-                                            {% if request.state.current_user.group in ['Approvers', 'Developers'] %}disabled title="Ação não permitida para o seu perfil"{% else %}
+                                            {% if request is defined and request.state and request.state.current_user.group in ['Approvers', 'Developers'] %}disabled title="Ação não permitida para o seu perfil"{% else %}
                                             hx-post="/ui/retry-step/{{ se.id }}"
                                             hx-target="body" hx-swap="beforeend"
                                             hx-confirm="Reexecutar o step '{{ se.step_id }}'?"
@@ -282,7 +282,7 @@ function flowScrollTo(id) {
                                     {% if sv == "waiting_approval" and se.job_input_id %}
                                     <li>
                                         <button class="text-success gap-2"
-                                            {% if request.state.current_user.group == 'Developers' %}disabled title="Ação não permitida para o seu perfil"{% else %}
+                                            {% if request is defined and request.state and request.state.current_user.group == 'Developers' %}disabled title="Ação não permitida para o seu perfil"{% else %}
                                             hx-post="/ui/step/{{ se.id }}/approve"
                                             hx-target="body" hx-swap="beforeend"
                                             hx-confirm="Aprovar individualmente o step '{{ se.step_id }}'? A aprovação será enviada ao Jenkins."
@@ -296,7 +296,7 @@ function flowScrollTo(id) {
                                     {% if sv in ["in_progress", "waiting_approval"] and se.job_execution_correlation_id %}
                                     <li>
                                         <button class="text-warning gap-2"
-                                            {% if request.state.current_user.group in ['Approvers', 'Developers'] %}disabled title="Ação não permitida para o seu perfil"{% else %}
+                                            {% if request is defined and request.state and request.state.current_user.group in ['Approvers', 'Developers'] %}disabled title="Ação não permitida para o seu perfil"{% else %}
                                             hx-post="/ui/step/{{ se.id }}/abort"
                                             hx-target="body" hx-swap="beforeend"
                                             hx-confirm="Cancelar forçadamente o step '{{ se.step_id }}'? Um abort será enviado ao Jenkins."
@@ -310,7 +310,7 @@ function flowScrollTo(id) {
                                     <li class="menu-title px-2 py-1"><span class="text-base-content/40 text-xs">Forçar resultado</span></li>
                                     <li>
                                         <button class="text-success gap-2"
-                                            {% if request.state.current_user.group in ['Approvers', 'Developers'] %}disabled title="Ação não permitida para o seu perfil"{% else %}
+                                            {% if request is defined and request.state and request.state.current_user.group in ['Approvers', 'Developers'] %}disabled title="Ação não permitida para o seu perfil"{% else %}
                                             hx-post="/ui/step/{{ se.id }}/override/success"
                                             hx-target="body" hx-swap="beforeend"
                                             hx-confirm="Marcar '{{ se.step_id }}' como SUCESSO? O fluxo continuará."
@@ -321,7 +321,7 @@ function flowScrollTo(id) {
                                     </li>
                                     <li>
                                         <button class="text-info gap-2"
-                                            {% if request.state.current_user.group in ['Approvers', 'Developers'] %}disabled title="Ação não permitida para o seu perfil"{% else %}
+                                            {% if request is defined and request.state and request.state.current_user.group in ['Approvers', 'Developers'] %}disabled title="Ação não permitida para o seu perfil"{% else %}
                                             hx-post="/ui/step/{{ se.id }}/override/waiting_approval"
                                             hx-target="body" hx-swap="beforeend"
                                             hx-confirm="Marcar '{{ se.step_id }}' como AGUARDANDO APROVAÇÃO?"
@@ -332,7 +332,7 @@ function flowScrollTo(id) {
                                     </li>
                                     <li>
                                         <button class="text-error gap-2"
-                                            {% if request.state.current_user.group in ['Approvers', 'Developers'] %}disabled title="Ação não permitida para o seu perfil"{% else %}
+                                            {% if request is defined and request.state and request.state.current_user.group in ['Approvers', 'Developers'] %}disabled title="Ação não permitida para o seu perfil"{% else %}
                                             hx-post="/ui/step/{{ se.id }}/override/failure"
                                             hx-target="body" hx-swap="beforeend"
                                             hx-confirm="Marcar '{{ se.step_id }}' como FALHA?"
