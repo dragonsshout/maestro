@@ -7,6 +7,7 @@ from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 from sse_starlette.sse import EventSourceResponse
 
+from maestro.auth.dependencies import get_current_user
 from maestro.database.models import ExecutionActionLog
 from maestro.repositories.execution import ExecutionRepository
 from maestro.repositories.orchestrator import OrchestratorDescriptorRepository
@@ -26,7 +27,7 @@ from maestro.services.ui import UIService
 TEMPLATES_DIR = Path(__file__).parent.parent.parent / "ui" / "templates"
 templates = Jinja2Templates(directory=TEMPLATES_DIR)
 
-router = APIRouter(prefix="/ui", tags=["UI"])
+router = APIRouter(prefix="/ui", tags=["UI"], dependencies=[Depends(get_current_user)])
 
 
 def _extract_environments(descriptors) -> dict:

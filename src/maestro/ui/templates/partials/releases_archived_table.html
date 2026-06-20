@@ -34,10 +34,12 @@
                         <div class="flex items-center gap-2">
                             <button
                                 class="btn btn-xs btn-outline btn-success hover:scale-105 active:scale-95 transition-transform"
+                                {% if request.state.current_user.group != 'Administrators' %}disabled title="Ação não permitida para o seu perfil"{% else %}
                                 hx-post="/ui/releases/{{ desc.id }}/unarchive"
                                 hx-swap="none"
                                 hx-confirm="Desarquivar a release {{ desc.name }}?"
                                 title="Desarquivar release"
+                                {% endif %}
                             >
                                 <svg class="w-3 h-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" /></svg>
                                 Desarquivar

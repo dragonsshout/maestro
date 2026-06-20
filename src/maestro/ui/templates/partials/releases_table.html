@@ -58,11 +58,13 @@
                             <button
                                 class="btn btn-xs btn-circle hover:scale-110 active:scale-95 transition-transform shadow-sm relative group
                                        {% if active %}btn-warning{% else %}btn-success{% endif %}"
+                                {% if request.state.current_user.group in ['Approvers', 'Developers'] %}disabled title="Ação não permitida para o seu perfil"{% else %}
                                 hx-post="/ui/execute/{{ desc.name }}"
                                 hx-target="body"
                                 hx-swap="beforeend"
                                 hx-confirm="{% if active %}Já existe uma execução ativa (#{{ active.id }}) para '{{ desc.name }}'. Isso será bloqueado. Deseja verificar?{% else %}Executar a release '{{ desc.name }}'?{% endif %}"
                                 title="{% if active %}Execução já em andamento{% else %}Executar release{% endif %}"
+                                {% endif %}
                             >
                                 {% if active %}
                                 <svg class="w-3 h-3 group-[.htmx-request]:hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"/></svg>
@@ -74,8 +76,10 @@
                             <button
                                 type="button"
                                 class="btn btn-xs btn-secondary btn-circle hover:scale-110 active:scale-95 transition-transform shadow-sm"
+                                {% if request.state.current_user.group in ['Approvers', 'Developers'] %}disabled title="Ação não permitida para o seu perfil"{% else %}
                                 title="Agendar execução"
                                 onclick="document.getElementById('schedule-modal-{{ desc.id }}').showModal()"
+                                {% endif %}
                             >
                                 <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                             </button>
@@ -108,20 +112,24 @@
                             </dialog>
                             <button
                                 class="btn btn-xs btn-info btn-circle hover:scale-110 active:scale-95 transition-transform shadow-sm relative group"
+                                {% if request.state.current_user.group == 'Approvers' %}disabled title="Ação não permitida para o seu perfil"{% else %}
                                 hx-post="/ui/dry-run/{{ desc.name }}"
                                 hx-target="body"
                                 hx-swap="beforeend"
                                 title="Dry Run - validar pré-requisitos"
+                                {% endif %}
                             >
                                 <svg class="w-3 h-3 group-[.htmx-request]:hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
                                 <span class="loading loading-spinner loading-xs hidden group-[.htmx-request]:inline-block"></span>
                             </button>
                             <button
                                 class="btn btn-xs btn-warning btn-circle hover:scale-110 active:scale-95 transition-transform shadow-sm"
+                                {% if request.state.current_user.group != 'Administrators' %}disabled title="Ação não permitida para o seu perfil"{% else %}
                                 hx-post="/ui/releases/{{ desc.id }}/archive"
                                 hx-swap="none"
                                 hx-confirm="Arquivar a release {{ desc.name }}?"
                                 title="Arquivar release"
+                                {% endif %}
                             >
                                 <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" /></svg>
                             </button>

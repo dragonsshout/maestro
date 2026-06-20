@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}Usuários — Maestro{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl">
+
+    <div class="flex items-center justify-between mb-8">
+        <h1 class="text-3xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary flex items-center">
+            <svg class="w-8 h-8 mr-2 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
+            Gerenciar Usuários
+        </h1>
+        <button class="btn btn-primary btn-sm" hx-get="/ui/users/modals/create" hx-target="body" hx-swap="beforeend">
+            <svg class="w-4 h-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
+            Novo Usuário
+        </button>
+    </div>
+
+    <div class="card bg-base-100/50 backdrop-blur-sm border border-base-300/50 shadow-lg rounded-2xl">
+        <div class="card-body p-0">
+            <div class="overflow-x-auto">
+                <table class="table table-zebra w-full">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Usuário</th>
+                            <th>Grupo</th>
+                            <th>Criado em</th>
+                            <th class="text-right">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for u in users %}
+                        <tr>
+                            <td>{{ u.id }}</td>
+                            <td class="font-bold">{{ u.username }}</td>
+                            <td>
+                                <span class="badge badge-outline 
+                                    {% if u.group == 'Administrators' %}badge-error
+                                    {% elif u.group == 'Approvers' %}badge-warning
+                                    {% elif u.group == 'Developers' %}badge-info
+                                    {% else %}badge-neutral{% endif %}">
+                                    {{ u.group }}
+                                </span>
+                            </td>
+                            <td class="text-sm text-base-content/60">{{ u.created_at.strftime('%d/%m/%Y %H:%M') }}</td>
+                            <td class="text-right space-x-1">
+                                <button class="btn btn-xs btn-ghost text-info" hx-get="/ui/users/modals/edit-group/{{ u.id }}" hx-target="body" hx-swap="beforeend" title="Alterar Grupo">Grupo</button>
+                                <button class="btn btn-xs btn-ghost text-error" hx-get="/ui/users/modals/reset-password/{{ u.id }}" hx-target="body" hx-swap="beforeend" title="Resetar Senha">Resetar Senha</button>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="5" class="text-center py-4">Nenhum usuário cadastrado.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -4,12 +4,16 @@ import sys
 from contextlib import asynccontextmanager
 
 import uvicorn
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import RedirectResponse
 
+from maestro.api.routes.auth import router as auth_router
 from maestro.api.routes.callback import router as callback_router
 from maestro.api.routes.job_path_registry import router as job_registry_router
 from maestro.api.routes.orchestrator import router as orchestrator_router
 from maestro.api.routes.ui import router as ui_router
+from maestro.api.routes.users import router as users_router
+from maestro.auth.dependencies import RequiresAuthException
 from maestro.config.logger import get_logger
 
 logger = get_logger(__name__)
@@ -76,6 +80,17 @@ app.include_router(orchestrator_router)
 app.include_router(callback_router)
 app.include_router(ui_router)
 app.include_router(job_registry_router)
+app.include_router(auth_router)
+app.include_router(users_router)
+
+
+@app.exception_handler(RequiresAuthException)
+async def requires_auth_exception_handler(request: Request, exc: RequiresAuthException):
+    if request.headers.get("HX-Request"):
+        response = RedirectResponse(url="/ui/login", status_code=303)
+        response.headers["HX-Redirect"] = "/ui/login"
+        return response
+    return RedirectResponse(url="/ui/login", status_code=303)
 
 
 @app.get("/health", tags=["System"])
