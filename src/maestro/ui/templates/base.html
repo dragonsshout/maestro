@@ -406,9 +406,9 @@
                     </a>
                 </li>
                 <li>
-                    <a href="{% if request.state.current_user and request.state.current_user.group in ['Administrators', 'Operators'] %}/ui/settings{% else %}#{% endif %}"
+                    <a href="{% if request.state.current_user and request.state.current_user.group in ['Administrators'] %}/ui/settings{% else %}#{% endif %}"
                        class="nav-item flex items-center gap-3 transition-colors duration-200 
-                       {% if request.state.current_user and request.state.current_user.group not in ['Administrators', 'Operators'] %}opacity-50 cursor-not-allowed pointer-events-none{% else %}hover:bg-base-200/70{% endif %}
+                       {% if request.state.current_user and request.state.current_user.group not in ['Administrators'] %}opacity-50 cursor-not-allowed pointer-events-none{% else %}hover:bg-base-200/70{% endif %}
                        {% if request.url.path == '/ui/settings' %}active shadow-sm{% endif %}"
                        title="Configurações">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">

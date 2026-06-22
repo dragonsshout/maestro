@@ -8,7 +8,7 @@ from pydantic import BaseModel
 from sse_starlette.sse import EventSourceResponse
 
 from maestro.auth.dependencies import get_current_user
-from maestro.database.models import ExecutionActionLog
+from maestro.database.models import ExecutionActionLog, User
 from maestro.repositories.execution import ExecutionRepository
 from maestro.repositories.orchestrator import OrchestratorDescriptorRepository
 from maestro.schemas.enums import ExecutionStatus
@@ -496,12 +496,19 @@ async def approve_step_ui(
 
 
 @router.get("/settings", response_class=HTMLResponse)
-async def settings_page(request: Request, service: UISettingsService = Depends()):
+async def settings_page(
+    request: Request,
+    service: UISettingsService = Depends(),
+    current_user: User = Depends(get_current_user),
+):
+    if current_user.group != "Administrators":
+        raise HTTPException(status_code=403, detail="Acesso negado.")
+
     current = await service.get_all_masked()
     return templates.TemplateResponse(
         request,
         "settings.html",
-        {"settings": current, "known_settings": KNOWN_SETTINGS},
+        {"settings": current, "known_settings": KNOWN_SETTINGS, "current_user": current_user},
     )
 
 
@@ -544,7 +551,14 @@ async def execute_release_ui(
 
 
 @router.post("/settings", response_class=HTMLResponse)
-async def settings_save(request: Request, service: UISettingsService = Depends()):
+async def settings_save(
+    request: Request,
+    service: UISettingsService = Depends(),
+    current_user: User = Depends(get_current_user),
+):
+    if current_user.group != "Administrators":
+        raise HTTPException(status_code=403, detail="Acesso negado.")
+
     form = await request.form()
     data = {key: (form.get(key) or "").strip() or None for key in KNOWN_SETTINGS}
     await service.save(data)
@@ -552,7 +566,7 @@ async def settings_save(request: Request, service: UISettingsService = Depends()
     return templates.TemplateResponse(
         request,
         "settings.html",
-        {"settings": current, "known_settings": KNOWN_SETTINGS, "saved": True},
+        {"settings": current, "known_settings": KNOWN_SETTINGS, "saved": True, "current_user": current_user},
     )
 
 
