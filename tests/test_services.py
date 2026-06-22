@@ -40,6 +40,7 @@ class TestOrchestratorServiceSaveDescriptor:
         mock_validation_cls.return_value = mock_validation
         mock_validation.validate = AsyncMock()
 
+        service.repository.get_by_name = AsyncMock(return_value=None)
         service.repository.add = AsyncMock(return_value=MagicMock(id=1, name="test-release"))
 
         result = await service.save_descriptor(SAMPLE_RELEASE_YAML)
@@ -62,6 +63,7 @@ class TestOrchestratorServiceSaveDescriptor:
         from sqlalchemy.exc import IntegrityError
 
         mock_validation_cls.return_value.validate = AsyncMock()
+        service.repository.get_by_name = AsyncMock(return_value=None)
         service.repository.add = AsyncMock(side_effect=IntegrityError("", "", Exception()))
 
         with pytest.raises(ValueError, match="Já existe"):

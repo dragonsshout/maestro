@@ -142,24 +142,25 @@ def override_get_db(mock_db_session):
 def app_with_db_override(override_get_db):
     """Returns the FastAPI app with the DB dependency overridden."""
     with patch("subprocess.run"):  # Prevent alembic migrations in lifespan
-        with patch("maestro.api.routes.ui.get_current_user") as mock_get_current_user:
-            from maestro.main import app
-            app.dependency_overrides[get_db] = override_get_db
-            
-            # Create a mock user
-            mock_user = MagicMock(spec=User)
-            mock_user.id = 1
-            mock_user.username = "admin"
-            mock_user.group = "Administrators"
-            
-            async def override_user(request: Request):
-                request.state.current_user = mock_user
-                return mock_user
-                
-            app.dependency_overrides[get_current_user] = override_user
-            
-            yield app
-            app.dependency_overrides.clear()
+        from maestro.main import app
+        app.dependency_overrides[get_db] = override_get_db
+        yield app
+        app.dependency_overrides.clear()
+
+
+@pytest.fixture(autouse=True)
+def bypass_auth():
+    """Globally bypass auth for all tests by patching get_current_user_optional."""
+    mock_user = MagicMock(spec=User)
+    mock_user.id = 1
+    mock_user.username = "admin"
+    mock_user.group = "Administrators"
+    
+    async def override_user_optional(*args, **kwargs):
+        return mock_user
+
+    with patch("maestro.auth.dependencies.get_current_user_optional", side_effect=override_user_optional):
+        yield mock_user
 
 
 @pytest.fixture
