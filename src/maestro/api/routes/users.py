@@ -39,7 +39,9 @@ async def modal_create_user(
 ):
     if current_user.group != "Administrators":
         raise HTTPException(status_code=403, detail="Acesso negado.")
-    return templates.TemplateResponse(request, "partials/user_modals.html", {"action": "create", "current_user": current_user})
+    return templates.TemplateResponse(
+        request, "partials/user_modals.html", {"action": "create", "current_user": current_user}
+    )
 
 
 @router.post("/create", response_class=HTMLResponse)
@@ -80,7 +82,9 @@ async def modal_edit_group(
     if not user:
         raise HTTPException(status_code=404, detail="Usuário não encontrado")
 
-    return templates.TemplateResponse(request, "partials/user_modals.html", {"action": "edit_group", "user": user, "current_user": current_user})
+    return templates.TemplateResponse(
+        request, "partials/user_modals.html", {"action": "edit_group", "user": user, "current_user": current_user}
+    )
 
 
 @router.post("/{user_id}/group", response_class=HTMLResponse)
@@ -115,7 +119,9 @@ async def modal_reset_password(
 
     user_service = UserService(db)
     user = await user_service.user_repo.get_by_id(user_id)
-    return templates.TemplateResponse(request, "partials/user_modals.html", {"action": "reset_password", "user": user, "current_user": current_user})
+    return templates.TemplateResponse(
+        request, "partials/user_modals.html", {"action": "reset_password", "user": user, "current_user": current_user}
+    )
 
 
 @router.post("/{user_id}/reset-password", response_class=HTMLResponse)
@@ -139,7 +145,9 @@ async def modal_change_own_password(
     request: Request,
     current_user: User = Depends(get_current_user),
 ):
-    return templates.TemplateResponse(request, "partials/user_modals.html", {"action": "change_password", "current_user": current_user})
+    return templates.TemplateResponse(
+        request, "partials/user_modals.html", {"action": "change_password", "current_user": current_user}
+    )
 
 
 @router.post("/change-password", response_class=HTMLResponse)
@@ -151,4 +159,6 @@ async def change_own_password(
 ):
     user_service = UserService(db)
     await user_service.change_password(current_user.id, password)
-    return HTMLResponse("<div class='alert alert-success'>Sua senha foi alterada com sucesso! Faça login novamente.</div><script>setTimeout(() => window.location.href='/ui/logout', 2000);</script>")
+    return HTMLResponse(
+        "<div class='alert alert-success'>Sua senha foi alterada com sucesso! Faça login novamente.</div><script>setTimeout(() => window.location.href='/ui/logout', 2000);</script>"  # noqa: E501
+    )

@@ -21,11 +21,7 @@ class UserService:
             raise ValueError(f"Usuário '{username}' já existe.")
 
         hashed = get_password_hash(password_plain)
-        user = User(
-            username=username,
-            password_hash=hashed,
-            group=group
-        )
+        user = User(username=username, password_hash=hashed, group=group)
         return await self.user_repo.add(user)
 
     async def update_user_group(self, user_id: int, group: str) -> User:

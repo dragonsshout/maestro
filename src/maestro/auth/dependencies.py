@@ -13,6 +13,7 @@ HTMX_REQUEST_HEADER = "HX-Request"
 class RequiresAuthException(Exception):
     pass
 
+
 async def get_current_user_optional(request: Request, db: AsyncSession = Depends(get_db)) -> User | None:
     token = request.cookies.get("maestro_session")
     if not token:
@@ -38,4 +39,3 @@ async def get_current_user(request: Request, db: AsyncSession = Depends(get_db))
 
     request.state.current_user = user
     return user
-

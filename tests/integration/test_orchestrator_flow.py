@@ -9,6 +9,7 @@ Tests the full lifecycle:
 
 All tests use a real PostgreSQL database and mock external HTTP APIs.
 """
+
 import re
 
 import pytest

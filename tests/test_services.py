@@ -192,7 +192,6 @@ class TestOrchestratorServiceDryRun:
         assert result.valid is False
         assert result.stages[0].steps[0].jenkins_job_exists is False
 
-
     @patch("maestro.services.app_settings.get_integration_settings")
     @patch("maestro.services.orchestrator.JenkinsIntegration")
     @patch("maestro.services.orchestrator.GithubIntegration")

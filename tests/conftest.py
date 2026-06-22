@@ -9,17 +9,15 @@ Provides:
 
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from fastapi import Request
 import pytest
 from httpx import ASGITransport, AsyncClient
 
-from maestro.auth.dependencies import get_current_user
 from maestro.database.models import (
-    User,
     OrchestratorDescriptor,
     ReleaseExecution,
     ReleaseStepExecution,
     StepEvent,
+    User,
 )
 from maestro.database.session import get_db
 from maestro.schemas.enums import ExecutionStatus
@@ -143,6 +141,7 @@ def app_with_db_override(override_get_db):
     """Returns the FastAPI app with the DB dependency overridden."""
     with patch("subprocess.run"):  # Prevent alembic migrations in lifespan
         from maestro.main import app
+
         app.dependency_overrides[get_db] = override_get_db
         yield app
         app.dependency_overrides.clear()
@@ -155,7 +154,7 @@ def bypass_auth():
     mock_user.id = 1
     mock_user.username = "admin"
     mock_user.group = "Administrators"
-    
+
     async def override_user_optional(*args, **kwargs):
         return mock_user
 
