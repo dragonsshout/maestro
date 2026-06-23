@@ -2,7 +2,7 @@
 <html lang="pt-BR" data-theme="night">
 <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
     <title>{% block title %}Maestro{% endblock %}</title>
 
     <!-- Google Fonts: Inter -->
@@ -41,6 +41,11 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/yaml.min.js"></script>
 
     <style>
+        /* ─── Cross-browser resets ───────────────────────────────────────────── */
+        *, *::before, *::after {
+            box-sizing: border-box;
+        }
+
         /* Fix para alinhamento perfeito de icones e textos de status sem quebrar linha */
         span[class^="status-"], span[class^="badge-modern-"] {
             display: inline-flex;
@@ -74,7 +79,7 @@
             padding: 0;
         }
 
-        /* Custom scrollbar */
+        /* Custom scrollbar — Webkit (Chrome, Safari, Edge) */
         ::-webkit-scrollbar {
             width: 8px;
             height: 8px;
@@ -83,10 +88,16 @@
             background: transparent;
         }
         ::-webkit-scrollbar-thumb {
-            @apply bg-base-300 rounded-full;
+            background: oklch(var(--bc) / 0.2);
+            border-radius: 9999px;
         }
         ::-webkit-scrollbar-thumb:hover {
-            @apply bg-base-content/30;
+            background: oklch(var(--bc) / 0.3);
+        }
+        /* Firefox scrollbar */
+        * {
+            scrollbar-width: thin;
+            scrollbar-color: oklch(var(--bc) / 0.2) transparent;
         }
 
         /* HTMX indicator: hidden by default, shown during request */
@@ -112,6 +123,7 @@
         /* Stage card */
         .flow-stage-card {
             width: 11rem;
+            min-width: 9rem;
             min-height: 6rem;
             border-radius: 0.875rem;
             border: 1.5px solid;
@@ -123,6 +135,7 @@
             cursor: default;
             position: relative;
             background: oklch(var(--b1) / 0.6);
+            -webkit-backdrop-filter: blur(8px);
             backdrop-filter: blur(8px);
         }
         .flow-stage-card:hover {
@@ -273,14 +286,15 @@
             opacity: 0.7;
         }
 
-        /* Sidebar transition */
+        /* ─── Sidebar & Layout ───────────────────────────────────────────────── */
         #sidebar {
-            transition: width 0.25s ease;
+            transition: width 0.25s ease, transform 0.25s ease;
             overflow: hidden;
-            width: 14rem; /* 56 = w-56 */
+            overflow-y: auto;
+            width: 14rem;
         }
         #sidebar.collapsed {
-            width: 3.5rem; /* só ícones */
+            width: 3.5rem;
         }
 
         /* Esconde labels quando recolhido */
@@ -308,12 +322,159 @@
         #sidebar.collapsed .nav-item {
             position: relative;
         }
+
+        /* Mobile overlay for sidebar */
+        #sidebar-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 35;
+            opacity: 0;
+            transition: opacity 0.25s ease;
+        }
+        #sidebar-overlay.active {
+            display: block;
+            opacity: 1;
+        }
+
+        /* ─── Responsive: Mobile-first fixes ─────────────────────────────────── */
+        @media (max-width: 768px) {
+            /* Sidebar: offscreen by default on mobile, shown as overlay */
+            #sidebar {
+                width: 14rem !important;
+                transform: translateX(-100%);
+                z-index: 45;
+            }
+            #sidebar.mobile-open {
+                transform: translateX(0);
+            }
+            #sidebar.collapsed {
+                transform: translateX(-100%);
+            }
+
+            /* Main content has no left margin on mobile */
+            #main-content,
+            #main-content.collapsed {
+                margin-left: 0 !important;
+            }
+
+            /* Reduce padding on mobile */
+            #main-content {
+                padding-left: 1rem;
+                padding-right: 1rem;
+                padding-top: 1.25rem;
+            }
+
+            /* Navbar adjustments for mobile */
+            .navbar {
+                padding-left: 0.5rem;
+                padding-right: 0.5rem;
+            }
+
+            /* Flow graph cards smaller on mobile */
+            .flow-stage-card {
+                width: 9rem;
+                min-width: 8rem;
+                min-height: 5rem;
+                padding: 0.5rem;
+            }
+
+            /* Table font size adjustments */
+            .table {
+                font-size: 0.75rem;
+            }
+            .table th, .table td {
+                padding: 0.5rem 0.4rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .flow-stage-card {
+                width: 8rem;
+                min-width: 7rem;
+                padding: 0.4rem;
+            }
+            .flow-stage-name {
+                font-size: 0.6rem;
+            }
+            .flow-step-label {
+                font-size: 0.55rem;
+            }
+
+            /* Stack header elements vertically on very small screens */
+            .card-body .flex.items-center.justify-between.flex-wrap {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+        }
+
+        /* ─── Responsive: Tablet ─────────────────────────────────────────────── */
+        @media (min-width: 769px) and (max-width: 1024px) {
+            #sidebar {
+                width: 3.5rem;
+            }
+            #sidebar .nav-label {
+                display: none;
+            }
+            #sidebar .nav-item {
+                justify-content: center;
+                padding-left: 0;
+                padding-right: 0;
+            }
+            #main-content {
+                margin-left: 3.5rem;
+            }
+        }
+
+        /* ─── Cross-browser: backdrop-filter fallback ────────────────────────── */
+        @supports (backdrop-filter: blur(8px)) or (-webkit-backdrop-filter: blur(8px)) {
+            .backdrop-blur-sm {
+                -webkit-backdrop-filter: blur(4px);
+            }
+            .backdrop-blur-md {
+                -webkit-backdrop-filter: blur(12px);
+            }
+        }
+        @supports not ((backdrop-filter: blur(8px)) or (-webkit-backdrop-filter: blur(8px))) {
+            .flow-stage-card,
+            #sidebar,
+            .navbar,
+            .backdrop-blur-sm,
+            .backdrop-blur-md {
+                background: oklch(var(--b1) / 0.95) !important;
+            }
+        }
+
+        /* ─── Cross-browser: oklch fallback for very old browsers ─────────────── */
+        @supports not (color: oklch(0% 0 0)) {
+            .status-pending          { color: #9ca3af; }
+            .status-in_progress      { color: #60a5fa; }
+            .status-success          { color: #4ade80; }
+            .status-failure          { color: #f87171; }
+            .status-error            { color: #f87171; }
+            .status-aborted          { color: #9ca3af; }
+            .status-waiting_approval { color: #fbbf24; }
+            .flow-stage-card {
+                background: rgba(30, 30, 46, 0.9);
+                border-color: rgba(255, 255, 255, 0.1);
+            }
+            ::-webkit-scrollbar-thumb {
+                background: rgba(255, 255, 255, 0.2);
+            }
+            ::-webkit-scrollbar-thumb:hover {
+                background: rgba(255, 255, 255, 0.3);
+            }
+            * {
+                scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+            }
+        }
     </style>
 </head>
-<body class="min-h-screen bg-base-200 font-sans text-base-content selection:bg-primary/30">
+<body class="min-h-screen bg-base-200 font-sans text-base-content selection:bg-primary/30 overflow-x-hidden">
 
     <!-- Navbar -->
-    <div class="navbar bg-base-100/80 backdrop-blur-md shadow-sm border-b border-base-300/50 fixed top-0 left-0 right-0 z-50 px-4 transition-all duration-300">
+    <div class="navbar bg-base-100/80 backdrop-blur-md shadow-sm border-b border-base-300/50 fixed top-0 left-0 right-0 z-50 px-2 sm:px-4 transition-all duration-300" style="-webkit-backdrop-filter: blur(12px)">
         <!-- Toggle button -->
         <button id="sidebar-toggle" class="btn btn-ghost btn-sm btn-square mr-2 hover:bg-base-200/50 transition-colors" title="Recolher menu">
             <svg id="icon-collapse" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -350,8 +511,11 @@
     <!-- Layout: sidebar + content -->
     <div class="flex pt-16 min-h-screen">
 
+        <!-- Sidebar overlay (mobile) -->
+        <div id="sidebar-overlay" onclick="closeMobileSidebar()"></div>
+
         <!-- Sidebar -->
-        <aside id="sidebar" class="bg-base-100/80 backdrop-blur-md border-r border-base-300/50 fixed top-16 left-0 bottom-0 flex flex-col py-4 z-40 transition-all duration-300">
+        <aside id="sidebar" class="bg-base-100/80 border-r border-base-300/50 fixed top-16 left-0 bottom-0 flex flex-col py-4 z-40 transition-all duration-300" style="-webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px)">
             <ul class="menu px-2 gap-1 w-full">
                 <li>
                     <a href="/ui"
@@ -433,7 +597,7 @@
             </ul>        </aside>
 
         <!-- Main content -->
-        <main id="main-content" class="flex-1 px-6 py-8">
+        <main id="main-content" class="flex-1 px-3 sm:px-6 py-6 sm:py-8 min-w-0">
             {% block content %}{% endblock %}
         </main>
 
@@ -443,20 +607,65 @@
         const sidebar = document.getElementById('sidebar');
         const mainContent = document.getElementById('main-content');
         const toggleBtn = document.getElementById('sidebar-toggle');
+        const sidebarOverlay = document.getElementById('sidebar-overlay');
 
         // Persiste estado no localStorage
         const STORAGE_KEY = 'maestro_sidebar_collapsed';
-        const isCollapsed = localStorage.getItem(STORAGE_KEY) === 'true';
+        const MOBILE_BREAKPOINT = 768;
 
-        if (isCollapsed) {
-            sidebar.classList.add('collapsed');
-            mainContent.classList.add('collapsed');
+        function isMobile() {
+            return window.innerWidth <= MOBILE_BREAKPOINT;
+        }
+
+        function closeMobileSidebar() {
+            sidebar.classList.remove('mobile-open');
+            sidebarOverlay.classList.remove('active');
+        }
+
+        function applyDesktopState(collapsed) {
+            if (collapsed) {
+                sidebar.classList.add('collapsed');
+                mainContent.classList.add('collapsed');
+            } else {
+                sidebar.classList.remove('collapsed');
+                mainContent.classList.remove('collapsed');
+            }
+        }
+
+        // Initialize
+        const isCollapsed = localStorage.getItem(STORAGE_KEY) === 'true';
+        if (!isMobile()) {
+            applyDesktopState(isCollapsed);
         }
 
         toggleBtn.addEventListener('click', () => {
-            const collapsed = sidebar.classList.toggle('collapsed');
-            mainContent.classList.toggle('collapsed', collapsed);
-            localStorage.setItem(STORAGE_KEY, collapsed);
+            if (isMobile()) {
+                // Mobile: toggle overlay sidebar
+                const isOpen = sidebar.classList.toggle('mobile-open');
+                sidebarOverlay.classList.toggle('active', isOpen);
+            } else {
+                // Desktop: toggle collapse
+                const collapsed = sidebar.classList.toggle('collapsed');
+                mainContent.classList.toggle('collapsed', collapsed);
+                localStorage.setItem(STORAGE_KEY, collapsed);
+            }
+        });
+
+        // Handle resize: clean up mobile state when going to desktop
+        let resizeTimer;
+        window.addEventListener('resize', () => {
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(() => {
+                if (!isMobile()) {
+                    closeMobileSidebar();
+                    const stored = localStorage.getItem(STORAGE_KEY) === 'true';
+                    applyDesktopState(stored);
+                } else {
+                    // On mobile, remove desktop collapsed state
+                    sidebar.classList.remove('collapsed');
+                    mainContent.classList.remove('collapsed');
+                }
+            }, 150);
         });
 
         // Setup Highlight.js to run on htmx:load (which fires for initial load and subsequent HTMX swaps)

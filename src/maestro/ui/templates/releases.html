@@ -2,11 +2,11 @@
 {% block title %}Releases — Maestro{% endblock %}
 
 {% block content %}
-<div class="max-w-4xl">
+<div class="max-w-4xl min-w-0">
 
-    <div class="flex items-center justify-between mb-8">
-        <h1 class="text-3xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary flex items-center">
-            <svg class="w-8 h-8 mr-2 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 sm:mb-8">
+        <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary flex items-center">
+            <svg class="w-6 h-6 sm:w-8 sm:h-8 mr-2 text-primary shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>
             Releases
         </h1>
     </div>
@@ -38,8 +38,8 @@
             </h2>
             <p class="text-sm text-base-content/60 mb-3">Envie um arquivo YAML com a definição da release.</p>
             <form method="POST" action="/ui/releases/upload" enctype="multipart/form-data">
-                <div class="flex items-end gap-3">
-                    <div class="form-control flex-1">
+                <div class="flex flex-col sm:flex-row items-stretch sm:items-end gap-3">
+                    <div class="form-control flex-1 min-w-0">
                         <input
                             type="file"
                             name="file"
@@ -48,7 +48,7 @@
                             required
                         />
                     </div>
-                    <button type="submit" class="btn btn-primary btn-sm shadow-sm hover:scale-105 active:scale-95 transition-transform flex items-center gap-1"
+                    <button type="submit" class="btn btn-primary btn-sm shadow-sm hover:scale-105 active:scale-95 transition-transform flex items-center gap-1 shrink-0"
                         {% if request.state.current_user.group == 'Approvers' %}disabled class="opacity-50 cursor-not-allowed" title="Aprovadores não podem cadastrar releases"{% endif %}>
                         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
                         Enviar
@@ -61,17 +61,17 @@
     <!-- Lista de releases cadastradas -->
     <div class="card bg-base-100/50 backdrop-blur-sm border border-base-300/50 shadow-lg shadow-base-300/10 rounded-2xl">
         <div class="card-body">
-            <div class="flex items-center justify-between mb-4">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-3">
                 <h2 class="card-title text-base flex items-center m-0">
-                    <svg class="w-5 h-5 mr-1 text-base-content/70" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
+                    <svg class="w-5 h-5 mr-1 text-base-content/70 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
                     Releases cadastradas
                 </h2>
-                <div class="form-control">
+                <div class="form-control w-full sm:w-auto">
                     <div class="relative">
                         <input type="text"
                                name="search"
                                placeholder="Buscar por nome..."
-                               class="input input-sm input-bordered bg-base-200/50 pl-8"
+                               class="input input-sm input-bordered bg-base-200/50 pl-8 w-full sm:w-auto"
                                hx-get="/ui/partials/releases"
                                hx-trigger="keyup changed delay:300ms, search"
                                hx-target="#releases-table-container">

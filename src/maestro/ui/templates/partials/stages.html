@@ -43,7 +43,7 @@
 {# ═══════════════════════════════════════════════════════════════
    FLOW GRAPH — GitHub Actions style
 ════════════════════════════════════════════════════════════════ #}
-<div class="flow-graph overflow-x-auto">
+<div class="flow-graph overflow-x-auto -mx-3 px-3 sm:mx-0 sm:px-0" style="-webkit-overflow-scrolling: touch;">
     <div class="flow-graph-inner">
         {% for stage in stages %}
         {% set stage_statuses = stage.steps | map(attribute='execution') | map(attribute='status') | list %}
@@ -114,12 +114,12 @@ function flowScrollTo(id) {
     {% set border_color = "border-base-300" %}
 {% endif %}
 
-<div class="card bg-base-100/50 backdrop-blur-sm border-l-4 {{ border_color }} border-y border-r border-base-300/50 shadow-sm mb-6 rounded-xl transition-all duration-300 hover:shadow-md">
-    <div class="card-body p-4 md:p-6">
+<div class="card bg-base-100/50 backdrop-blur-sm border-l-4 {{ border_color }} border-y border-r border-base-300/50 shadow-sm mb-6 rounded-xl transition-all duration-300 hover:shadow-md" style="-webkit-backdrop-filter: blur(8px)">
+    <div class="card-body p-3 sm:p-4 md:p-6">
         <!-- Stage header -->
-        <div class="flex items-center gap-3 mb-4">
-            <div class="badge badge-outline badge-lg font-mono font-medium shadow-sm">Stage</div>
-            <h3 class="text-xl font-bold tracking-tight">{{ stage.id }}</h3>
+        <div class="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4 flex-wrap">
+            <div class="badge badge-outline badge-md sm:badge-lg font-mono font-medium shadow-sm">Stage</div>
+            <h3 class="text-base sm:text-xl font-bold tracking-tight">{{ stage.id }}</h3>
             {% if "failure" in stage_statuses %}
                 <span class="status-failure"><svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg> Falha</span>
             {% elif "timeout" in stage_statuses %}
@@ -138,18 +138,18 @@ function flowScrollTo(id) {
         </div>
 
         <!-- Tabela de steps -->
-        <div class="rounded-lg border border-base-300/50 bg-base-100/30 overflow-visible pb-4">
-            <table class="table table-sm w-full text-xs">
+        <div class="rounded-lg border border-base-300/50 bg-base-100/30 overflow-x-auto pb-4" style="-webkit-overflow-scrolling: touch;">
+            <table class="table table-sm w-full text-xs min-w-[700px]">
                 <thead class="bg-base-200/50 text-base-content/70 uppercase tracking-wide text-xs">
                     <tr>
                         <th class="w-8"></th>
                         <th>Step</th>
-                        <th>Tipo</th>
+                        <th class="hidden sm:table-cell">Tipo</th>
                         <th>Repositório</th>
-                        <th>Release</th>
-                        <th>Build</th>
-                        <th>Atualizado</th>
-                        <th>Mensagem</th>
+                        <th class="hidden md:table-cell">Release</th>
+                        <th class="hidden lg:table-cell">Build</th>
+                        <th class="hidden sm:table-cell">Atualizado</th>
+                        <th class="hidden lg:table-cell">Mensagem</th>
                         <th>Ações</th>
                     </tr>
                 </thead>
@@ -192,7 +192,7 @@ function flowScrollTo(id) {
                         </td>
 
                         <!-- Job type -->
-                        <td>
+                        <td class="hidden sm:table-cell">
                             {% if step.job_type == "jenkins" and jenkins_base_url and step.job_path %}
                                 <a href="{{ jenkins_base_url }}/{{ step.job_path }}" target="_blank" rel="noopener"
                                    class="badge badge-outline badge-sm font-mono hover:badge-primary transition-colors">
@@ -204,7 +204,7 @@ function flowScrollTo(id) {
                         </td>
 
                         <!-- Repositório -->
-                        <td class="font-mono text-base-content/70 max-w-[10rem] truncate" title="{{ step.repository }}">
+                        <td class="font-mono text-base-content/70 max-w-[8rem] sm:max-w-[10rem] truncate" title="{{ step.repository }}">
                             {% if github_base_url and github_organization %}
                                 <a href="{{ github_base_url }}/{{ github_organization }}/{{ step.repository }}" target="_blank" rel="noopener"
                                    class="link link-hover">
@@ -216,7 +216,7 @@ function flowScrollTo(id) {
                         </td>
 
                         <!-- Release -->
-                        <td class="font-mono text-base-content/70 max-w-[10rem] truncate" title="{{ step.release }}">
+                        <td class="hidden md:table-cell font-mono text-base-content/70 max-w-[8rem] sm:max-w-[10rem] truncate" title="{{ step.release }}">
                             {% if github_base_url and github_organization %}
                                 <a href="{{ github_base_url }}/{{ github_organization }}/{{ step.repository }}/tree/{{ step.release }}" target="_blank" rel="noopener"
                                    class="link link-hover">
@@ -228,7 +228,7 @@ function flowScrollTo(id) {
                         </td>
 
                         <!-- Build # -->
-                        <td class="font-mono text-base-content/50">
+                        <td class="hidden lg:table-cell font-mono text-base-content/50">
                             {% if se.job_execution_correlation_id %}
                                     <button
                                         class="link link-hover text-base-content/70"
@@ -243,12 +243,12 @@ function flowScrollTo(id) {
                         </td>
 
                         <!-- Horário -->
-                        <td class="text-base-content/50 whitespace-nowrap">
+                        <td class="hidden sm:table-cell text-base-content/50 whitespace-nowrap">
                             {{ se.updated_at.strftime('%H:%M:%S') }}
                         </td>
 
                         <!-- Mensagem -->
-                        <td class="text-base-content/60 max-w-[12rem] truncate" title="{{ se.message or '' }}">
+                        <td class="hidden lg:table-cell text-base-content/60 max-w-[10rem] sm:max-w-[12rem] truncate" title="{{ se.message or '' }}">
                             {% if se.message %}
                                 {{ se.message }}
                             {% else %}

@@ -3,15 +3,15 @@
      hx-trigger="refreshReleases from:body"
      hx-swap="outerHTML">
     {% if descriptors %}
-    <div class="overflow-x-auto">
-        <table class="table table-sm w-full text-sm">
+    <div class="overflow-x-auto" style="-webkit-overflow-scrolling: touch;">
+        <table class="table table-sm w-full text-sm min-w-[580px]">
             <thead class="text-xs uppercase text-base-content/60">
                 <tr>
-                    <th>#</th>
+                    <th class="hidden sm:table-cell">#</th>
                     <th>Nome</th>
                     <th>Ambiente</th>
-                    <th>Criado em</th>
-                    <th>Execução ativa</th>
+                    <th class="hidden md:table-cell">Criado em</th>
+                    <th class="hidden lg:table-cell">Execução ativa</th>
                     <th>Ações</th>
                 </tr>
             </thead>
@@ -20,8 +20,8 @@
                 {% set active = active_executions.get(desc.name) %}
                 {% set env_val = environments.get(desc.name, "PRD") if environments is defined else "PRD" %}
                 <tr class="hover:bg-base-200/70 transition-colors duration-200">
-                    <td class="font-mono text-base-content/50">{{ desc.id }}</td>
-                    <td class="font-semibold font-mono">{{ desc.name }}</td>
+                    <td class="hidden sm:table-cell font-mono text-base-content/50">{{ desc.id }}</td>
+                    <td class="font-semibold font-mono max-w-[8rem] sm:max-w-none truncate sm:overflow-visible sm:whitespace-normal">{{ desc.name }}</td>
                     <td>
                         {% if env_val == "PRD" %}
                         <span class="badge badge-sm badge-success">{{ env_val }}</span>
@@ -31,10 +31,10 @@
                         <span class="badge badge-sm badge-ghost">{{ env_val }}</span>
                         {% endif %}
                     </td>
-                    <td class="text-base-content/60">{{ desc.created_at.strftime('%d/%m/%Y %H:%M') }}</td>
+                    <td class="hidden md:table-cell text-base-content/60 whitespace-nowrap">{{ desc.created_at.strftime('%d/%m/%Y %H:%M') }}</td>
 
                     {# Coluna de execução ativa #}
-                    <td>
+                    <td class="hidden lg:table-cell">
                         {% if active %}
                         <a href="/ui/execution/{{ active.id }}"
                            class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold
@@ -54,7 +54,7 @@
                     </td>
 
                     <td>
-                        <div class="flex items-center gap-2">
+                        <div class="flex items-center gap-1 sm:gap-2 flex-wrap">
                             <button
                                 class="btn btn-xs btn-circle hover:scale-110 active:scale-95 transition-transform shadow-sm relative group
                                        {% if active %}btn-warning{% else %}btn-success{% endif %}"
