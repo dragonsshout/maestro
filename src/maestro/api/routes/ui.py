@@ -405,8 +405,8 @@ async def override_step_ui(
         )
     )
 
-    # Re-dispara o workflow apenas se for success, pois falha ou waiting approval pausam o fluxo
-    if action == "success":
+    # Re-dispara o workflow para recalcular o status da execução
+    if action in ("success", "waiting_approval"):
         background_tasks.add_task(orchestrator_service.process_workflow, step.release_execution_id)
 
     return templates.TemplateResponse(

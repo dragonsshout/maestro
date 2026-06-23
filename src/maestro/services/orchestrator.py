@@ -481,7 +481,7 @@ class OrchestratorService:
                 logger.warning(f"Execução {execution_id} não encontrada.")
                 return
 
-            if execution.status in [ExecutionStatus.SUCCESS, ExecutionStatus.FAILURE]:
+            if execution.status in [ExecutionStatus.SUCCESS, ExecutionStatus.ABORTED]:
                 return
 
             # Garante que a execução está em IN_PROGRESS
