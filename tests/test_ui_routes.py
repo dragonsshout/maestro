@@ -165,6 +165,8 @@ class TestOverrideStep:
         response = await client.post("/ui/step/1/override/failure")
         assert response.status_code == 200
         assert step.status == ExecutionStatus.FAILURE
+        # process_workflow should NOT be called for failure overrides
+        mock_process.assert_not_awaited()
 
     @patch("maestro.services.orchestrator.OrchestratorService.process_workflow", new_callable=AsyncMock)
     async def test_override_step_to_waiting_approval(self, mock_process, client, mock_session):
@@ -182,6 +184,8 @@ class TestOverrideStep:
         response = await client.post("/ui/step/1/override/waiting_approval")
         assert response.status_code == 200
         assert step.status == ExecutionStatus.WAITING_APPROVAL
+        # process_workflow MUST be called for waiting_approval overrides (bug fix verification)
+        mock_process.assert_awaited_once()
 
 
 # ===========================================================================

@@ -481,3 +481,47 @@ class TestProcessWorkflowMultiStage:
         # Execution failed, stage-2 not triggered
         assert execution.status == ExecutionStatus.FAILURE
         service._trigger_step_standalone.assert_not_awaited()
+
+
+class TestProcessWorkflowRecalculation:
+    @patch("maestro.database.session.AsyncSessionLocal")
+    async def test_failure_execution_recalculates_to_waiting_approval(self, mock_session_local, service):
+        """
+        Bug scenario: execution.status is FAILURE but all steps are WAITING_APPROVAL.
+        Previously, process_workflow would early-return on FAILURE without recalculating.
+        After the fix, it recalculates and sets execution to WAITING_APPROVAL.
+        """
+        session = AsyncMock()
+
+        class FakeCtx:
+            async def __aenter__(self_):
+                return session
+
+            async def __aexit__(self_, *a):
+                pass
+
+        mock_session_local.return_value = FakeCtx()
+
+        # Execution is in FAILURE state (set by a previous step failure that was overridden)
+        execution = _make_execution(status=ExecutionStatus.FAILURE)
+        descriptor = _make_descriptor()
+        # The single step has been overridden to WAITING_APPROVAL
+        step = _make_step(status=ExecutionStatus.WAITING_APPROVAL)
+
+        exec_repo = AsyncMock()
+        exec_repo.get_execution_by_id.return_value = execution
+        exec_repo.get_steps_by_execution_id.return_value = [step]
+        exec_repo.update_release_execution.return_value = execution
+
+        orch_repo = AsyncMock()
+        orch_repo.get_by_id.return_value = descriptor
+
+        with (
+            patch("maestro.repositories.execution.ExecutionRepository", return_value=exec_repo),
+            patch("maestro.repositories.orchestrator.OrchestratorDescriptorRepository", return_value=orch_repo),
+        ):
+            await service.process_workflow(1)
+
+        # The execution should be recalculated to WAITING_APPROVAL
+        assert execution.status == ExecutionStatus.WAITING_APPROVAL
+        exec_repo.update_release_execution.assert_awaited()
