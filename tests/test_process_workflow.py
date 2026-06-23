@@ -494,10 +494,10 @@ class TestProcessWorkflowRecalculation:
         session = AsyncMock()
 
         class FakeCtx:
-            async def __aenter__(self_):
+            async def __aenter__(self):
                 return session
 
-            async def __aexit__(self_, *a):
+            async def __aexit__(self, *a):
                 pass
 
         mock_session_local.return_value = FakeCtx()
