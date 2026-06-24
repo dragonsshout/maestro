@@ -62,10 +62,10 @@
         .badge-modern-error { color: oklch(var(--er)); }
         .badge-modern-warning { color: oklch(var(--wa)); }
         .badge-modern-info { color: oklch(var(--in)); }
-        .badge-modern-ghost { color: oklch(var(--bc) / 0.7); }
+        .badge-modern-ghost { color: color-mix(in oklch, oklch(var(--bc)) 70%, transparent); }
         .badge-modern-neutral { color: oklch(var(--n)); }
 
-        .status-pending          { color: oklch(var(--bc) / 0.7); }
+        .status-pending          { color: color-mix(in oklch, oklch(var(--bc)) 70%, transparent); }
         .status-in_progress      { color: oklch(var(--in)); }
         .status-success          { color: oklch(var(--su)); }
         .status-failure          { color: oklch(var(--er)); }
@@ -88,16 +88,16 @@
             background: transparent;
         }
         ::-webkit-scrollbar-thumb {
-            background: oklch(var(--bc) / 0.2);
+            background: color-mix(in oklch, oklch(var(--bc)) 20%, transparent);
             border-radius: 9999px;
         }
         ::-webkit-scrollbar-thumb:hover {
-            background: oklch(var(--bc) / 0.3);
+            background: color-mix(in oklch, oklch(var(--bc)) 30%, transparent);
         }
         /* Firefox scrollbar */
         * {
             scrollbar-width: thin;
-            scrollbar-color: oklch(var(--bc) / 0.2) transparent;
+            scrollbar-color: color-mix(in oklch, oklch(var(--bc)) 20%, transparent) transparent;
         }
 
         /* HTMX indicator: hidden by default, shown during request */
@@ -134,38 +134,38 @@
             transition: box-shadow 0.2s ease, transform 0.15s ease;
             cursor: default;
             position: relative;
-            background: oklch(var(--b1) / 0.6);
+            background: color-mix(in oklch, oklch(var(--b1)) 60%, transparent);
             -webkit-backdrop-filter: blur(8px);
             backdrop-filter: blur(8px);
         }
         .flow-stage-card:hover {
             transform: translateY(-2px);
-            box-shadow: 0 8px 24px oklch(var(--bc) / 0.12);
+            box-shadow: 0 8px 24px color-mix(in oklch, oklch(var(--bc)) 12%, transparent);
         }
 
         /* Stage card color variants */
         .flow-stage-card.flow-status-success {
-            border-color: oklch(var(--su) / 0.6);
-            box-shadow: 0 0 0 1px oklch(var(--su) / 0.15), 0 2px 12px oklch(var(--su) / 0.08);
+            border-color: color-mix(in oklch, oklch(var(--su)) 60%, transparent);
+            box-shadow: 0 0 0 1px color-mix(in oklch, oklch(var(--su)) 15%, transparent), 0 2px 12px color-mix(in oklch, oklch(var(--su)) 8%, transparent);
         }
         .flow-stage-card.flow-status-failure {
-            border-color: oklch(var(--er) / 0.6);
-            box-shadow: 0 0 0 1px oklch(var(--er) / 0.15), 0 2px 12px oklch(var(--er) / 0.08);
+            border-color: color-mix(in oklch, oklch(var(--er)) 60%, transparent);
+            box-shadow: 0 0 0 1px color-mix(in oklch, oklch(var(--er)) 15%, transparent), 0 2px 12px color-mix(in oklch, oklch(var(--er)) 8%, transparent);
         }
         .flow-stage-card.flow-status-in_progress {
-            border-color: oklch(var(--wa) / 0.7);
-            box-shadow: 0 0 0 1px oklch(var(--wa) / 0.2), 0 2px 12px oklch(var(--wa) / 0.1);
+            border-color: color-mix(in oklch, oklch(var(--wa)) 70%, transparent);
+            box-shadow: 0 0 0 1px color-mix(in oklch, oklch(var(--wa)) 20%, transparent), 0 2px 12px color-mix(in oklch, oklch(var(--wa)) 10%, transparent);
         }
         .flow-stage-card.flow-status-timeout {
-            border-color: oklch(var(--wa) / 0.6);
-            box-shadow: 0 0 0 1px oklch(var(--wa) / 0.15), 0 2px 12px oklch(var(--wa) / 0.08);
+            border-color: color-mix(in oklch, oklch(var(--wa)) 60%, transparent);
+            box-shadow: 0 0 0 1px color-mix(in oklch, oklch(var(--wa)) 15%, transparent), 0 2px 12px color-mix(in oklch, oklch(var(--wa)) 8%, transparent);
         }
         .flow-stage-card.flow-status-waiting_approval {
-            border-color: oklch(var(--in) / 0.6);
-            box-shadow: 0 0 0 1px oklch(var(--in) / 0.15), 0 2px 12px oklch(var(--in) / 0.08);
+            border-color: color-mix(in oklch, oklch(var(--in)) 60%, transparent);
+            box-shadow: 0 0 0 1px color-mix(in oklch, oklch(var(--in)) 15%, transparent), 0 2px 12px color-mix(in oklch, oklch(var(--in)) 8%, transparent);
         }
         .flow-stage-card.flow-status-pending {
-            border-color: oklch(var(--bc) / 0.2);
+            border-color: color-mix(in oklch, oklch(var(--bc)) 20%, transparent);
         }
 
         /* Stage header */
@@ -181,7 +181,7 @@
             font-weight: 700;
             font-family: ui-monospace, monospace;
             letter-spacing: 0.02em;
-            color: oklch(var(--bc) / 0.9);
+            color: color-mix(in oklch, oklch(var(--bc)) 90%, transparent);
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
@@ -198,8 +198,8 @@
         .flow-stage-dot.dot-in_progress  { background: oklch(var(--wa)); animation: flow-pulse 1.2s ease-in-out infinite; }
         .flow-stage-dot.dot-timeout      { background: oklch(var(--wa)); }
         .flow-stage-dot.dot-waiting_approval { background: oklch(var(--in)); }
-        .flow-stage-dot.dot-pending      { background: oklch(var(--bc) / 0.3); }
-        .flow-stage-dot.dot-aborted      { background: oklch(var(--n) / 0.6); }
+        .flow-stage-dot.dot-pending      { background: color-mix(in oklch, oklch(var(--bc)) 30%, transparent); }
+        .flow-stage-dot.dot-aborted      { background: color-mix(in oklch, oklch(var(--n)) 60%, transparent); }
 
         @keyframes flow-pulse {
             0%, 100% { opacity: 1;   transform: scale(1); }
@@ -209,7 +209,7 @@
         /* Divider inside card */
         .flow-card-divider {
             height: 1px;
-            background: oklch(var(--bc) / 0.08);
+            background: color-mix(in oklch, oklch(var(--bc)) 8%, transparent);
             margin: 0.1rem 0 0.4rem;
         }
 
@@ -225,7 +225,7 @@
             text-decoration: none;
         }
         .flow-step-item:hover {
-            background: oklch(var(--bc) / 0.07);
+            background: color-mix(in oklch, oklch(var(--bc)) 7%, transparent);
         }
         .flow-step-icon {
             width: 0.9rem;
@@ -242,7 +242,7 @@
         .flow-step-label {
             font-size: 0.65rem;
             font-family: ui-monospace, monospace;
-            color: oklch(var(--bc) / 0.75);
+            color: color-mix(in oklch, oklch(var(--bc)) 75%, transparent);
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
@@ -253,8 +253,8 @@
         .flow-step-icon.icon-in_progress  { color: oklch(var(--wa)); }
         .flow-step-icon.icon-timeout      { color: oklch(var(--wa)); }
         .flow-step-icon.icon-waiting_approval { color: oklch(var(--in)); }
-        .flow-step-icon.icon-pending      { color: oklch(var(--bc) / 0.3); }
-        .flow-step-icon.icon-aborted      { color: oklch(var(--n) / 0.5); }
+        .flow-step-icon.icon-pending      { color: color-mix(in oklch, oklch(var(--bc)) 30%, transparent); }
+        .flow-step-icon.icon-aborted      { color: color-mix(in oklch, oklch(var(--n)) 50%, transparent); }
 
         /* Arrow between stages */
         .flow-arrow {
@@ -262,7 +262,7 @@
             align-items: center;
             padding: 0 0.3rem;
             margin-top: 2.5rem; /* vertically centres arrow relative to card top area */
-            color: oklch(var(--bc) / 0.25);
+            color: color-mix(in oklch, oklch(var(--bc)) 25%, transparent);
             flex-shrink: 0;
         }
         .flow-arrow svg {
@@ -275,7 +275,7 @@
             animation: row-highlight 1.8s ease forwards;
         }
         @keyframes row-highlight {
-            0%   { background: oklch(var(--p) / 0.18); }
+            0%   { background: color-mix(in oklch, oklch(var(--p)) 18%, transparent); }
             100% { background: transparent; }
         }
         /* ─── end Flow Graph ─────────────────────────────────────────────────── */
@@ -431,9 +431,11 @@
         @supports (backdrop-filter: blur(8px)) or (-webkit-backdrop-filter: blur(8px)) {
             .backdrop-blur-sm {
                 -webkit-backdrop-filter: blur(4px);
+                backdrop-filter: blur(4px);
             }
             .backdrop-blur-md {
                 -webkit-backdrop-filter: blur(12px);
+                backdrop-filter: blur(12px);
             }
         }
         @supports not ((backdrop-filter: blur(8px)) or (-webkit-backdrop-filter: blur(8px))) {
@@ -442,12 +444,12 @@
             .navbar,
             .backdrop-blur-sm,
             .backdrop-blur-md {
-                background: oklch(var(--b1) / 0.95) !important;
+                background: color-mix(in oklch, oklch(var(--b1)) 95%, transparent) !important;
             }
         }
 
-        /* ─── Cross-browser: oklch fallback for very old browsers ─────────────── */
-        @supports not (color: oklch(0% 0 0)) {
+        /* ─── Cross-browser: oklch/color-mix fallback for very old browsers ────── */
+        @supports not (color: color-mix(in oklch, red, blue)) {
             .status-pending          { color: #9ca3af; }
             .status-in_progress      { color: #60a5fa; }
             .status-success          { color: #4ade80; }
@@ -455,10 +457,24 @@
             .status-error            { color: #f87171; }
             .status-aborted          { color: #9ca3af; }
             .status-waiting_approval { color: #fbbf24; }
+            .badge-modern-success    { color: #4ade80; }
+            .badge-modern-error      { color: #f87171; }
+            .badge-modern-warning    { color: #fbbf24; }
+            .badge-modern-info       { color: #60a5fa; }
+            .badge-modern-ghost      { color: #9ca3af; }
+            .badge-modern-neutral    { color: #6b7280; }
             .flow-stage-card {
                 background: rgba(30, 30, 46, 0.9);
                 border-color: rgba(255, 255, 255, 0.1);
             }
+            .flow-stage-name         { color: rgba(255, 255, 255, 0.9); }
+            .flow-step-label         { color: rgba(255, 255, 255, 0.75); }
+            .flow-card-divider       { background: rgba(255, 255, 255, 0.08); }
+            .flow-arrow              { color: rgba(255, 255, 255, 0.25); }
+            .flow-stage-dot.dot-pending  { background: rgba(255, 255, 255, 0.3); }
+            .flow-stage-dot.dot-aborted  { background: rgba(255, 255, 255, 0.4); }
+            .flow-step-icon.icon-pending { color: rgba(255, 255, 255, 0.3); }
+            .flow-step-icon.icon-aborted { color: rgba(255, 255, 255, 0.5); }
             ::-webkit-scrollbar-thumb {
                 background: rgba(255, 255, 255, 0.2);
             }
@@ -474,7 +490,7 @@
 <body class="min-h-screen bg-base-200 font-sans text-base-content selection:bg-primary/30 overflow-x-hidden">
 
     <!-- Navbar -->
-    <div class="navbar bg-base-100/80 backdrop-blur-md shadow-sm border-b border-base-300/50 fixed top-0 left-0 right-0 z-50 px-2 sm:px-4 transition-all duration-300" style="-webkit-backdrop-filter: blur(12px)">
+    <div class="navbar bg-base-100/80 backdrop-blur-md shadow-sm border-b border-base-300/50 fixed top-0 left-0 right-0 z-50 px-2 sm:px-4 transition-all duration-300" style="-webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px)">
         <!-- Toggle button -->
         <button id="sidebar-toggle" class="btn btn-ghost btn-sm btn-square mr-2 hover:bg-base-200/50 transition-colors" title="Recolher menu">
             <svg id="icon-collapse" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
