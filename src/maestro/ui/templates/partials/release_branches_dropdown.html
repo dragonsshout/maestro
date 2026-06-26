@@ -19,7 +19,15 @@
     <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
     </svg>
-    <span>GitHub ✔ &nbsp;·&nbsp; Jenkins ✔ &nbsp;·&nbsp; <code class="font-mono text-base-content/60">{{ jenkins_path }}</code></span>
+    <span>
+        GitHub ✔ &nbsp;·&nbsp; Jenkins ✔ &nbsp;·&nbsp;
+        {% if jenkins_path_source == 'registry' %}
+        <span class="badge badge-outline badge-xs text-primary border-primary/40 mr-1" title="Path cadastrado no Job Registry">registry</span>
+        {% else %}
+        <span class="badge badge-outline badge-xs text-base-content/40 border-base-content/20 mr-1" title="Path gerado automaticamente">auto</span>
+        {% endif %}
+        <code class="font-mono text-base-content/60">{{ jenkins_path }}</code>
+    </span>
 </div>
 <div class="mt-2 validation-result">
     {% if branches %}

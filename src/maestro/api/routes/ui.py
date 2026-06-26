@@ -756,15 +756,20 @@ async def validate_repository(
     from maestro.services.app_settings import get_integration_settings
     from maestro.integration.github import GithubIntegration
     from maestro.integration.jenkins import JenkinsIntegration
+    from maestro.database.session import AsyncSessionLocal
+    from maestro.repositories.job_path_registry import JobPathRegistryRepository
 
     repository = repository.strip()
     if not repository:
         return HTMLResponse(content="")
 
-    # Busca credenciais das integrações
-    from maestro.database.session import AsyncSessionLocal
+    # ── Busca cfg + registry_entry em uma única sessão ────────────────────────
     async with AsyncSessionLocal() as session:
         cfg = await get_integration_settings(session)
+        registry_repo = JobPathRegistryRepository(db=session)
+        registry_entry = await registry_repo.get_by_repository_and_environment(
+            repository, environment.upper()
+        )
 
     github = GithubIntegration(
         organization=cfg.github_organization,
@@ -782,8 +787,17 @@ async def validate_repository(
     repo_exists = False
     jenkins_ok = False
     branches: list[str] = []
-    jenkins_path = f"job/{environment.upper()}/job/{repository}/job/{repository}"
     error_msg = None
+
+    # ── Resolve o jenkins_path — mesma prioridade do resolve_job_path_async ──
+    # 1. JobPathRegistry (repository + environment) → usa o path cadastrado
+    # 2. Fallback: gera path padrão job/<ENV>/job/<repo>/job/<repo>
+    if registry_entry:
+        jenkins_path = registry_entry.path
+        jenkins_path_source = "registry"
+    else:
+        jenkins_path = f"job/{environment.upper()}/job/{repository}/job/{repository}"
+        jenkins_path_source = "auto"
 
     try:
         repo_exists = await github.repository_exists(repository)
@@ -814,6 +828,7 @@ async def validate_repository(
             "jenkins_ok": jenkins_ok,
             "branches": branches,
             "jenkins_path": jenkins_path,
+            "jenkins_path_source": jenkins_path_source,
             "repository": repository,
             "error_msg": error_msg,
             "stage_idx": stage_idx,
