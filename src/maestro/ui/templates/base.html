@@ -5,43 +5,51 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>{% block title %}Maestro{% endblock %}</title>
 
-    <!-- Google Fonts: Inter -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Assets servidos localmente — sem dependência de CDN externo.
+         Garante funcionamento em ambientes com proxy corporativo (NTLM/Kerberos)
+         onde Chrome/Firefox não autenticam automaticamente com o proxy. -->
 
-    <!-- Tailwind + DaisyUI via CDN -->
-    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.10/dist/full.min.css" rel="stylesheet" />
-    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- DaisyUI (inclui Tailwind v4 base styles) -->
+    <link href="/static/css/daisyui.min.css" rel="stylesheet" />
 
-    <!-- Tailwind config for Inter font -->
+    <!-- Tailwind Play CDN (compilação JIT no browser) -->
+    <script src="/static/js/tailwind.js"></script>
+
+    <!-- Tailwind config: system font stack (sem dependência de Google Fonts) -->
     <script>
         tailwind.config = {
             theme: {
                 extend: {
                     fontFamily: {
-                        sans: ['Inter', 'sans-serif'],
-                        mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', "Liberation Mono", "Courier New", 'monospace'],
+                        sans: ['system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'sans-serif'],
+                        mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'Liberation Mono', 'Courier New', 'monospace'],
                     },
                 }
             }
         }
     </script>
 
-    <!-- HTMX -->
-    <script src="https://unpkg.com/htmx.org@1.9.12"></script>
-    <!-- HTMX SSE extension -->
-    <script src="https://unpkg.com/htmx.org@1.9.12/dist/ext/sse.js"></script>
-    <!-- HTMX JSON Encoding extension -->
-    <script src="https://unpkg.com/htmx.org@1.9.12/dist/ext/json-enc.js"></script>
+    <!-- HTMX e extensões -->
+    <script src="/static/js/htmx.min.js"></script>
+    <script src="/static/js/htmx-sse.js"></script>
+    <script src="/static/js/htmx-json-enc.js"></script>
 
-    <!-- Highlight.js for syntax highlighting -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/tokyo-night-dark.min.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/yaml.min.js"></script>
+    <!-- Highlight.js para syntax highlighting -->
+    <link rel="stylesheet" href="/static/css/tokyo-night-dark.min.css">
+    <script src="/static/js/highlight.min.js"></script>
+    <script src="/static/js/highlight-yaml.min.js"></script>
 
     <style>
-        /* Fix para alinhamento perfeito de icones e textos de status sem quebrar linha */
+        /* ─── Cross-browser gradient text fix ────────────────────────────────── */
+        /* Firefox requer background-clip sem prefixo + color: transparent       */
+        .text-clip-gradient {
+            -webkit-background-clip: text !important;
+            background-clip: text !important;
+            -webkit-text-fill-color: transparent;
+            color: transparent;
+        }
+
+        /* ─── Status / Badge icon alignment ──────────────────────────────────── */
         span[class^="status-"], span[class^="badge-modern-"] {
             display: inline-flex;
             align-items: center;
@@ -52,29 +60,30 @@
             flex-shrink: 0;
         }
 
-        /* Cores base para os badges modernos caso o apply falhe */
-        .badge-modern-success { color: oklch(var(--su)); }
-        .badge-modern-error { color: oklch(var(--er)); }
-        .badge-modern-warning { color: oklch(var(--wa)); }
-        .badge-modern-info { color: oklch(var(--in)); }
-        .badge-modern-ghost { color: oklch(var(--bc) / 0.7); }
-        .badge-modern-neutral { color: oklch(var(--n)); }
+        /* ─── Badge / Status colors (fallback rgb → oklch) ─────────────────── */
+        /* rgb fallback garante cor mesmo em browsers sem suporte a oklch        */
+        .badge-modern-success { color: #36d399; color: oklch(var(--su)); }
+        .badge-modern-error   { color: #f87272; color: oklch(var(--er)); }
+        .badge-modern-warning { color: #fbbd23; color: oklch(var(--wa)); }
+        .badge-modern-info    { color: #3abff8; color: oklch(var(--in)); }
+        .badge-modern-ghost   { color: rgba(255,255,255,0.5); color: oklch(var(--bc) / 0.7); }
+        .badge-modern-neutral { color: #2a323c; color: oklch(var(--n)); }
 
-        .status-pending          { color: oklch(var(--bc) / 0.7); }
-        .status-in_progress      { color: oklch(var(--in)); }
-        .status-success          { color: oklch(var(--su)); }
-        .status-failure          { color: oklch(var(--er)); }
-        .status-error            { color: oklch(var(--er)); }
-        .status-aborted          { color: oklch(var(--n)); }
-        .status-waiting_approval { color: oklch(var(--wa)); }
+        .status-pending          { color: rgba(255,255,255,0.5); color: oklch(var(--bc) / 0.7); }
+        .status-in_progress      { color: #3abff8; color: oklch(var(--in)); }
+        .status-success          { color: #36d399; color: oklch(var(--su)); }
+        .status-failure          { color: #f87272; color: oklch(var(--er)); }
+        .status-error            { color: #f87272; color: oklch(var(--er)); }
+        .status-aborted          { color: #2a323c; color: oklch(var(--n)); }
+        .status-waiting_approval { color: #fbbd23; color: oklch(var(--wa)); }
 
-        /* Override Highlight.js background inside mockup-code */
+        /* ─── Highlight.js override ────────────────────────────────────────── */
         .mockup-code pre code.hljs {
             background: transparent;
             padding: 0;
         }
 
-        /* Custom scrollbar */
+        /* ─── Custom scrollbar (Chrome/Edge only — Firefox ignores) ─────────── */
         ::-webkit-scrollbar {
             width: 8px;
             height: 8px;
@@ -83,13 +92,15 @@
             background: transparent;
         }
         ::-webkit-scrollbar-thumb {
-            @apply bg-base-300 rounded-full;
+            /* Fallback: substituímos @apply (inválido no CDN Tailwind) por valores diretos */
+            background-color: rgba(255, 255, 255, 0.12);
+            border-radius: 9999px;
         }
         ::-webkit-scrollbar-thumb:hover {
-            @apply bg-base-content/30;
+            background-color: rgba(255, 255, 255, 0.25);
         }
 
-        /* HTMX indicator: hidden by default, shown during request */
+        /* ─── HTMX indicator ───────────────────────────────────────────────── */
         .htmx-indicator {
             display: none;
         }
@@ -98,7 +109,7 @@
             display: inline-flex;
         }
 
-        /* ─── Flow Graph ─────────────────────────────────────────────────────── */
+        /* ─── Flow Graph ──────────────────────────────────────────────────── */
         .flow-graph {
             padding: 1.25rem 0;
         }
@@ -122,36 +133,51 @@
             transition: box-shadow 0.2s ease, transform 0.15s ease;
             cursor: default;
             position: relative;
+            background: rgba(0,0,0,0.4); /* fallback para oklch(var(--b1)/0.6) */
             background: oklch(var(--b1) / 0.6);
+            /* Prefixo -webkit- para Safari e Chrome antigo */
+            -webkit-backdrop-filter: blur(8px);
             backdrop-filter: blur(8px);
         }
         .flow-stage-card:hover {
             transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.18);
             box-shadow: 0 8px 24px oklch(var(--bc) / 0.12);
         }
 
         /* Stage card color variants */
         .flow-stage-card.flow-status-success {
+            border-color: rgba(54,211,153,0.6);
             border-color: oklch(var(--su) / 0.6);
+            box-shadow: 0 0 0 1px rgba(54,211,153,0.15), 0 2px 12px rgba(54,211,153,0.08);
             box-shadow: 0 0 0 1px oklch(var(--su) / 0.15), 0 2px 12px oklch(var(--su) / 0.08);
         }
         .flow-stage-card.flow-status-failure {
+            border-color: rgba(248,114,114,0.6);
             border-color: oklch(var(--er) / 0.6);
+            box-shadow: 0 0 0 1px rgba(248,114,114,0.15), 0 2px 12px rgba(248,114,114,0.08);
             box-shadow: 0 0 0 1px oklch(var(--er) / 0.15), 0 2px 12px oklch(var(--er) / 0.08);
         }
         .flow-stage-card.flow-status-in_progress {
+            border-color: rgba(251,189,35,0.7);
             border-color: oklch(var(--wa) / 0.7);
+            box-shadow: 0 0 0 1px rgba(251,189,35,0.2), 0 2px 12px rgba(251,189,35,0.1);
             box-shadow: 0 0 0 1px oklch(var(--wa) / 0.2), 0 2px 12px oklch(var(--wa) / 0.1);
         }
         .flow-stage-card.flow-status-timeout {
+            border-color: rgba(251,189,35,0.6);
             border-color: oklch(var(--wa) / 0.6);
+            box-shadow: 0 0 0 1px rgba(251,189,35,0.15), 0 2px 12px rgba(251,189,35,0.08);
             box-shadow: 0 0 0 1px oklch(var(--wa) / 0.15), 0 2px 12px oklch(var(--wa) / 0.08);
         }
         .flow-stage-card.flow-status-waiting_approval {
+            border-color: rgba(58,191,248,0.6);
             border-color: oklch(var(--in) / 0.6);
+            box-shadow: 0 0 0 1px rgba(58,191,248,0.15), 0 2px 12px rgba(58,191,248,0.08);
             box-shadow: 0 0 0 1px oklch(var(--in) / 0.15), 0 2px 12px oklch(var(--in) / 0.08);
         }
         .flow-stage-card.flow-status-pending {
+            border-color: rgba(255,255,255,0.12);
             border-color: oklch(var(--bc) / 0.2);
         }
 
@@ -168,6 +194,7 @@
             font-weight: 700;
             font-family: ui-monospace, monospace;
             letter-spacing: 0.02em;
+            color: rgba(255,255,255,0.9);
             color: oklch(var(--bc) / 0.9);
             overflow: hidden;
             text-overflow: ellipsis;
@@ -180,13 +207,13 @@
             border-radius: 50%;
             flex-shrink: 0;
         }
-        .flow-stage-dot.dot-success      { background: oklch(var(--su)); }
-        .flow-stage-dot.dot-failure      { background: oklch(var(--er)); }
-        .flow-stage-dot.dot-in_progress  { background: oklch(var(--wa)); animation: flow-pulse 1.2s ease-in-out infinite; }
-        .flow-stage-dot.dot-timeout      { background: oklch(var(--wa)); }
-        .flow-stage-dot.dot-waiting_approval { background: oklch(var(--in)); }
-        .flow-stage-dot.dot-pending      { background: oklch(var(--bc) / 0.3); }
-        .flow-stage-dot.dot-aborted      { background: oklch(var(--n) / 0.6); }
+        .flow-stage-dot.dot-success      { background: #36d399; background: oklch(var(--su)); }
+        .flow-stage-dot.dot-failure      { background: #f87272; background: oklch(var(--er)); }
+        .flow-stage-dot.dot-in_progress  { background: #fbbd23; background: oklch(var(--wa)); animation: flow-pulse 1.2s ease-in-out infinite; }
+        .flow-stage-dot.dot-timeout      { background: #fbbd23; background: oklch(var(--wa)); }
+        .flow-stage-dot.dot-waiting_approval { background: #3abff8; background: oklch(var(--in)); }
+        .flow-stage-dot.dot-pending      { background: rgba(255,255,255,0.2); background: oklch(var(--bc) / 0.3); }
+        .flow-stage-dot.dot-aborted      { background: rgba(42,50,60,0.6); background: oklch(var(--n) / 0.6); }
 
         @keyframes flow-pulse {
             0%, 100% { opacity: 1;   transform: scale(1); }
@@ -196,6 +223,7 @@
         /* Divider inside card */
         .flow-card-divider {
             height: 1px;
+            background: rgba(255,255,255,0.06);
             background: oklch(var(--bc) / 0.08);
             margin: 0.1rem 0 0.4rem;
         }
@@ -212,6 +240,7 @@
             text-decoration: none;
         }
         .flow-step-item:hover {
+            background: rgba(255,255,255,0.06);
             background: oklch(var(--bc) / 0.07);
         }
         .flow-step-icon {
@@ -229,26 +258,28 @@
         .flow-step-label {
             font-size: 0.65rem;
             font-family: ui-monospace, monospace;
+            color: rgba(255,255,255,0.6);
             color: oklch(var(--bc) / 0.75);
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
             flex: 1;
         }
-        .flow-step-icon.icon-success      { color: oklch(var(--su)); }
-        .flow-step-icon.icon-failure      { color: oklch(var(--er)); }
-        .flow-step-icon.icon-in_progress  { color: oklch(var(--wa)); }
-        .flow-step-icon.icon-timeout      { color: oklch(var(--wa)); }
-        .flow-step-icon.icon-waiting_approval { color: oklch(var(--in)); }
-        .flow-step-icon.icon-pending      { color: oklch(var(--bc) / 0.3); }
-        .flow-step-icon.icon-aborted      { color: oklch(var(--n) / 0.5); }
+        .flow-step-icon.icon-success      { color: #36d399; color: oklch(var(--su)); }
+        .flow-step-icon.icon-failure      { color: #f87272; color: oklch(var(--er)); }
+        .flow-step-icon.icon-in_progress  { color: #fbbd23; color: oklch(var(--wa)); }
+        .flow-step-icon.icon-timeout      { color: #fbbd23; color: oklch(var(--wa)); }
+        .flow-step-icon.icon-waiting_approval { color: #3abff8; color: oklch(var(--in)); }
+        .flow-step-icon.icon-pending      { color: rgba(255,255,255,0.2); color: oklch(var(--bc) / 0.3); }
+        .flow-step-icon.icon-aborted      { color: rgba(42,50,60,0.5); color: oklch(var(--n) / 0.5); }
 
         /* Arrow between stages */
         .flow-arrow {
             display: flex;
             align-items: center;
             padding: 0 0.3rem;
-            margin-top: 2.5rem; /* vertically centres arrow relative to card top area */
+            margin-top: 2.5rem;
+            color: rgba(255,255,255,0.2);
             color: oklch(var(--bc) / 0.25);
             flex-shrink: 0;
         }
@@ -262,25 +293,25 @@
             animation: row-highlight 1.8s ease forwards;
         }
         @keyframes row-highlight {
-            0%   { background: oklch(var(--p) / 0.18); }
+            0%   { background: rgba(99,102,241,0.18); }
             100% { background: transparent; }
         }
-        /* ─── end Flow Graph ─────────────────────────────────────────────────── */
+        /* ─── end Flow Graph ──────────────────────────────────────────────── */
 
-        /* Disable buttons and links during HTMX requests to prevent double-clicks */
+        /* Disable buttons and links during HTMX requests */
         button.htmx-request, a.htmx-request {
             pointer-events: none !important;
             opacity: 0.7;
         }
 
-        /* Sidebar transition */
+        /* ─── Sidebar ─────────────────────────────────────────────────────── */
         #sidebar {
-            transition: width 0.25s ease;
+            transition: width 0.25s ease, transform 0.25s ease;
             overflow: hidden;
-            width: 14rem; /* 56 = w-56 */
+            width: 14rem;
         }
         #sidebar.collapsed {
-            width: 3.5rem; /* só ícones */
+            width: 3.5rem;
         }
 
         /* Esconde labels quando recolhido */
@@ -289,10 +320,12 @@
         }
 
         /* Centraliza ícone quando recolhido */
+        #sidebar.collapsed .nav-item,
         #sidebar.collapsed .nav-item {
             justify-content: center;
             padding-left: 0;
             padding-right: 0;
+            position: relative;
         }
 
         /* Main content acompanha a sidebar */
@@ -304,9 +337,40 @@
             margin-left: 3.5rem;
         }
 
-        /* Tooltip quando recolhido */
-        #sidebar.collapsed .nav-item {
-            position: relative;
+        /* ─── Overlay para mobile (fecha sidebar ao clicar fora) ─────────── */
+        #sidebar-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 30;
+        }
+        #sidebar-overlay.active {
+            display: block;
+        }
+
+        /* ─── Responsividade: mobile (< 768px) ───────────────────────────── */
+        @media (max-width: 767px) {
+            #sidebar {
+                width: 14rem;
+                transform: translateX(-100%);
+                z-index: 40;
+            }
+            #sidebar.mobile-open {
+                transform: translateX(0);
+            }
+            /* Em mobile o sidebar recolhido é apenas escondido, não comprimido */
+            #sidebar.collapsed {
+                width: 14rem;
+                transform: translateX(-100%);
+            }
+            #sidebar.collapsed.mobile-open {
+                transform: translateX(0);
+            }
+            #main-content,
+            #main-content.collapsed {
+                margin-left: 0;
+            }
         }
     </style>
 </head>
@@ -321,7 +385,7 @@
             </svg>
         </button>
         <div class="flex-1">
-            <a href="/ui" class="text-xl font-bold tracking-wide text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary">🎼 Maestro</a>
+            <a href="/ui" class="text-xl font-bold tracking-wide text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary text-clip-gradient">🎼 Maestro</a>
         </div>
         
         {% if request.state.current_user %}
@@ -346,6 +410,9 @@
         </div>
         {% endif %}
     </div>
+
+    <!-- Overlay mobile (fecha sidebar ao clicar fora) -->
+    <div id="sidebar-overlay"></div>
 
     <!-- Layout: sidebar + content -->
     <div class="flex pt-16 min-h-screen">
@@ -443,23 +510,55 @@
         const sidebar = document.getElementById('sidebar');
         const mainContent = document.getElementById('main-content');
         const toggleBtn = document.getElementById('sidebar-toggle');
+        const overlay = document.getElementById('sidebar-overlay');
 
-        // Persiste estado no localStorage
         const STORAGE_KEY = 'maestro_sidebar_collapsed';
-        const isCollapsed = localStorage.getItem(STORAGE_KEY) === 'true';
+        const isMobile = () => window.innerWidth < 768;
 
-        if (isCollapsed) {
+        // Restaura estado persistido (apenas desktop)
+        const isCollapsed = localStorage.getItem(STORAGE_KEY) === 'true';
+        if (isCollapsed && !isMobile()) {
             sidebar.classList.add('collapsed');
             mainContent.classList.add('collapsed');
         }
 
         toggleBtn.addEventListener('click', () => {
-            const collapsed = sidebar.classList.toggle('collapsed');
-            mainContent.classList.toggle('collapsed', collapsed);
-            localStorage.setItem(STORAGE_KEY, collapsed);
+            if (isMobile()) {
+                // Mobile: slide-in/out sem reduzir para ícones
+                const isOpen = sidebar.classList.toggle('mobile-open');
+                overlay.classList.toggle('active', isOpen);
+            } else {
+                // Desktop: colapsa para barra de ícones
+                const collapsed = sidebar.classList.toggle('collapsed');
+                mainContent.classList.toggle('collapsed', collapsed);
+                localStorage.setItem(STORAGE_KEY, collapsed);
+            }
         });
 
-        // Setup Highlight.js to run on htmx:load (which fires for initial load and subsequent HTMX swaps)
+        // Fecha sidebar mobile ao clicar no overlay
+        overlay.addEventListener('click', () => {
+            sidebar.classList.remove('mobile-open');
+            overlay.classList.remove('active');
+        });
+
+        // Reage ao redimensionamento da janela
+        window.addEventListener('resize', () => {
+            if (!isMobile()) {
+                // Garante que estado mobile é limpo ao voltar para desktop
+                sidebar.classList.remove('mobile-open');
+                overlay.classList.remove('active');
+                // Restaura estado desktop
+                const collapsed = localStorage.getItem(STORAGE_KEY) === 'true';
+                sidebar.classList.toggle('collapsed', collapsed);
+                mainContent.classList.toggle('collapsed', collapsed);
+            } else {
+                // Remove estado desktop ao ir para mobile
+                sidebar.classList.remove('collapsed');
+                mainContent.classList.remove('collapsed');
+            }
+        });
+
+        // Setup Highlight.js to run on htmx:load
         document.body.addEventListener('htmx:load', function(evt) {
             if (typeof hljs !== 'undefined') {
                 evt.detail.elt.querySelectorAll('pre code').forEach((block) => {
