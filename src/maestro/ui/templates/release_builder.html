@@ -86,7 +86,7 @@
                             <span class="label-text text-sm font-medium">Ambiente</span>
                         </label>
                         <select id="rb-env" name="environment" class="select select-bordered select-sm">
-                            {% for env in ['PRD', 'UAT', 'HML', 'STG', 'DEV'] %}
+                            {% for env in ['PRD', 'UAT'] %}
                             <option value="{{ env }}" {% if form and form.get('environment') == env %}selected{% elif not form and env == 'PRD' %}selected{% endif %}>{{ env }}</option>
                             {% endfor %}
                         </select>
@@ -109,11 +109,12 @@
         {# ─── Actions ─────────────────────────────────────────────────────── #}
         <div class="flex items-center justify-end gap-3 pt-2 border-t border-base-300/30">
             <a href="/ui/releases" class="btn btn-ghost btn-sm">Cancelar</a>
-            <button type="submit" class="btn btn-primary btn-sm gap-2 shadow">
-                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <button id="rb-submit-btn" type="submit" class="btn btn-primary btn-sm gap-2 shadow">
+                <span id="rb-submit-spinner" class="loading loading-spinner loading-xs hidden"></span>
+                <svg id="rb-submit-icon" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
                 </svg>
-                Salvar Release
+                <span id="rb-submit-text">Salvar Release</span>
             </button>
         </div>
 
@@ -339,6 +340,20 @@
     // ── Bootstrap ─────────────────────────────────────────────────────────
     addStageBtn.addEventListener('click', addStage);
     addStage(); // começa com 1 stage
+
+    // ── Feedback no submit ─────────────────────────────────────────────────
+    document.getElementById('rb-form').addEventListener('submit', function () {
+        const btn     = document.getElementById('rb-submit-btn');
+        const spinner = document.getElementById('rb-submit-spinner');
+        const icon    = document.getElementById('rb-submit-icon');
+        const text    = document.getElementById('rb-submit-text');
+
+        btn.disabled = true;
+        btn.classList.add('btn-disabled');
+        spinner.classList.remove('hidden');
+        icon.classList.add('hidden');
+        text.textContent = 'Salvando...';
+    });
 })();
 </script>
 {% endblock %}
