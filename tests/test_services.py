@@ -925,6 +925,94 @@ class TestUIService:
         assert action_logs == []
 
 
+class TestExecutionSSEStreamCloseEvent:
+    """Tests that SSE stream emits a 'close' event when execution reaches a terminal status."""
+
+    @pytest.fixture
+    def service(self):
+        svc = UIService.__new__(UIService)
+        svc.execution_repo = AsyncMock()
+        svc.orchestrator_repo = AsyncMock()
+        return svc
+
+    async def test_emits_close_event_on_terminal_status(self, service):
+        """When execution status is terminal, stream should yield a close event after stage-update."""
+        execution = MagicMock()
+        execution.id = 1
+        execution.status = ExecutionStatus.SUCCESS
+        execution.orchestrator_descriptor_id = 1
+
+        step = MagicMock()
+        step.stage_id = "stage-1"
+        step.step_id = "step-1"
+        step.status = ExecutionStatus.SUCCESS
+
+        mock_session = AsyncMock()
+        mock_session_ctx = AsyncMock()
+        mock_session_ctx.__aenter__ = AsyncMock(return_value=mock_session)
+        mock_session_ctx.__aexit__ = AsyncMock(return_value=False)
+
+        mock_scoped_service = AsyncMock()
+        mock_scoped_service.get_execution_with_stages = AsyncMock(
+            return_value=(execution, [{"id": "stage-1", "steps": [{"execution": step}]}], [])
+        )
+
+        mock_settings_repo = AsyncMock()
+        mock_settings_repo.get = AsyncMock(return_value="")
+
+        with patch("maestro.database.session.AsyncSessionLocal", return_value=mock_session_ctx), \
+             patch("maestro.repositories.settings.UISettingsRepository", return_value=mock_settings_repo), \
+             patch("maestro.services.ui.ExecutionRepository"), \
+             patch("maestro.services.ui.OrchestratorDescriptorRepository"), \
+             patch("maestro.services.ui.UIService", return_value=mock_scoped_service), \
+             patch("maestro.services.ui._render_partial", return_value="<div>html</div>"):
+            events = []
+            async for event in service.execution_sse_stream(1):
+                events.append(event)
+
+        # Should emit stage-update followed by close
+        assert len(events) == 2
+        assert events[0]["event"] == "stage-update"
+        assert events[1] == {"event": "close", "data": ""}
+
+    async def test_emits_close_event_for_failure_status(self, service):
+        """Close event is emitted for FAILURE status as well."""
+        execution = MagicMock()
+        execution.id = 2
+        execution.status = ExecutionStatus.FAILURE
+        execution.orchestrator_descriptor_id = 1
+
+        step = MagicMock()
+        step.stage_id = "stage-1"
+        step.step_id = "step-1"
+        step.status = ExecutionStatus.FAILURE
+
+        mock_session = AsyncMock()
+        mock_session_ctx = AsyncMock()
+        mock_session_ctx.__aenter__ = AsyncMock(return_value=mock_session)
+        mock_session_ctx.__aexit__ = AsyncMock(return_value=False)
+
+        mock_scoped_service = AsyncMock()
+        mock_scoped_service.get_execution_with_stages = AsyncMock(
+            return_value=(execution, [{"id": "stage-1", "steps": [{"execution": step}]}], [])
+        )
+
+        mock_settings_repo = AsyncMock()
+        mock_settings_repo.get = AsyncMock(return_value="")
+
+        with patch("maestro.database.session.AsyncSessionLocal", return_value=mock_session_ctx), \
+             patch("maestro.repositories.settings.UISettingsRepository", return_value=mock_settings_repo), \
+             patch("maestro.services.ui.ExecutionRepository"), \
+             patch("maestro.services.ui.OrchestratorDescriptorRepository"), \
+             patch("maestro.services.ui.UIService", return_value=mock_scoped_service), \
+             patch("maestro.services.ui._render_partial", return_value="<div>html</div>"):
+            events = []
+            async for event in service.execution_sse_stream(2):
+                events.append(event)
+
+        assert any(e == {"event": "close", "data": ""} for e in events)
+
+
 class TestAssembleStages:
     async def test_assemble_stages_basic(self):
         config = ReleaseConfigSchema(**yaml.safe_load(SAMPLE_RELEASE_YAML))
