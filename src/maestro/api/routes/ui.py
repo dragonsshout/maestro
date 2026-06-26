@@ -725,13 +725,27 @@ async def delete_release_ui(
         # O HTMX ignora respostas com status >= 400 (não faz o swap no target).
         # Por isso, retornamos 200 com o HTML do erro para que o alerta apareça na tela.
         return HTMLResponse(
-            content=f"""<div class="alert alert-error text-sm shadow p-3" id="delete-error-{descriptor_id}">
-                <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                          d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"/>
-                </svg>
-                <span>{msg}</span>
-            </div>""",
+            content=f"""
+            <div id="delete-toast-err-{descriptor_id}" class="toast toast-top toast-end z-50" style="position:fixed;">
+                <div class="alert alert-error shadow-lg">
+                    <svg class="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    <span class="text-sm grow">{msg}</span>
+                    <button class="btn btn-sm btn-circle btn-ghost" onclick="this.closest('.toast').remove()">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            <script>
+                setTimeout(() => {{
+                    const toast = document.getElementById('delete-toast-err-{descriptor_id}');
+                    if (toast) toast.remove();
+                }}, 4000);
+            </script>
+            """,
             status_code=200,
         )
 
