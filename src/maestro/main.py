@@ -1,11 +1,13 @@
 import asyncio
 import subprocess
 import sys
+from pathlib import Path
 from contextlib import asynccontextmanager
 
 import uvicorn
 from fastapi import FastAPI, Request
 from fastapi.responses import RedirectResponse
+from fastapi.staticfiles import StaticFiles
 
 from maestro.api.routes.auth import router as auth_router
 from maestro.api.routes.callback import router as callback_router
@@ -82,6 +84,12 @@ app.include_router(ui_router)
 app.include_router(job_registry_router)
 app.include_router(auth_router)
 app.include_router(users_router)
+
+# Serve static assets (CSS, JS) diretamente — elimina dependência de CDN externo.
+# Crítico para ambientes com proxy corporativo (NTLM) onde Chrome/Firefox
+# não autenticam automaticamente e perdem acesso a CDNs como unpkg, jsdelivr, etc.
+_static_dir = Path(__file__).parent / "ui" / "static"
+app.mount("/static", StaticFiles(directory=str(_static_dir)), name="static")
 
 
 @app.exception_handler(RequiresAuthException)
