@@ -9,8 +9,19 @@ Regra de prioridade:
 ENVIRONMENT vem de `spec.environment` (default: "PRD").
 """
 
+from dataclasses import dataclass
+
 from maestro.repositories.job_path_registry import JobPathRegistryRepository
 from maestro.schemas.orchestrator import ReleaseSpecSchema, StepSchema
+
+
+@dataclass
+class ResolvedJobPath:
+    """Resultado da resolução de um job path com metadados sobre a origem."""
+
+    path: str
+    source: str  # "explicit" | "registry" | "auto"
+
 
 
 def resolve_job_path(step: StepSchema, spec: ReleaseSpecSchema) -> str:
@@ -67,3 +78,35 @@ async def resolve_job_path_async(
 
     # 3. Fallback: gera path padrão
     return f"job/{environment}/job/{repository}/job/{repository}"
+
+
+async def resolve_job_path_by_repository(
+    repository: str,
+    environment: str,
+    registry_repo: JobPathRegistryRepository,
+) -> ResolvedJobPath:
+    """
+    Resolve o job path apenas com repositório e ambiente, sem precisar do StepSchema.
+
+    Útil quando não existe ainda um step YAML definido (ex: Release Builder, validações
+    inline de UI) e só se quer saber qual path será efetivamente usado.
+
+    Prioridade:
+    1. Busca na tabela job_path_registry por (repository + environment).
+    2. Fallback: gera path padrão job/<ENV>/job/<repo>/job/<repo>.
+
+    :param repository: Nome do repositório.
+    :param environment: Ambiente (ex: 'PRD', 'DEV').
+    :param registry_repo: Instância do JobPathRegistryRepository.
+    :return: ResolvedJobPath com o path resolvido e a origem ('registry' | 'auto').
+    """
+    env = environment.upper()
+
+    registry_entry = await registry_repo.get_by_repository_and_environment(repository, env)
+    if registry_entry:
+        return ResolvedJobPath(path=registry_entry.path, source="registry")
+
+    return ResolvedJobPath(
+        path=f"job/{env}/job/{repository}/job/{repository}",
+        source="auto",
+    )

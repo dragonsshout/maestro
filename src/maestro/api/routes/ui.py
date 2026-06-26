@@ -758,18 +758,20 @@ async def validate_repository(
     from maestro.integration.jenkins import JenkinsIntegration
     from maestro.database.session import AsyncSessionLocal
     from maestro.repositories.job_path_registry import JobPathRegistryRepository
+    from maestro.services.job_path_resolver import resolve_job_path_by_repository
 
     repository = repository.strip()
     if not repository:
         return HTMLResponse(content="")
 
-    # ── Busca cfg + registry_entry em uma única sessão ────────────────────────
+    # ── Busca cfg + resolve path em uma única sessão ──────────────────────────
     async with AsyncSessionLocal() as session:
         cfg = await get_integration_settings(session)
         registry_repo = JobPathRegistryRepository(db=session)
-        registry_entry = await registry_repo.get_by_repository_and_environment(
-            repository, environment.upper()
-        )
+        resolved = await resolve_job_path_by_repository(repository, environment, registry_repo)
+
+    jenkins_path = resolved.path
+    jenkins_path_source = resolved.source
 
     github = GithubIntegration(
         organization=cfg.github_organization,
@@ -788,16 +790,6 @@ async def validate_repository(
     jenkins_ok = False
     branches: list[str] = []
     error_msg = None
-
-    # ── Resolve o jenkins_path — mesma prioridade do resolve_job_path_async ──
-    # 1. JobPathRegistry (repository + environment) → usa o path cadastrado
-    # 2. Fallback: gera path padrão job/<ENV>/job/<repo>/job/<repo>
-    if registry_entry:
-        jenkins_path = registry_entry.path
-        jenkins_path_source = "registry"
-    else:
-        jenkins_path = f"job/{environment.upper()}/job/{repository}/job/{repository}"
-        jenkins_path_source = "auto"
 
     try:
         repo_exists = await github.repository_exists(repository)
