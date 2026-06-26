@@ -119,6 +119,7 @@ class UIService:
                     yield {"event": "stage-update", "data": html}
 
                     if execution.status in TERMINAL_STATUSES:
+                        yield {"event": "close", "data": ""}
                         break
 
             except asyncio.CancelledError:
