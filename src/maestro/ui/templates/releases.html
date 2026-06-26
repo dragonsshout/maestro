@@ -9,9 +9,25 @@
             <svg class="w-8 h-8 mr-2 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>
             Releases
         </h1>
+        <a href="/ui/releases/new"
+           class="btn btn-primary btn-sm gap-2 shadow-sm hover:scale-105 active:scale-95 transition-transform"
+           {% if request.state.current_user.group == 'Approvers' %}style="pointer-events:none;opacity:.5" tabindex="-1" aria-disabled="true"{% endif %}>
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+            </svg>
+            Criar Release
+        </a>
     </div>
 
     <!-- Feedback de upload -->
+    {% if request.query_params.get('created') == '1' %}
+    <div class="alert alert-success mb-4 shadow">
+        <svg class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+        </svg>
+        <span>Release criada com sucesso!</span>
+    </div>
+    {% endif %}
     {% if upload_success %}
     <div class="alert alert-success mb-4">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">

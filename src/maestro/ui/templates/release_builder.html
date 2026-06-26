@@ -1,0 +1,344 @@
+{% extends "base.html" %}
+{% block title %}Nova Release — Maestro{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl">
+
+    {# ─── Cabeçalho ──────────────────────────────────────────────────────── #}
+    <div class="flex items-center gap-4 mb-8">
+        <a href="/ui/releases" class="btn btn-ghost btn-sm hover:bg-base-200/50 transition-colors">← Voltar</a>
+        <h1 class="text-3xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary flex items-center text-clip-gradient">
+            <svg class="w-8 h-8 mr-2 text-primary shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+            </svg>
+            Nova Release
+        </h1>
+    </div>
+
+    {# ─── Erro global ─────────────────────────────────────────────────────── #}
+    {% if error %}
+    <div class="alert alert-error mb-6 shadow">
+        <svg class="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"/>
+        </svg>
+        <div class="whitespace-pre-wrap text-sm">{{ error }}</div>
+    </div>
+    {% endif %}
+
+    <form method="POST" action="/ui/releases/create" id="rb-form">
+
+        {# ─── Metadados ───────────────────────────────────────────────────── #}
+        <div class="card bg-base-100/50 backdrop-blur-sm border border-base-300/50 shadow-lg rounded-2xl mb-5">
+            <div class="card-body gap-4 p-5">
+                <h2 class="font-semibold text-sm text-base-content/60 uppercase tracking-wider flex items-center gap-2">
+                    <svg class="w-4 h-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
+                    </svg>
+                    Metadados
+                </h2>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="form-control">
+                        <label class="label pb-1" for="rb-name">
+                            <span class="label-text text-sm font-medium">Nome <span class="text-error">*</span></span>
+                        </label>
+                        <input type="text" id="rb-name" name="name"
+                               value="{{ form.name if form else '' }}"
+                               placeholder="minha-release-v1"
+                               class="input input-bordered input-sm font-mono"
+                               required>
+                    </div>
+                    <div class="form-control">
+                        <label class="label pb-1" for="rb-author">
+                            <span class="label-text text-sm font-medium">Autor <span class="text-error">*</span></span>
+                        </label>
+                        <input type="text" id="rb-author" name="author"
+                               value="{{ form.author if form else request.state.current_user.username }}"
+                               placeholder="Seu Nome"
+                               class="input input-bordered input-sm"
+                               required>
+                    </div>
+                </div>
+
+                <div class="form-control">
+                    <label class="label pb-1" for="rb-description">
+                        <span class="label-text text-sm font-medium">Descrição</span>
+                        <span class="label-text-alt text-base-content/40">opcional</span>
+                    </label>
+                    <input type="text" id="rb-description" name="description"
+                           value="{{ form.description if form else '' }}"
+                           placeholder="Breve descrição desta release..."
+                           class="input input-bordered input-sm">
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="form-control">
+                        <label class="label pb-1" for="rb-strategy">
+                            <span class="label-text text-sm font-medium">Estratégia</span>
+                        </label>
+                        <select id="rb-strategy" name="strategy" class="select select-bordered select-sm">
+                            <option value="all-or-nothing" {% if not form or form.get('strategy','') != 'fire-and-forget' %}selected{% endif %}>all-or-nothing</option>
+                            <option value="fire-and-forget" {% if form and form.get('strategy') == 'fire-and-forget' %}selected{% endif %}>fire-and-forget</option>
+                        </select>
+                    </div>
+                    <div class="form-control">
+                        <label class="label pb-1" for="rb-env">
+                            <span class="label-text text-sm font-medium">Ambiente</span>
+                        </label>
+                        <select id="rb-env" name="environment" class="select select-bordered select-sm">
+                            {% for env in ['PRD', 'UAT', 'HML', 'STG', 'DEV'] %}
+                            <option value="{{ env }}" {% if form and form.get('environment') == env %}selected{% elif not form and env == 'PRD' %}selected{% endif %}>{{ env }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {# ─── Stages ──────────────────────────────────────────────────────── #}
+        <div id="stages-container" class="flex flex-col gap-4 mb-4"></div>
+
+        <button type="button" id="add-stage-btn"
+                class="btn btn-outline btn-sm w-full gap-2 border-dashed border-base-content/25 hover:border-primary hover:text-primary hover:bg-primary/5 transition-all mb-8 text-base-content/50">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+            </svg>
+            Adicionar Stage
+        </button>
+
+        {# ─── Actions ─────────────────────────────────────────────────────── #}
+        <div class="flex items-center justify-end gap-3 pt-2 border-t border-base-300/30">
+            <a href="/ui/releases" class="btn btn-ghost btn-sm">Cancelar</a>
+            <button type="submit" class="btn btn-primary btn-sm gap-2 shadow">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                </svg>
+                Salvar Release
+            </button>
+        </div>
+
+    </form>
+</div>
+
+{# ────────────────────────────────────────────────────────────────────────────
+   JavaScript — geração dinâmica de stages e steps + validação de repositório
+   ──────────────────────────────────────────────────────────────────────────── #}
+<script>
+(function() {
+    'use strict';
+
+    const stagesContainer = document.getElementById('stages-container');
+    const addStageBtn     = document.getElementById('add-stage-btn');
+    const envSelect       = document.getElementById('rb-env');
+    let stageCount = 0;
+
+    function getEnv() {
+        return envSelect ? envSelect.value : 'PRD';
+    }
+
+    // ── Strings de HTML para stage e step ──────────────────────────────────
+    function stageHTML(si) {
+        return `
+<div class="stage-card card bg-base-100/50 backdrop-blur-sm border border-base-300/50 shadow-lg rounded-2xl" data-si="${si}">
+  <div class="card-body gap-3 p-5">
+    <div class="flex items-center gap-3">
+      <span class="badge badge-outline badge-sm text-base-content/50 font-mono shrink-0 stage-label">Stage ${si+1}</span>
+      <input type="text" name="stages[${si}][id]"
+             placeholder="id do stage (ex: deploy, deploy-prd)"
+             class="input input-bordered input-xs font-mono flex-1 min-w-0" required>
+      <button type="button" class="btn btn-ghost btn-xs btn-square text-error/60 hover:text-error remove-stage-btn" title="Remover stage">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+        </svg>
+      </button>
+    </div>
+    <div class="divider my-0 opacity-20"></div>
+    <div class="steps-container flex flex-col gap-2"></div>
+    <button type="button" class="btn btn-ghost btn-xs gap-1 self-start text-base-content/50 hover:text-primary add-step-btn">
+      <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+      </svg>
+      Adicionar Step
+    </button>
+  </div>
+</div>`;
+    }
+
+    function stepHTML(si, ti) {
+        return `
+<div class="step-row border border-base-300/30 rounded-xl p-3 bg-base-200/20 flex flex-col gap-2" data-si="${si}" data-ti="${ti}">
+
+  <div class="flex items-center gap-2">
+    <span class="text-xs text-base-content/30 font-mono shrink-0">step</span>
+    <input type="text" name="stages[${si}][steps][${ti}][id]"
+           placeholder="id do step (ex: deploy-api, deploy-frontend)"
+           class="input input-bordered input-xs font-mono flex-1 min-w-0" required>
+    <button type="button" class="btn btn-ghost btn-xs btn-square text-error/50 hover:text-error remove-step-btn" title="Remover step">
+      <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+      </svg>
+    </button>
+  </div>
+
+  <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+    <div>
+      <label class="label py-0.5">
+        <span class="label-text text-xs font-medium">Repositório <span class="text-error">*</span></span>
+      </label>
+      <input type="text" name="stages[${si}][steps][${ti}][repository]"
+             placeholder="nome-do-repositorio"
+             class="input input-bordered input-xs font-mono w-full repo-input"
+             data-si="${si}" data-ti="${ti}" required>
+      <div class="repo-status mt-1 text-xs" id="repo-status-${si}-${ti}"></div>
+    </div>
+    <div>
+      <label class="label py-0.5">
+        <span class="label-text text-xs font-medium">Branch <span class="text-error">*</span></span>
+      </label>
+      <div id="branch-slot-${si}-${ti}" class="branch-slot">
+        <div class="input input-bordered input-xs w-full flex items-center text-base-content/30 text-xs select-none cursor-default bg-base-200/50">
+          Digite o repositório para carregar as branches
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="flex flex-wrap items-center gap-5 pt-1">
+    <label class="flex items-center gap-2 cursor-pointer">
+      <input type="hidden"   name="stages[${si}][steps][${ti}][critical]" value="false">
+      <input type="checkbox" name="stages[${si}][steps][${ti}][critical]" value="true" class="toggle toggle-warning toggle-xs">
+      <span class="text-xs text-base-content/60">Crítico</span>
+    </label>
+    <label class="flex items-center gap-2 cursor-pointer">
+      <input type="hidden"   name="stages[${si}][steps][${ti}][requires_approval]" value="false">
+      <input type="checkbox" name="stages[${si}][steps][${ti}][requires_approval]" value="true" class="toggle toggle-info toggle-xs">
+      <span class="text-xs text-base-content/60">Requer aprovação</span>
+    </label>
+  </div>
+
+  <details class="group">
+    <summary class="text-xs text-base-content/35 cursor-pointer hover:text-base-content/60 transition-colors list-none flex items-center gap-1 select-none">
+      <svg class="w-3 h-3 transition-transform group-open:rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+      </svg>
+      Job path customizado (opcional)
+    </summary>
+    <div class="mt-2 flex flex-col gap-1">
+      <input type="text" name="stages[${si}][steps][${ti}][job_path]"
+             placeholder="job/ENV/job/repo/job/repo"
+             class="input input-bordered input-xs font-mono w-full">
+      <p class="text-xs text-base-content/35">Deixe em branco para gerar automaticamente como <code class="font-mono">job/${getEnv()}/job/repo/job/repo</code></p>
+    </div>
+  </details>
+
+</div>`;
+    }
+
+    // ── Valida repositório e retorna HTML para o branch-slot ──────────────
+    function validateRepo(si, ti, repoValue) {
+        const statusEl = document.getElementById(`repo-status-${si}-${ti}`);
+        const branchSlot = document.getElementById(`branch-slot-${si}-${ti}`);
+
+        if (!statusEl || !branchSlot) return;
+
+        if (!repoValue || repoValue.length < 2) {
+            statusEl.innerHTML = '';
+            branchSlot.innerHTML = `
+                <div class="input input-bordered input-xs w-full flex items-center text-base-content/30 text-xs select-none cursor-default bg-base-200/50">
+                    Digite o repositório para carregar as branches
+                </div>`;
+            return;
+        }
+
+        statusEl.innerHTML = `
+            <span class="flex items-center gap-1 text-base-content/40">
+                <span class="loading loading-spinner loading-xs"></span>
+                Verificando...
+            </span>`;
+        branchSlot.innerHTML = '';
+
+        const params = new URLSearchParams({
+            repository: repoValue,
+            environment: getEnv(),
+            stage_idx: si,
+            step_idx: ti,
+        });
+
+        fetch(`/ui/api/validate-repository?${params}`)
+            .then(r => r.text())
+            .then(html => {
+                const tmp = document.createElement('div');
+                tmp.innerHTML = html;
+
+                // Os dois .validation-result: [0] = status, [1] = branch select
+                const parts = tmp.querySelectorAll('.validation-result');
+                statusEl.innerHTML = parts[0] ? parts[0].outerHTML : '';
+                branchSlot.innerHTML = parts[1] ? parts[1].innerHTML : '';
+            })
+            .catch(() => {
+                statusEl.innerHTML = '<span class="text-error">Erro ao verificar repositório.</span>';
+                branchSlot.innerHTML = '';
+            });
+    }
+
+    // ── Adiciona stage ────────────────────────────────────────────────────
+    function addStage() {
+        const si = stageCount++;
+        const wrapper = document.createElement('div');
+        wrapper.innerHTML = stageHTML(si);
+        const card = wrapper.firstElementChild;
+
+        card.querySelector('.remove-stage-btn').addEventListener('click', () => {
+            card.remove();
+            renumber();
+        });
+        card.querySelector('.add-step-btn').addEventListener('click', () => addStep(card, si));
+
+        stagesContainer.appendChild(card);
+        addStep(card, si); // começa com 1 step já adicionado
+    }
+
+    // ── Renumera labels ───────────────────────────────────────────────────
+    function renumber() {
+        document.querySelectorAll('.stage-label').forEach((el, i) => {
+            el.textContent = `Stage ${i + 1}`;
+        });
+    }
+
+    // ── Adiciona step ─────────────────────────────────────────────────────
+    function addStep(stageCard, si) {
+        const container = stageCard.querySelector('.steps-container');
+        const ti = container.children.length;
+
+        const wrapper = document.createElement('div');
+        wrapper.innerHTML = stepHTML(si, ti);
+        const row = wrapper.firstElementChild;
+
+        row.querySelector('.remove-step-btn').addEventListener('click', () => row.remove());
+
+        // Validação com debounce
+        let timer;
+        const repoInput = row.querySelector('.repo-input');
+        repoInput.addEventListener('input', () => {
+            clearTimeout(timer);
+            timer = setTimeout(() => validateRepo(si, ti, repoInput.value.trim()), 600);
+        });
+
+        // Re-valida quando o ambiente muda
+        envSelect.addEventListener('change', () => {
+            const val = repoInput.value.trim();
+            if (val.length >= 2) {
+                clearTimeout(timer);
+                timer = setTimeout(() => validateRepo(si, ti, val), 300);
+            }
+        });
+
+        container.appendChild(row);
+    }
+
+    // ── Bootstrap ─────────────────────────────────────────────────────────
+    addStageBtn.addEventListener('click', addStage);
+    addStage(); // começa com 1 stage
+})();
+</script>
+{% endblock %}

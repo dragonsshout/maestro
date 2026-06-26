@@ -116,3 +116,35 @@ class GithubIntegration:
                 return PullRequestSchema(**prs[0])
 
             return None
+
+    async def list_release_branches(self, repo_name: str) -> list[str]:
+        """
+        Lista todas as branches do repositório que começam com 'release/'.
+
+        :param repo_name: Nome do repositório.
+        :return: Lista de nomes de branches no formato 'release/xxx', ordenada alfabeticamente.
+        :raises Exception: Se o repositório não existir ou a API retornar erro.
+        """
+        branches: list[str] = []
+        page = 1
+        per_page = 100
+
+        async with self._get_client() as client:
+            while True:
+                endpoint = f"/repos/{self.organization}/{repo_name}/branches"
+                response = await client.get(endpoint, params={"per_page": per_page, "page": page})
+                if response.status_code != 200:
+                    break
+                data = response.json()
+                if not data:
+                    break
+                for b in data:
+                    name = b.get("name", "")
+                    if name.startswith("release/"):
+                        branches.append(name)
+                if len(data) < per_page:
+                    break
+                page += 1
+
+        return sorted(branches)
+

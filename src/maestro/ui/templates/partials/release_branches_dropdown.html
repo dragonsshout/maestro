@@ -1,0 +1,48 @@
+{% if error_msg %}
+{# ─── Erro: repositório ou Jenkins inválido ──────────────────────────────── #}
+<div class="flex items-center gap-2 text-error text-xs mt-1 validation-result">
+    <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"/>
+    </svg>
+    <span>{{ error_msg }}</span>
+</div>
+<div class="mt-2 validation-result">
+    <select name="stages[{{ stage_idx }}][steps][{{ step_idx }}][release]"
+            class="select select-bordered select-sm w-full opacity-50"
+            disabled>
+        <option value="">— selecione a branch —</option>
+    </select>
+</div>
+{% else %}
+{# ─── Sucesso ─────────────────────────────────────────────────────────────── #}
+<div class="flex items-center gap-2 text-success text-xs mt-1 validation-result">
+    <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+    </svg>
+    <span>GitHub ✔ &nbsp;·&nbsp; Jenkins ✔ &nbsp;·&nbsp; <code class="font-mono text-base-content/60">{{ jenkins_path }}</code></span>
+</div>
+<div class="mt-2 validation-result">
+    {% if branches %}
+    <select name="stages[{{ stage_idx }}][steps][{{ step_idx }}][release]"
+            class="select select-bordered select-sm w-full"
+            required>
+        <option value="">— selecione a branch —</option>
+        {% for branch in branches %}
+        <option value="{{ branch }}">{{ branch }}</option>
+        {% endfor %}
+    </select>
+    {% else %}
+    <div class="flex items-center gap-2 text-warning text-xs mb-1">
+        <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"/>
+        </svg>
+        <span>Nenhuma branch <code class="font-mono">release/*</code> encontrada. Informe manualmente:</span>
+    </div>
+    <input type="text"
+           name="stages[{{ stage_idx }}][steps][{{ step_idx }}][release]"
+           placeholder="release/v1.0.0"
+           class="input input-bordered input-sm w-full font-mono"
+           required>
+    {% endif %}
+</div>
+{% endif %}

@@ -2,7 +2,7 @@ from pathlib import Path
 
 import yaml as yaml_lib
 from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, Request, UploadFile
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 from sse_starlette.sse import EventSourceResponse
@@ -727,6 +727,213 @@ async def releases_upload(
             "upload_success": error is None,
         },
     )
+
+
+# ─── Release Builder ─────────────────────────────────────────────────────────
+
+
+@router.get("/releases/new", response_class=HTMLResponse)
+async def release_builder_page(request: Request):
+    """Página do Release Builder — cadastro visual de releases."""
+    return templates.TemplateResponse(request, "release_builder.html")
+
+
+@router.get("/api/validate-repository", response_class=HTMLResponse)
+async def validate_repository(
+    request: Request,
+    repository: str = "",
+    environment: str = "PRD",
+    stage_idx: int = 0,
+    step_idx: int = 0,
+    settings_service: UISettingsService = Depends(),
+):
+    """
+    Valida o repositório no GitHub e o job correspondente no Jenkins.
+    Retorna um partial HTML com:
+      - Estado da validação (ok / erro)
+      - Dropdown de branches 'release/*' quando ok
+    """
+    from maestro.services.app_settings import get_integration_settings
+    from maestro.integration.github import GithubIntegration
+    from maestro.integration.jenkins import JenkinsIntegration
+
+    repository = repository.strip()
+    if not repository:
+        return HTMLResponse(content="")
+
+    # Busca credenciais das integrações
+    from maestro.database.session import AsyncSessionLocal
+    async with AsyncSessionLocal() as session:
+        cfg = await get_integration_settings(session)
+
+    github = GithubIntegration(
+        organization=cfg.github_organization,
+        token=cfg.github_token,
+        base_url=cfg.github_base_url,
+        trust_env=cfg.http_trust_env,
+    )
+    jenkins = JenkinsIntegration(
+        base_url=cfg.jenkins_url,
+        username=cfg.jenkins_username,
+        token=cfg.jenkins_token,
+        trust_env=cfg.http_trust_env,
+    )
+
+    repo_exists = False
+    jenkins_ok = False
+    branches: list[str] = []
+    jenkins_path = f"job/{environment.upper()}/job/{repository}/job/{repository}"
+    error_msg = None
+
+    try:
+        repo_exists = await github.repository_exists(repository)
+    except Exception:
+        repo_exists = False
+
+    if repo_exists:
+        try:
+            jenkins_ok = await jenkins.job_exists(jenkins_path)
+        except Exception:
+            jenkins_ok = False
+
+        try:
+            branches = await github.list_release_branches(repository)
+        except Exception:
+            branches = []
+    else:
+        error_msg = f"Repositório '{repository}' não encontrado no GitHub."
+
+    if repo_exists and not jenkins_ok:
+        error_msg = f"Job Jenkins '{jenkins_path}' não encontrado."
+
+    return templates.TemplateResponse(
+        request,
+        "partials/release_branches_dropdown.html",
+        {
+            "repo_exists": repo_exists,
+            "jenkins_ok": jenkins_ok,
+            "branches": branches,
+            "jenkins_path": jenkins_path,
+            "repository": repository,
+            "error_msg": error_msg,
+            "stage_idx": stage_idx,
+            "step_idx": step_idx,
+        },
+    )
+
+
+@router.post("/releases/create", response_class=HTMLResponse)
+async def release_create(
+    request: Request,
+    orchestrator_service: OrchestratorService = Depends(),
+):
+    """Recebe o form do Release Builder, monta o YAML e salva via save_descriptor."""
+    form = await request.form()
+
+    # ── Metadados ──────────────────────────────────────────────────────────────
+    name = (form.get("name") or "").strip()
+    author = (form.get("author") or "").strip()
+    description = (form.get("description") or "").strip()
+    strategy = (form.get("strategy") or "all-or-nothing").strip()
+    environment = (form.get("environment") or "PRD").strip()
+
+    if not name or not author:
+        return templates.TemplateResponse(
+            request,
+            "release_builder.html",
+            {"error": "Nome e autor são obrigatórios.", "form": dict(form)},
+        )
+
+    # ── Monta stages e steps a partir dos campos nomeados ──────────────────────
+    # Convenção de nomes: stages[0][id], stages[0][steps][0][repository], ...
+    stages_raw: dict[int, dict] = {}
+    for key, value in form.multi_items():
+        # stages[0][id] ou stages[0][steps][0][repository]
+        import re
+        m = re.match(r"stages\[(\d+)\]\[steps\]\[(\d+)\]\[(.+?)\]", key)
+        if m:
+            si, ti, field = int(m.group(1)), int(m.group(2)), m.group(3)
+            stages_raw.setdefault(si, {"id": "", "steps": {}})
+            stages_raw[si]["steps"].setdefault(ti, {})
+            stages_raw[si]["steps"][ti][field] = value
+            continue
+        m2 = re.match(r"stages\[(\d+)\]\[id\]", key)
+        if m2:
+            si = int(m2.group(1))
+            stages_raw.setdefault(si, {"id": "", "steps": {}})
+            stages_raw[si]["id"] = value
+
+    # ── Validação mínima ──────────────────────────────────────────────────────
+    if not stages_raw:
+        return templates.TemplateResponse(
+            request,
+            "release_builder.html",
+            {"error": "Adicione pelo menos um stage com um step.", "form": dict(form)},
+        )
+
+    # ── Serializa para YAML ────────────────────────────────────────────────────
+    stages_list = []
+    for si in sorted(stages_raw):
+        stage = stages_raw[si]
+        stage_id = stage["id"].strip()
+        if not stage_id:
+            continue
+        steps_list = []
+        for ti in sorted(stage.get("steps", {})):
+            step = stage["steps"][ti]
+            repo = step.get("repository", "").strip()
+            release_branch = step.get("release", "").strip()
+            step_id = step.get("id", "").strip()
+            if not repo or not release_branch or not step_id:
+                continue
+            step_dict: dict = {
+                "id": step_id,
+                "repository": repo,
+                "release": release_branch,
+                "critical": step.get("critical") == "true",
+                "requires_approval": step.get("requires_approval") == "true",
+            }
+            custom_path = step.get("job_path", "").strip()
+            if custom_path:
+                step_dict["job"] = {"type": "jenkins", "path": custom_path}
+            steps_list.append(step_dict)
+        if steps_list:
+            stages_list.append({"id": stage_id, "steps": steps_list})
+
+    if not stages_list:
+        return templates.TemplateResponse(
+            request,
+            "release_builder.html",
+            {"error": "Nenhum stage válido encontrado. Verifique os campos obrigatórios.", "form": dict(form)},
+        )
+
+    yaml_dict = {
+        "apiVersion": "maestro.ecosoft.com/v1alpha1",
+        "kind": "Release",
+        "metadata": {
+            "name": name,
+            "author": author,
+            **({"description": description} if description else {}),
+        },
+        "spec": {
+            "strategy": {"type": strategy},
+            "environment": environment,
+            "stages": stages_list,
+        },
+    }
+
+    yaml_content = yaml_lib.dump(yaml_dict, allow_unicode=True, sort_keys=False)
+
+    try:
+        await orchestrator_service.save_descriptor(yaml_content)
+    except ValueError as e:
+        return templates.TemplateResponse(
+            request,
+            "release_builder.html",
+            {"error": str(e), "form": dict(form)},
+        )
+
+    return RedirectResponse(url="/ui/releases?created=1", status_code=303)
 
 
 @router.post("/dry-run/{name}", response_class=HTMLResponse)
