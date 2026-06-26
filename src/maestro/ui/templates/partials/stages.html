@@ -143,6 +143,7 @@ function flowScrollTo(id) {
                 <thead class="bg-base-200/50 text-base-content/70 uppercase tracking-wide text-xs">
                     <tr>
                         <th class="w-8"></th>
+                        <th>Ações</th>
                         <th>Step</th>
                         <th>Tipo</th>
                         <th>Repositório</th>
@@ -150,7 +151,6 @@ function flowScrollTo(id) {
                         <th>Build</th>
                         <th>Atualizado</th>
                         <th>Mensagem</th>
-                        <th>Ações</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -179,82 +179,6 @@ function flowScrollTo(id) {
                             {% endif %}
                         </td>
 
-                        <!-- Step ID -->
-                        <td>
-                            {% if step.job_type == "jenkins" and jenkins_base_url and step.job_path %}
-                                <a href="{{ jenkins_base_url }}/{{ step.job_path }}" target="_blank" rel="noopener"
-                                   class="font-semibold font-mono link link-hover" title="{{ se.step_id }}">
-                                    {{ se.step_id }}
-                                </a>
-                            {% else %}
-                                <span class="font-semibold font-mono" title="{{ se.step_id }}">{{ se.step_id }}</span>
-                            {% endif %}
-                        </td>
-
-                        <!-- Job type -->
-                        <td>
-                            {% if step.job_type == "jenkins" and jenkins_base_url and step.job_path %}
-                                <a href="{{ jenkins_base_url }}/{{ step.job_path }}" target="_blank" rel="noopener"
-                                   class="badge badge-outline badge-sm font-mono hover:badge-primary transition-colors">
-                                    {{ step.job_type }} ↗
-                                </a>
-                            {% else %}
-                                <span class="badge badge-outline badge-sm font-mono">{{ step.job_type }}</span>
-                            {% endif %}
-                        </td>
-
-                        <!-- Repositório -->
-                        <td class="font-mono text-base-content/70 max-w-[10rem] truncate" title="{{ step.repository }}">
-                            {% if github_base_url and github_organization %}
-                                <a href="{{ github_base_url }}/{{ github_organization }}/{{ step.repository }}" target="_blank" rel="noopener"
-                                   class="link link-hover">
-                                    {{ step.repository }}
-                                </a>
-                            {% else %}
-                                {{ step.repository }}
-                            {% endif %}
-                        </td>
-
-                        <!-- Release -->
-                        <td class="font-mono text-base-content/70 max-w-[10rem] truncate" title="{{ step.release }}">
-                            {% if github_base_url and github_organization %}
-                                <a href="{{ github_base_url }}/{{ github_organization }}/{{ step.repository }}/tree/{{ step.release }}" target="_blank" rel="noopener"
-                                   class="link link-hover">
-                                    {{ step.release }}
-                                </a>
-                            {% else %}
-                                {{ step.release }}
-                            {% endif %}
-                        </td>
-
-                        <!-- Build # -->
-                        <td class="font-mono text-base-content/50">
-                            {% if se.job_execution_correlation_id %}
-                                    <button
-                                        class="link link-hover text-base-content/70"
-                                        hx-get="/ui/step-events/{{ se.job_execution_correlation_id }}"
-                                        hx-target="#events-modal-container"
-                                        hx-swap="innerHTML"
-                                        title="Ver eventos do build"
-                                    >#{{ se.job_execution_correlation_id }} <svg class="w-3 h-3 inline-block" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg></button>
-                            {% else %}
-                                <span class="text-base-content/30">—</span>
-                            {% endif %}
-                        </td>
-
-                        <!-- Horário -->
-                        <td class="text-base-content/50 whitespace-nowrap">
-                            {{ se.updated_at.strftime('%H:%M:%S') }}
-                        </td>
-
-                        <!-- Mensagem -->
-                        <td class="text-base-content/60 max-w-[12rem] truncate" title="{{ se.message or '' }}">
-                            {% if se.message %}
-                                {{ se.message }}
-                            {% else %}
-                                <span class="text-base-content/30">—</span>
-                            {% endif %}
-                        </td>
                         <!-- Ações do step (menu dropdown na coluna visível) -->
                         <td class="whitespace-nowrap">
                             {% if sv not in ["success", "aborted"] %}
@@ -346,6 +270,83 @@ function flowScrollTo(id) {
                             </div>
                             {% else %}
                             <span class="text-base-content/20 text-xs">—</span>
+                            {% endif %}
+                        </td>
+
+                        <!-- Step ID -->
+                        <td>
+                            {% if step.job_type == "jenkins" and jenkins_base_url and step.job_path %}
+                                <a href="{{ jenkins_base_url }}/{{ step.job_path }}" target="_blank" rel="noopener"
+                                   class="font-semibold font-mono link link-hover" title="{{ se.step_id }}">
+                                    {{ se.step_id }}
+                                </a>
+                            {% else %}
+                                <span class="font-semibold font-mono" title="{{ se.step_id }}">{{ se.step_id }}</span>
+                            {% endif %}
+                        </td>
+
+                        <!-- Job type -->
+                        <td>
+                            {% if step.job_type == "jenkins" and jenkins_base_url and step.job_path %}
+                                <a href="{{ jenkins_base_url }}/{{ step.job_path }}" target="_blank" rel="noopener"
+                                   class="badge badge-outline badge-sm font-mono hover:badge-primary transition-colors">
+                                    {{ step.job_type }} ↗
+                                </a>
+                            {% else %}
+                                <span class="badge badge-outline badge-sm font-mono">{{ step.job_type }}</span>
+                            {% endif %}
+                        </td>
+
+                        <!-- Repositório -->
+                        <td class="font-mono text-base-content/70 max-w-[10rem] truncate" title="{{ step.repository }}">
+                            {% if github_base_url and github_organization %}
+                                <a href="{{ github_base_url }}/{{ github_organization }}/{{ step.repository }}" target="_blank" rel="noopener"
+                                   class="link link-hover">
+                                    {{ step.repository }}
+                                </a>
+                            {% else %}
+                                {{ step.repository }}
+                            {% endif %}
+                        </td>
+
+                        <!-- Release -->
+                        <td class="font-mono text-base-content/70 max-w-[10rem] truncate" title="{{ step.release }}">
+                            {% if github_base_url and github_organization %}
+                                <a href="{{ github_base_url }}/{{ github_organization }}/{{ step.repository }}/tree/{{ step.release }}" target="_blank" rel="noopener"
+                                   class="link link-hover">
+                                    {{ step.release }}
+                                </a>
+                            {% else %}
+                                {{ step.release }}
+                            {% endif %}
+                        </td>
+
+                        <!-- Build # -->
+                        <td class="font-mono text-base-content/50">
+                            {% if se.job_execution_correlation_id %}
+                                    <button
+                                        class="link link-hover text-base-content/70"
+                                        hx-get="/ui/step-events/{{ se.job_execution_correlation_id }}"
+                                        hx-target="#events-modal-container"
+                                        hx-swap="innerHTML"
+                                        title="Ver eventos do build"
+                                    >#{{ se.job_execution_correlation_id }} <svg class="w-3 h-3 inline-block" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg></button>
+                            {% else %}
+                                <span class="text-base-content/30">—</span>
+                            {% endif %}
+                        </td>
+
+                        <!-- Horário -->
+                        <td class="text-base-content/50 whitespace-nowrap">
+                            {{ se.updated_at.strftime('%H:%M:%S') }}
+                        </td>
+
+                        <!-- Mensagem -->
+                        <td class="text-base-content/60 max-w-[12rem] truncate" title="{{ se.message or '' }}">
+                            {% if se.message %}
+                                {{ se.message }}
+                            {% else %}
+                                <span class="text-base-content/30">—</span>
                             {% endif %}
                         </td>
                     </tr>
