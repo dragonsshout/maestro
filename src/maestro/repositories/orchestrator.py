@@ -61,3 +61,14 @@ class OrchestratorDescriptorRepository:
         await self.db.commit()
         await self.db.refresh(descriptor)
         return descriptor
+
+    async def delete(self, descriptor_id: int) -> bool:
+        """Remove permanentemente um descriptor. Retorna True se encontrado e deletado."""
+        result = await self.db.execute(select(OrchestratorDescriptor).where(OrchestratorDescriptor.id == descriptor_id))
+        descriptor = result.scalars().first()
+        if descriptor is None:
+            return False
+        await self.db.delete(descriptor)
+        await self.db.commit()
+        return True
+

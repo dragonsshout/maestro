@@ -202,3 +202,15 @@ class ExecutionRepository:
             select(OrchestratorDescriptor).where(OrchestratorDescriptor.id.in_(descriptor_ids))
         )
         return {d.id: d for d in result.scalars().all()}
+
+    async def count_by_descriptor_id(self, descriptor_id: int) -> int:
+        """Conta quantas execuções existem para um dado descriptor_id."""
+        from sqlalchemy import func
+
+        result = await self.db.execute(
+            select(func.count(ReleaseExecution.id)).where(
+                ReleaseExecution.orchestrator_descriptor_id == descriptor_id
+            )
+        )
+        return result.scalar() or 0
+
