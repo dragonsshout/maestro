@@ -711,16 +711,28 @@ async def delete_release_ui(
 
     # Valida no momento do clique — impede exclusão se houver execuções vinculadas
     exec_count = await execution_repo.count_by_descriptor_id(descriptor_id)
-    if exec_count > 0:
+    
+    # Valida também se há agendamentos (ScheduledRelease) para evitar erro 500 de Foreign Key
+    from maestro.repositories.schedule import ScheduleRepository
+    schedule_repo = ScheduleRepository(db=execution_repo.db)
+    schedules = await schedule_repo.get_schedules_for_release(descriptor.name)
+    
+    if exec_count > 0 or schedules:
+        msg = f"A release <strong>{descriptor.name}</strong> possui {exec_count} execução(ões) registrada(s) e não pode ser excluída."
+        if schedules:
+            msg = f"A release <strong>{descriptor.name}</strong> possui agendamentos vinculados e não pode ser excluída."
+            
+        # O HTMX ignora respostas com status >= 400 (não faz o swap no target).
+        # Por isso, retornamos 200 com o HTML do erro para que o alerta apareça na tela.
         return HTMLResponse(
             content=f"""<div class="alert alert-error text-sm shadow p-3" id="delete-error-{descriptor_id}">
                 <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                           d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"/>
                 </svg>
-                <span>A release <strong>{descriptor.name}</strong> possui {exec_count} execução(ões) registrada(s) e não pode ser excluída.</span>
+                <span>{msg}</span>
             </div>""",
-            status_code=409,
+            status_code=200,
         )
 
     await orchestrator_repo.delete(descriptor_id)
