@@ -1,8 +1,8 @@
 import asyncio
 import subprocess
 import sys
-from pathlib import Path
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 import uvicorn
 from fastapi import FastAPI, Request

@@ -698,7 +698,10 @@ async def delete_release_ui(
             content="""<div class="alert alert-error text-sm shadow p-3">
                 <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                          d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"/>
+                          d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5
+                             L13.732 4c-.77-.833-1.964-.833-2.732 0
+                             L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"
+                    />
                 </svg>
                 Apenas Administrators podem excluir releases.
             </div>""",
@@ -711,17 +714,23 @@ async def delete_release_ui(
 
     # Valida no momento do clique — impede exclusão se houver execuções vinculadas
     exec_count = await execution_repo.count_by_descriptor_id(descriptor_id)
-    
+
     # Valida também se há agendamentos (ScheduledRelease) para evitar erro 500 de Foreign Key
     from maestro.repositories.schedule import ScheduleRepository
     schedule_repo = ScheduleRepository(db=execution_repo.db)
     schedules = await schedule_repo.get_schedules_for_release(descriptor.name)
-    
+
     if exec_count > 0 or schedules:
-        msg = f"A release <strong>{descriptor.name}</strong> possui {exec_count} execução(ões) registrada(s) e não pode ser excluída."
+        msg = (
+            f"A release <strong>{descriptor.name}</strong> possui {exec_count} "
+            "execução(ões) registrada(s) e não pode ser excluída."
+        )
         if schedules:
-            msg = f"A release <strong>{descriptor.name}</strong> possui agendamentos vinculados e não pode ser excluída."
-            
+            msg = (
+                f"A release <strong>{descriptor.name}</strong> possui agendamentos "
+                "vinculados e não pode ser excluída."
+            )
+
         # O HTMX ignora respostas com status >= 400 (não faz o swap no target).
         # Por isso, retornamos 200 com o HTML do erro para que o alerta apareça na tela.
         return HTMLResponse(
@@ -729,12 +738,15 @@ async def delete_release_ui(
             <div id="delete-toast-err-{descriptor_id}" class="toast toast-top toast-end z-50" style="position:fixed;">
                 <div class="alert alert-error shadow-lg">
                     <svg class="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                     </svg>
                     <span class="text-sm grow">{msg}</span>
-                    <button class="btn btn-sm btn-circle btn-ghost" onclick="this.closest('.toast').remove()">
+                    <button class="btn btn-sm btn-circle btn-ghost"
+                            onclick="this.closest('.toast').remove()">
                         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                  d="M6 18L18 6M6 6l12 12"/>
                         </svg>
                     </button>
                 </div>
@@ -825,11 +837,11 @@ async def validate_repository(
       - Estado da validação (ok / erro)
       - Dropdown de branches 'release/*' quando ok
     """
-    from maestro.services.app_settings import get_integration_settings
+    from maestro.database.session import AsyncSessionLocal
     from maestro.integration.github import GithubIntegration
     from maestro.integration.jenkins import JenkinsIntegration
-    from maestro.database.session import AsyncSessionLocal
     from maestro.repositories.job_path_registry import JobPathRegistryRepository
+    from maestro.services.app_settings import get_integration_settings
     from maestro.services.job_path_resolver import resolve_job_path_by_repository
 
     repository = repository.strip()
